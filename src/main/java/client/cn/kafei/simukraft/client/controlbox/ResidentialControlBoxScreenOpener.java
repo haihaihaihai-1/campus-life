@@ -1,13 +1,9 @@
 package client.cn.kafei.simukraft.client.controlbox;
 
 import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
-import com.lowdragmc.lowdraglib2.gui.texture.ColorBorderTexture;
-import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
-import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup;
-import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
+import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
-import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
@@ -25,7 +21,6 @@ import dev.vfyjxf.taffy.style.TaffyPosition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -33,7 +28,6 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("null")
 public final class ResidentialControlBoxScreenOpener {
-    private static final ResourceLocation GDP_THEME = ResourceLocation.fromNamespaceAndPath("ldlib2", "lss/gdp.lss");
     private static final int PANEL_WIDTH = 320;
     private static final int PANEL_HEIGHT = 184;
     private static final int ACTION_WIDTH = 132;
@@ -73,13 +67,16 @@ public final class ResidentialControlBoxScreenOpener {
     }
 
     private static ModularUI createUi(ResidentialControlBoxOpenResponsePacket packet) {
+        int screenWidth = Math.max(320, Minecraft.getInstance().getWindow().getGuiScaledWidth());
+        int screenHeight = Math.max(240, Minecraft.getInstance().getWindow().getGuiScaledHeight());
         UIElement root = new UIElement().layout(layout -> {
             layout.widthPercent(100);
             layout.heightPercent(100);
             layout.alignItems(AlignItems.CENTER);
             layout.justifyContent(AlignContent.CENTER);
             layout.paddingAll(8);
-        }).style(style -> style.backgroundTexture(new ColorRectTexture(0xC8000000)));
+        });
+        root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
 
         root.addChild(topButton("gui.button.done", 5, 5, 50, ResidentialControlBoxScreenOpener::close));
         root.addChild(topButton("gui.button.demolish", -5, 5, 60, () -> demolish(packet)));
@@ -93,7 +90,7 @@ public final class ResidentialControlBoxScreenOpener {
             layout.flexDirection(FlexDirection.COLUMN);
             layout.alignItems(AlignItems.STRETCH);
             layout.gapAll(6);
-        }).style(style -> style.backgroundTexture(panelTexture()));
+        }).addClass("simukraft_panel");
 
         panel.addChild(label(Component.translatable("gui.residential_control_box.panel_title"), Horizontal.CENTER, 0xFFFFFF, 16));
         panel.addChild(label(buildingLine(packet), Horizontal.LEFT, 0xFFF5F5A0, 13));
@@ -121,7 +118,7 @@ public final class ResidentialControlBoxScreenOpener {
         panel.addChild(occupancyRow);
 
         root.addChild(panel);
-        return new ModularUI(UI.of(root, GDP_THEME))
+        return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
     }
@@ -162,15 +159,7 @@ public final class ResidentialControlBoxScreenOpener {
             layout.height(ACTION_HEIGHT);
         });
         slot.addChild(button);
-        if (!active) {
-            slot.addChild(new UIElement().layout(layout -> {
-                layout.positionType(TaffyPosition.ABSOLUTE);
-                layout.left(1);
-                layout.top(1);
-                layout.width(ACTION_WIDTH - 2);
-                layout.height(ACTION_HEIGHT - 2);
-            }).style(style -> style.backgroundTexture(new ColorRectTexture(0x88303030))));
-        }
+        button.setActive(active);
         return slot;
     }
 
@@ -218,10 +207,6 @@ public final class ResidentialControlBoxScreenOpener {
 
     private static Component onOffText(boolean enabled) {
         return Component.translatable(enabled ? "gui.switch.on" : "gui.switch.off");
-    }
-
-    private static IGuiTexture panelTexture() {
-        return new GuiTextureGroup(new ColorRectTexture(0xAA101014), new ColorBorderTexture(1, 0x66FFFFFF));
     }
 
     private static void toggleBounds(ResidentialControlBoxOpenResponsePacket packet) {

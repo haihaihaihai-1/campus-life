@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.city;
 
+import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.city.map.SimuMapManager;
 import client.cn.kafei.simukraft.client.city.map.SimuMapRegion;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
@@ -22,7 +23,6 @@ import com.lowdragmc.lowdraglib2.gui.texture.Icons;
 import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
-import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
@@ -45,7 +45,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.joml.Matrix4f;
@@ -67,7 +66,6 @@ public final class CityCoreScreenOpener {
     private static final int BUTTON_HEIGHT = 24;
     private static final int BACK_BUTTON_WIDTH = 52;
     private static final int BACK_BUTTON_HEIGHT = 20;
-    private static final ResourceLocation GDP_THEME = ResourceLocation.fromNamespaceAndPath("ldlib2", "lss/gdp.lss");
 
     private CityCoreScreenOpener() {
     }
@@ -102,21 +100,21 @@ public final class CityCoreScreenOpener {
 
     private static ModularUI createUi(CityCoreMapResponsePacket packet) {
         EditorWindow root = new EditorWindow(() -> new CityCoreEditor(packet));
-        return new ModularUI(UI.of(root, GDP_THEME))
+        return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
     }
 
     private static ModularUI createUi(CityCoreMembersResponsePacket packet) {
         EditorWindow root = new EditorWindow(() -> new CityCoreEditor(packet));
-        return new ModularUI(UI.of(root, GDP_THEME))
+        return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
     }
 
     private static ModularUI createUi(CityCoreOpenResponsePacket packet) {
         EditorWindow root = new EditorWindow(() -> new CityCoreEditor(packet));
-        return new ModularUI(UI.of(root, GDP_THEME))
+        return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
     }

@@ -2,16 +2,13 @@ package client.cn.kafei.simukraft.client.hire;
 
 import client.cn.kafei.simukraft.client.buildbox.BuildBoxScreenOpener;
 import client.cn.kafei.simukraft.client.citizen.CitizenAvatarFactory;
+import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import common.cn.kafei.simukraft.SimuKraft;
-import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
-import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup;
-import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
-import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
-import com.lowdragmc.lowdraglib2.gui.ui.styletemplate.Sprites;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ProgressBar;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireAssignPacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListRequestPacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListResponsePacket;
@@ -19,7 +16,6 @@ import dev.vfyjxf.taffy.style.TaffyPosition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.ArrayList;
@@ -28,7 +24,7 @@ import java.util.UUID;
 
 @SuppressWarnings("null")
 public final class NpcHireScreen {
-    private static final ResourceLocation GDP_THEME = ResourceLocation.fromNamespaceAndPath("ldlib2", "lss/gdp.lss");
+    private static final int CARD_TEXT_COLOR = SimuKraftUiTheme.CARD_TEXT_COLOR;
     private static final int NPC_PER_PAGE = 6;
     private static final int COLUMNS = 3;
     private static final int CARD_GAP = 10;
@@ -83,7 +79,8 @@ public final class NpcHireScreen {
             UIElement root = new UIElement().layout(layout -> {
                 layout.widthPercent(100);
                 layout.heightPercent(100);
-            }).style(style -> style.backgroundTexture(new ColorRectTexture(0x80000000)));
+            });
+            root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
 
             Button backButton = new Button();
             backButton.setText(Component.translatable("gui.button.back"));
@@ -97,7 +94,7 @@ public final class NpcHireScreen {
             });
             root.addChild(backButton);
 
-            root.addChild(textElement(Component.translatable(titleKey(packet.role())), screenWidth, 0xFFFFFF, TextTexture.TextType.NORMAL).layout(layout -> {
+            root.addChild(textElement(Component.translatable(titleKey(packet.role())), screenWidth, SimuKraftUiTheme.TEXT_PRIMARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(0);
                 layout.top(25);
@@ -108,7 +105,7 @@ public final class NpcHireScreen {
             Component status = packet.candidates().isEmpty()
                     ? Component.translatable("message.simukraft.no_idle_npcs")
                     : Component.translatable("gui.select_npc.title", packet.candidates().size(), currentPage + 1, pageCount);
-            int statusColor = packet.candidates().isEmpty() ? 0xFF5555 : 0x55FF55;
+            int statusColor = packet.candidates().isEmpty() ? SimuKraftUiTheme.TEXT_ERROR_COLOR : SimuKraftUiTheme.TEXT_SUCCESS_COLOR;
             root.addChild(textElement(status, screenWidth, statusColor, TextTexture.TextType.NORMAL).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(0);
@@ -129,6 +126,12 @@ public final class NpcHireScreen {
             int totalHeight = rows * actualCardHeight + (rows - 1) * CARD_GAP;
             int startX = (screenWidth - totalWidth) / 2;
             int startY = Math.max(TOP_MARGIN, TOP_MARGIN + (availableHeight - totalHeight) / 2);
+            int panelPadding = 12;
+            int panelLeft = Math.max(8, startX - panelPadding);
+            int panelTop = Math.max(TOP_MARGIN - 8, startY - panelPadding);
+            int panelRight = Math.min(screenWidth - 8, startX + totalWidth + panelPadding);
+            int panelBottom = Math.min(screenHeight - BOTTOM_MARGIN, startY + totalHeight + panelPadding);
+            root.addChild(SimuKraftUiTheme.createDecorationLayer(panelLeft, panelTop, panelRight - panelLeft, panelBottom - panelTop, "simukraft_grid_panel"));
 
             for (int i = 0; i < pageCandidates.size(); i++) {
                 int row = i / COLUMNS;
@@ -139,7 +142,7 @@ public final class NpcHireScreen {
             }
 
             if (pageCount > 1) {
-                root.addChild(textElement(Component.translatable("gui.pagination.info", currentPage + 1, pageCount), screenWidth, 0xAAAAAA, TextTexture.TextType.NORMAL).layout(layout -> {
+                root.addChild(textElement(Component.translatable("gui.pagination.info", currentPage + 1, pageCount), screenWidth, SimuKraftUiTheme.TEXT_SECONDARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
                     layout.positionType(TaffyPosition.ABSOLUTE);
                     layout.left(0);
                     layout.top(screenHeight - 40);
@@ -150,7 +153,7 @@ public final class NpcHireScreen {
 
             if (selectedNpcId != null) {
                 String selectedName = selectedNpcName(packet.candidates(), selectedNpcId);
-                root.addChild(textElement(Component.translatable("gui.select_npc.selected", selectedName), screenWidth, 0xFFFF00, TextTexture.TextType.NORMAL).layout(layout -> {
+                root.addChild(textElement(Component.translatable("gui.select_npc.selected", selectedName), screenWidth, SimuKraftUiTheme.TEXT_WARNING_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
                     layout.positionType(TaffyPosition.ABSOLUTE);
                     layout.left(0);
                     layout.top(screenHeight - 60);
@@ -174,7 +177,7 @@ public final class NpcHireScreen {
                     reopen();
                 });
             } else {
-                prevButton.style(style -> style.backgroundTexture(new ColorRectTexture(0x66000000)));
+                prevButton.setActive(false);
             }
             root.addChild(prevButton);
 
@@ -193,7 +196,7 @@ public final class NpcHireScreen {
                     reopen();
                 });
             } else {
-                nextButton.style(style -> style.backgroundTexture(new ColorRectTexture(0x66000000)));
+                nextButton.setActive(false);
             }
             root.addChild(nextButton);
 
@@ -212,11 +215,11 @@ public final class NpcHireScreen {
                     returnToSource(packet.sourceType(), packet.sourcePos());
                 });
             } else {
-                confirmButton.style(style -> style.backgroundTexture(new ColorRectTexture(0x66000000)));
+                confirmButton.setActive(false);
             }
             root.addChild(confirmButton);
 
-            return new ModularUI(UI.of(root, GDP_THEME)).shouldCloseOnEsc(true).shouldCloseOnKeyInventory(false);
+            return new ModularUI(SimuKraftUiTheme.createUi(root)).shouldCloseOnEsc(true).shouldCloseOnKeyInventory(false);
         } catch (Exception exception) {
             SimuKraft.LOGGER.error("Simukraft: Failed to build hire UI sourceType={} role={} page={} selectedNpcId={}",
                     packet.sourceType(), packet.role(), currentPage, selectedNpcId, exception);
@@ -227,31 +230,35 @@ public final class NpcHireScreen {
     private static UIElement candidateCard(NpcHireListResponsePacket packet, NpcHireListResponsePacket.HireCandidate candidate, int x, int y, int width, int height) {
         try {
             boolean selected = candidate.citizenId().equals(selectedNpcId);
-            UIElement card = new UIElement().layout(layout -> {
+            int buttonInset = 2;
+            int buttonWidth = Math.max(1, width - buttonInset * 2);
+            int buttonHeight = Math.max(1, height - buttonInset * 2);
+            UIElement wrapper = new UIElement().layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(x);
                 layout.top(y);
                 layout.width(width);
                 layout.height(height);
+            });
+            wrapper.addChild(SimuKraftUiTheme.createDecorationLayer(3, 4, width - 4, height - 4, "simukraft_card_shadow"));
+
+            Button card = new Button().noText();
+            card.addClass("simukraft_large_button");
+            card.layout(layout -> {
+                layout.positionType(TaffyPosition.ABSOLUTE);
+                layout.left(buttonInset);
+                layout.top(buttonInset);
+                layout.width(buttonWidth);
+                layout.height(buttonHeight);
                 layout.paddingAll(6);
-            }).style(style -> style.backgroundTexture(selected
-                    ? new GuiTextureGroup(
-                    Sprites.BORDER1_RT1,
-                    new ColorRectTexture(0x66000000),
-                    new ColorRectTexture(0x66000000)
-            )
-                    : new GuiTextureGroup(
-                    Sprites.BORDER1_RT1,
-                    new ColorRectTexture(0x66000000)
-            )));
-            card.addEventListener(com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents.MOUSE_DOWN, event -> {
-                if (event.button != 0) {
-                    return;
-                }
+            });
+            card.addClass("simukraft_card_button");
+            card.setOnClick(event -> {
                 selectedNpcId = candidate.citizenId();
                 reopen();
-                event.stopPropagation();
             });
+            card.addChild(SimuKraftUiTheme.createDecorationLayer(6, 7, buttonWidth - 12, buttonHeight - 14, "simukraft_card_content_panel"));
+            card.addChild(SimuKraftUiTheme.createDecorationLayer(6, 8, HEAD_SIZE + 4, HEAD_SIZE + 4, "simukraft_card_slot"));
 
             card.addChild(CitizenAvatarFactory.createHead(candidate.skinPath(), 0xFFFFFFFF).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
@@ -262,16 +269,16 @@ public final class NpcHireScreen {
             }));
 
             int textLeft = HEAD_SIZE + 18;
-            int textWidth = width - textLeft - 10;
+            int textWidth = buttonWidth - textLeft - 10;
 
-            card.addChild(infoLine(Component.literal(candidate.name()), textWidth, 0xFFFFFF).layout(layout -> {
+            card.addChild(infoLine(Component.literal(candidate.name()), textWidth, CARD_TEXT_COLOR).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(textLeft);
                 layout.top(10);
                 layout.width(textWidth);
                 layout.height(14);
             }));
-            card.addChild(infoLine(Component.translatable("work_status.idle"), textWidth, 0x55FF55).layout(layout -> {
+            card.addChild(infoLine(Component.translatable("work_status.idle"), textWidth, CARD_TEXT_COLOR).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(textLeft);
                 layout.top(28);
@@ -286,15 +293,19 @@ public final class NpcHireScreen {
                 layout.height(12);
             }));
 
-            card.addChild(expBar(candidate, width, height).layout(layout -> {
+            card.addChild(expBar(candidate, buttonWidth, buttonHeight).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(8);
-                layout.top(height - 18);
-                layout.width(width - 16);
+                layout.top(buttonHeight - 18);
+                layout.width(buttonWidth - 16);
                 layout.height(10);
             }));
+            wrapper.addChild(card);
+            if (selected) {
+                wrapper.addChild(SimuKraftUiTheme.createSelectionBorder(width, height));
+            }
 
-            return card;
+            return wrapper;
         } catch (Exception exception) {
             SimuKraft.LOGGER.error("Simukraft: Failed to build hire candidate card id={} name={} skinPath={} level={}",
                     candidate.citizenId(), candidate.name(), candidate.skinPath(), candidate.skillLevel(), exception);
@@ -310,51 +321,22 @@ public final class NpcHireScreen {
         float progress = isMaxLevel ? 1.0F : 0.35F;
         int barWidth = width - 16;
         String expText = isMaxLevel ? "MAX" : currentXp + "/" + nextXp;
-        int fillWidth = Math.max(0, Math.round((barWidth - 8) * Math.max(0.0F, Math.min(progress, 1.0F))));
 
-        UIElement bar = new UIElement().layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(0);
-            layout.top(0);
+        ProgressBar bar = new ProgressBar();
+        bar.setRange(0.0F, 1.0F);
+        bar.setProgress(progress);
+        bar.label.setText(expText);
+        return bar.layout(layout -> {
             layout.width(barWidth);
             layout.height(10);
-        }).style(style -> style.backgroundTexture(new GuiTextureGroup(
-                progressFillTexture(fillWidth),
-                Sprites.PROGRESS_CONTAINER,
-                new TextTexture(expText).setWidth(barWidth).setType(TextTexture.TextType.NORMAL).setColor(0xFFFFFFFF).setDropShadow(true)
-        )));
-        return bar;
-    }
-
-    private static IGuiTexture progressFillTexture(int fillWidth) {
-        if (fillWidth <= 0) {
-            return IGuiTexture.EMPTY;
-        }
-        return new IGuiTexture() {
-            @Override
-            public void draw(net.minecraft.client.gui.GuiGraphics graphics, float mouseX, float mouseY, float x, float y, float width, float height, float partialTicks) {
-                float drawX = x + 4;
-                float drawY = y + 4;
-                float drawWidth = Math.min(fillWidth, width - 8);
-                float drawHeight = 4;
-                if (drawWidth <= 0 || drawHeight <= 0) {
-                    return;
-                }
-                new GuiTextureGroup(
-                        Sprites.PROGRESS_BAR,
-                        new ColorRectTexture(0xFF19C7E6)
-                ).draw(graphics, mouseX, mouseY, drawX, drawY, drawWidth, drawHeight, partialTicks);
-            }
-        };
+        });
     }
 
 
     private static UIElement levelBadge(int level) {
         UIElement badge = new UIElement();
-        badge.style(style -> style.backgroundTexture(new GuiTextureGroup(
-                Sprites.RECT_RD_DARK,
-                new TextTexture("Lv " + level).setWidth(34).setType(TextTexture.TextType.NORMAL).setColor(0xFFFFFF).setDropShadow(true)
-        )));
+        badge.addClass("simukraft_badge");
+        badge.style(style -> style.backgroundTexture(new TextTexture("Lv " + level).setWidth(34).setType(TextTexture.TextType.NORMAL).setColor(CARD_TEXT_COLOR).setDropShadow(false)));
         return badge;
     }
 
@@ -364,7 +346,7 @@ public final class NpcHireScreen {
                 .setWidth(width)
                 .setType(TextTexture.TextType.LEFT)
                 .setColor(color)
-                .setDropShadow(true)));
+                .setDropShadow(false)));
         return element;
     }
 

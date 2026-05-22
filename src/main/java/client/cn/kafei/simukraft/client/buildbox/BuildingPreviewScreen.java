@@ -1,6 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
+import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import common.cn.kafei.simukraft.building.BuildingStructure;
 import common.cn.kafei.simukraft.network.building.BuildBoxStartConstructionPacket;
 import net.minecraft.client.gui.GuiGraphics;
@@ -51,19 +52,23 @@ public final class BuildingPreviewScreen extends Screen {
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         int centerX = this.width / 2;
-        int y = 10;
-        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.title_with_name", building.name()), centerX, y, 0xFFFFFF);
+        int y = 14;
+        int panelWidth = Math.min(this.width - 24, 520);
+        int panelHeight = 82;
+        int panelLeft = centerX - panelWidth / 2;
+        guiGraphics.fill(panelLeft, 8, panelLeft + panelWidth, 8 + panelHeight, SimuKraftUiTheme.CITY_CORE_BACKGROUND_COLOR);
+        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.title_with_name", building.name()), centerX, y, SimuKraftUiTheme.TEXT_PRIMARY_COLOR);
         y += 15;
-        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.preview_move"), centerX, y, 0xFFFF00);
+        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.preview_move"), centerX, y, SimuKraftUiTheme.TEXT_WARNING_COLOR);
         y += 12;
-        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.camera"), centerX, y, 0x00FFFF);
+        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.camera"), centerX, y, SimuKraftUiTheme.TEXT_INFO_COLOR);
         y += 12;
-        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.actions"), centerX, y, 0xFFAA00);
+        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.actions"), centerX, y, SimuKraftUiTheme.TEXT_WARNING_COLOR);
         y += 12;
         BlockPos origin = BuildingPreviewManager.getPreviewOrigin();
-        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.origin_info", origin.getX(), origin.getY(), origin.getZ(), BuildingPreviewManager.getRotationDegrees()), centerX, y, 0x00FF00);
+        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.origin_info", origin.getX(), origin.getY(), origin.getZ(), BuildingPreviewManager.getRotationDegrees()), centerX, y, SimuKraftUiTheme.TEXT_SUCCESS_COLOR);
         y += 12;
-        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.block_count", structure.blockCount()), centerX, y, 0x00FFFF);
+        guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.block_count", structure.blockCount()), centerX, y, SimuKraftUiTheme.TEXT_INFO_COLOR);
     }
 
     @Override

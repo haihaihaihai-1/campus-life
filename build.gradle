@@ -150,7 +150,7 @@ configurations {
 }
 
 dependencies {
-    implementation "curse.maven:ldlib-626676:8125765"
+    implementation "com.lowdragmc.ldlib2:ldlib2-neoforge-${minecraft_version}:${ldlib2_version}:all"
     implementation "dev.vfyjxf:taffy:1.1.4"
     compileOnly "org.appliedenergistics.yoga:yoga:1.0.0"
     implementation "org.xerial:sqlite-jdbc:3.46.1.0"

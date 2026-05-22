@@ -1,0 +1,46 @@
+.simukraft_panel {
+  background: built-in(ui-gdp:RECT_SOLID);
+  padding-all: 10;
+}
+
+.simukraft_shell_panel {
+  background: rect(#ff444444);
+}
+
+.simukraft_badge {
+  background: built-in(ui-gdp:RECT_RD_DARK);
+}
+
+.simukraft_grid_panel {
+  background: group(rect(#44202020), built-in(ui-gdp:RECT_SOLID));
+  padding-all: 8;
+}
+
+.simukraft_card_shadow {
+  background: rect(#88000000);
+}
+
+.simukraft_card_content_panel {
+  background: rect(#28ffffff);
+}
+
+.simukraft_card_slot {
+  background: built-in(ui-gdp:RECT_RD_DARK);
+}
+
+button.simukraft_large_button:host {
+  base-background: built-in(ui-gdp:BORDER1_RT1);
+  hover-background: group(built-in(ui-gdp:BORDER1_RT1), built-in(ui-gdp:BORDER1_RT1_TRANSLATE) color(#55add8e6));
+  pressed-background: group(built-in(ui-gdp:BORDER1_RT1), built-in(ui-gdp:BORDER1_RT1_TRANSLATE) color(#55add8e6));
+  padding-all: 6;
+}
+
+button.simukraft_large_button:disabled:host {
+  base-background: built-in(ui-gdp:RECT_RD_DARK);
+}
+
+button.simukraft_card_button:host {
+  base-background: group(built-in(ui-gdp:BORDER1_RT1), built-in(ui-gdp:BORDER1_RT1_TRANSLATE) color(#55add8e6));
+  hover-background: group(built-in(ui-gdp:BORDER1_RT1), built-in(ui-gdp:BORDER1_RT1_TRANSLATE) color(#55add8e6));
+  pressed-background: group(built-in(ui-gdp:BORDER1_RT1), built-in(ui-gdp:BORDER1_RT1_TRANSLATE) color(#55add8e6));
+}

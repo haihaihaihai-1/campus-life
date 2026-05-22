@@ -1,0 +1,47 @@
+.simukraft_panel {
+  background: built-in(ui-ore:BORDER_7);
+  padding-all: 10;
+}
+
+.simukraft_shell_panel {
+  background: rect(#ff444444);
+}
+
+.simukraft_badge {
+  background: built-in(ui-ore:RECT2);
+}
+
+.simukraft_grid_panel {
+  background: group(rect(#44202020), built-in(ui-ore:BORDER_7));
+  padding-all: 8;
+}
+
+.simukraft_card_shadow {
+  background: rect(#88000000);
+}
+
+.simukraft_card_content_panel {
+  background: group(rect(#22ffffff), built-in(ui-ore:RECT));
+}
+
+.simukraft_card_slot {
+  background: built-in(ui-ore:SLOT_LIGHT);
+}
+
+button.simukraft_large_button:host {
+  base-background: built-in(ui-ore:BTN_RECT_DEFAULT);
+  hover-background: built-in(ui-ore:BTN_RECT_HOVER);
+  pressed-background: built-in(ui-ore:BTN_RECT_HOVER) color(#dddddd);
+  padding-all: 6;
+  padding-bottom: 7;
+}
+
+button.simukraft_large_button:disabled:host {
+  base-background: built-in(ui-ore:BTN_RECT_DISABLED);
+}
+
+button.simukraft_card_button:host {
+  base-background: built-in(ui-ore:BTN_RECT_HOVER);
+  hover-background: built-in(ui-ore:BTN_RECT_HOVER);
+  pressed-background: built-in(ui-ore:BTN_RECT_HOVER) color(#dddddd);
+}

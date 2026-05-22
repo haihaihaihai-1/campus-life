@@ -1,35 +1,32 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup;
 import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
-import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
-import com.lowdragmc.lowdraglib2.gui.ui.styletemplate.Sprites;
-import dev.vfyjxf.taffy.style.TaffyPosition;
 import common.cn.kafei.simukraft.building.BuildingStructure;
 import common.cn.kafei.simukraft.building.BuildingStructureService;
+import dev.vfyjxf.taffy.style.TaffyPosition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
-import java.util.Optional;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 @SuppressWarnings("null")
 @EventBusSubscriber(value = Dist.CLIENT)
 public final class BuildingListScreenOpener {
-    private static final ResourceLocation GDP_THEME = ResourceLocation.fromNamespaceAndPath("ldlib2", "lss/gdp.lss");
+    private static final int CARD_TEXT_COLOR = SimuKraftUiTheme.CARD_TEXT_COLOR;
     private static final int BUILDINGS_PER_PAGE = 6;
     private static final int COLUMNS = 3;
     private static final int CARD_GAP = 10;
@@ -90,7 +87,8 @@ public final class BuildingListScreenOpener {
         UIElement root = new UIElement().layout(layout -> {
             layout.widthPercent(100);
             layout.heightPercent(100);
-        }).style(style -> style.backgroundTexture(new ColorRectTexture(0x80000000)));
+        });
+        root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
 
         Button backButton = new Button();
         backButton.setText(Component.translatable("gui.button.back"));
@@ -104,7 +102,7 @@ public final class BuildingListScreenOpener {
         });
         root.addChild(backButton);
 
-        root.addChild(textElement(Component.translatable("gui.building_list.title", categoryName(category)), screenWidth, 0xFFFFFF, TextTexture.TextType.NORMAL).layout(layout -> {
+        root.addChild(textElement(Component.translatable("gui.building_list.title", categoryName(category)), screenWidth, SimuKraftUiTheme.TEXT_PRIMARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(0);
             layout.top(25);
@@ -115,7 +113,7 @@ public final class BuildingListScreenOpener {
         Component status = buildings.isEmpty()
                 ? Component.translatable("gui.building_list.empty_dir", BuildingCacheService.categoryDirectory(category).toString())
                 : Component.translatable("gui.building_list.status", buildings.size());
-        int statusColor = buildings.isEmpty() ? 0xFF5555 : 0x55FF55;
+        int statusColor = buildings.isEmpty() ? SimuKraftUiTheme.TEXT_ERROR_COLOR : SimuKraftUiTheme.TEXT_SUCCESS_COLOR;
         root.addChild(textElement(status, screenWidth, statusColor, TextTexture.TextType.NORMAL).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(0);
@@ -136,6 +134,12 @@ public final class BuildingListScreenOpener {
         int totalHeight = rows * actualCardHeight + (rows - 1) * CARD_GAP;
         int startX = (screenWidth - totalWidth) / 2;
         int startY = Math.max(TOP_MARGIN, TOP_MARGIN + (availableHeight - totalHeight) / 2);
+        int panelPadding = 12;
+        int panelLeft = Math.max(8, startX - panelPadding);
+        int panelTop = Math.max(TOP_MARGIN - 8, startY - panelPadding);
+        int panelRight = Math.min(screenWidth - 8, startX + totalWidth + panelPadding);
+        int panelBottom = Math.min(screenHeight - BOTTOM_MARGIN, startY + totalHeight + panelPadding);
+        root.addChild(SimuKraftUiTheme.createDecorationLayer(panelLeft, panelTop, panelRight - panelLeft, panelBottom - panelTop, "simukraft_grid_panel"));
 
         for (int i = 0; i < pageBuildings.size(); i++) {
             int row = i / COLUMNS;
@@ -146,7 +150,7 @@ public final class BuildingListScreenOpener {
         }
 
         if (pageCount > 1) {
-            root.addChild(textElement(Component.translatable("gui.pagination.info", currentPage + 1, pageCount), screenWidth, 0xAAAAAA, TextTexture.TextType.NORMAL).layout(layout -> {
+            root.addChild(textElement(Component.translatable("gui.pagination.info", currentPage + 1, pageCount), screenWidth, SimuKraftUiTheme.TEXT_SECONDARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(0);
                 layout.top(screenHeight - 40);
@@ -156,7 +160,7 @@ public final class BuildingListScreenOpener {
         }
 
         if (selectedBuildingFileName != null) {
-            root.addChild(textElement(Component.translatable("gui.building_list.selected", selectedBuildingFileName), screenWidth, 0xFFFF00, TextTexture.TextType.NORMAL).layout(layout -> {
+            root.addChild(textElement(Component.translatable("gui.building_list.selected", selectedBuildingFileName), screenWidth, SimuKraftUiTheme.TEXT_WARNING_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(0);
                 layout.top(screenHeight - 60);
@@ -180,7 +184,7 @@ public final class BuildingListScreenOpener {
                 reopen();
             });
         } else {
-            prevButton.style(style -> style.backgroundTexture(new ColorRectTexture(0x66000000)));
+            prevButton.setActive(false);
         }
         root.addChild(prevButton);
 
@@ -199,36 +203,39 @@ public final class BuildingListScreenOpener {
                 reopen();
             });
         } else {
-            nextButton.style(style -> style.backgroundTexture(new ColorRectTexture(0x66000000)));
+            nextButton.setActive(false);
         }
         root.addChild(nextButton);
 
-        return new ModularUI(UI.of(root, GDP_THEME)).shouldCloseOnEsc(true).shouldCloseOnKeyInventory(false);
+        return new ModularUI(SimuKraftUiTheme.createUi(root)).shouldCloseOnEsc(true).shouldCloseOnKeyInventory(false);
     }
 
     private static UIElement createBuildingCard(BuildingCacheService.BuildingMeta building, int x, int y, int width, int height, int accentColor) {
         boolean selected = building.structureFileName().equals(selectedBuildingFileName);
-        UIElement card = new UIElement().layout(layout -> {
+        int buttonInset = 2;
+        int buttonWidth = Math.max(1, width - buttonInset * 2);
+        int buttonHeight = Math.max(1, height - buttonInset * 2);
+        UIElement wrapper = new UIElement().layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(x);
             layout.top(y);
             layout.width(width);
             layout.height(height);
+        });
+        wrapper.addChild(SimuKraftUiTheme.createDecorationLayer(3, 4, width - 4, height - 4, "simukraft_card_shadow"));
+
+        Button card = new Button().noText();
+        card.addClass("simukraft_large_button");
+        card.layout(layout -> {
+            layout.positionType(TaffyPosition.ABSOLUTE);
+            layout.left(buttonInset);
+            layout.top(buttonInset);
+            layout.width(buttonWidth);
+            layout.height(buttonHeight);
             layout.paddingAll(6);
-        }).style(style -> style.backgroundTexture(selected
-                ? new GuiTextureGroup(
-                Sprites.BORDER1_RT1,
-                new ColorRectTexture(0x66000000),
-                new ColorRectTexture(0x66000000)
-        )
-                : new GuiTextureGroup(
-                Sprites.BORDER1_RT1,
-                new ColorRectTexture(0x66000000)
-        )));
-        card.addEventListener(com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents.MOUSE_DOWN, event -> {
-            if (event.button != 0) {
-                return;
-            }
+        });
+        card.addClass("simukraft_card_button");
+        card.setOnClick(event -> {
             selectedBuildingFileName = building.structureFileName();
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft != null && minecraft.player != null) {
@@ -245,53 +252,57 @@ public final class BuildingListScreenOpener {
                     minecraft.player.displayClientMessage(Component.translatable("message.simukraft.building_preview.open_failed", building.name()), false);
                 }
             }
-            event.stopPropagation();
         });
+        card.addChild(SimuKraftUiTheme.createDecorationLayer(6, 7, buttonWidth - 12, buttonHeight - 14, "simukraft_card_content_panel"));
 
         card.addChild(new UIElement().layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(8);
             layout.top(3);
-            layout.width(width - 16);
+            layout.width(buttonWidth - 16);
             layout.height(2);
         }).style(style -> style.backgroundTexture(new GuiTextureGroup(
                 new ColorRectTexture(0x66000000),
                 new ColorRectTexture(accentColor)
         ))));
 
-        card.addChild(textElement(Component.literal(trim(building.name(), Math.max(10, width / 10))), width, 0xFFFFFF, TextTexture.TextType.NORMAL).layout(layout -> {
+        card.addChild(textElement(Component.literal(trim(building.name(), Math.max(10, buttonWidth / 10))), buttonWidth, CARD_TEXT_COLOR, TextTexture.TextType.NORMAL, false).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(0);
             layout.top(8);
-            layout.width(width);
+            layout.width(buttonWidth);
             layout.height(12);
         }));
 
-        int infoWidth = width - 8;
+        int infoWidth = buttonWidth - 8;
         int infoY = 24;
-        card.addChild(infoLine(Component.translatable("gui.building.size", building.size()), infoWidth, 0xAAAAAA).layout(layout -> {
+        card.addChild(infoLine(Component.translatable("gui.building.size", building.size()), infoWidth, CARD_TEXT_COLOR).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(4);
             layout.top(infoY);
             layout.width(infoWidth);
             layout.height(10);
         }));
-        card.addChild(infoLine(Component.translatable("gui.building.price", building.amount()), infoWidth, 0xAAAAAA).layout(layout -> {
+        card.addChild(infoLine(Component.translatable("gui.building.price", building.amount()), infoWidth, CARD_TEXT_COLOR).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(4);
             layout.top(infoY + 12);
             layout.width(infoWidth);
             layout.height(10);
         }));
-        card.addChild(infoLine(Component.translatable("gui.building.author", building.author()), infoWidth, 0xAAAAAA).layout(layout -> {
+        card.addChild(infoLine(Component.translatable("gui.building.author", building.author()), infoWidth, CARD_TEXT_COLOR).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
             layout.left(4);
             layout.top(infoY + 24);
             layout.width(infoWidth);
             layout.height(10);
         }));
+        wrapper.addChild(card);
+        if (selected) {
+            wrapper.addChild(SimuKraftUiTheme.createSelectionBorder(width, height));
+        }
 
-        return card;
+        return wrapper;
     }
 
     private static UIElement infoLine(Component text, int width, int color) {
@@ -300,17 +311,21 @@ public final class BuildingListScreenOpener {
                 .setWidth(width)
                 .setType(TextTexture.TextType.LEFT)
                 .setColor(color)
-                .setDropShadow(true)));
+                .setDropShadow(false)));
         return element;
     }
 
     private static UIElement textElement(Component text, int width, int color, TextTexture.TextType type) {
+        return textElement(text, width, color, type, true);
+    }
+
+    private static UIElement textElement(Component text, int width, int color, TextTexture.TextType type, boolean dropShadow) {
         UIElement element = new UIElement();
         element.style(style -> style.backgroundTexture(new TextTexture(text.getString())
                 .setWidth(width)
                 .setType(type)
                 .setColor(color)
-                .setDropShadow(true)));
+                .setDropShadow(dropShadow)));
         return element;
     }
 

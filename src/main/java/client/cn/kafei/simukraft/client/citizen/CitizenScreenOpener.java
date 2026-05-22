@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.citizen;
 
+import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import com.lowdragmc.lowdraglib2.editor.ui.Editor;
 import com.lowdragmc.lowdraglib2.editor.ui.EditorWindow;
 import com.lowdragmc.lowdraglib2.editor.ui.View;
@@ -7,7 +8,6 @@ import com.lowdragmc.lowdraglib2.editor.ui.ViewContainer;
 import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
-import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.ScrollerView;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Tab;
@@ -17,7 +17,6 @@ import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.FlexDirection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 
 import javax.annotation.Nonnull;
 import java.util.Locale;
@@ -26,8 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("null")
 public final class CitizenScreenOpener {
-    private static final ResourceLocation CITIZEN_THEME = ResourceLocation.fromNamespaceAndPath("ldlib2", "lss/gdp.lss");
-
     private CitizenScreenOpener() {
     }
 
@@ -41,7 +38,7 @@ public final class CitizenScreenOpener {
 
     private static ModularUI createUi(CitizenInfoResponsePacket packet) {
         EditorWindow root = new EditorWindow(() -> new CitizenInfoEditor(packet));
-        return new ModularUI(UI.of(root, CITIZEN_THEME))
+        return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
     }
