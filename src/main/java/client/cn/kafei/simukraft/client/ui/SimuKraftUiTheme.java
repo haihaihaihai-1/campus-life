@@ -22,7 +22,7 @@ public final class SimuKraftUiTheme {
     public static final int TEXT_ERROR_COLOR = 0xFFFF7777;
     public static final int TEXT_INFO_COLOR = 0xFF66FFFF;
     public static final int TEXT_MUTED_COLOR = 0xFFBDBDBD;
-    public static final int CARD_TEXT_COLOR = 0xFF222222;
+    public static final int CARD_TEXT_COLOR = 0xFFFFFFFF;
 
     private SimuKraftUiTheme() {
     }

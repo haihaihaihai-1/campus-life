@@ -53,10 +53,6 @@ public final class BuildingPreviewScreen extends Screen {
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         int centerX = this.width / 2;
         int y = 14;
-        int panelWidth = Math.min(this.width - 24, 520);
-        int panelHeight = 82;
-        int panelLeft = centerX - panelWidth / 2;
-        guiGraphics.fill(panelLeft, 8, panelLeft + panelWidth, 8 + panelHeight, SimuKraftUiTheme.CITY_CORE_BACKGROUND_COLOR);
         guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.title_with_name", building.name()), centerX, y, SimuKraftUiTheme.TEXT_PRIMARY_COLOR);
         y += 15;
         guiGraphics.drawCenteredString(this.font, Component.translatable("gui.building_preview.hint.preview_move"), centerX, y, SimuKraftUiTheme.TEXT_WARNING_COLOR);

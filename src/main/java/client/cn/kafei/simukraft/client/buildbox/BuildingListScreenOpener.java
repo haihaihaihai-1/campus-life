@@ -134,13 +134,6 @@ public final class BuildingListScreenOpener {
         int totalHeight = rows * actualCardHeight + (rows - 1) * CARD_GAP;
         int startX = (screenWidth - totalWidth) / 2;
         int startY = Math.max(TOP_MARGIN, TOP_MARGIN + (availableHeight - totalHeight) / 2);
-        int panelPadding = 12;
-        int panelLeft = Math.max(8, startX - panelPadding);
-        int panelTop = Math.max(TOP_MARGIN - 8, startY - panelPadding);
-        int panelRight = Math.min(screenWidth - 8, startX + totalWidth + panelPadding);
-        int panelBottom = Math.min(screenHeight - BOTTOM_MARGIN, startY + totalHeight + panelPadding);
-        root.addChild(SimuKraftUiTheme.createDecorationLayer(panelLeft, panelTop, panelRight - panelLeft, panelBottom - panelTop, "simukraft_grid_panel"));
-
         for (int i = 0; i < pageBuildings.size(); i++) {
             int row = i / COLUMNS;
             int col = i % COLUMNS;
@@ -274,25 +267,26 @@ public final class BuildingListScreenOpener {
             layout.height(12);
         }));
 
-        int infoWidth = buttonWidth - 8;
+        int infoLeft = 14;
+        int infoWidth = buttonWidth - infoLeft - 8;
         int infoY = 24;
         card.addChild(infoLine(Component.translatable("gui.building.size", building.size()), infoWidth, CARD_TEXT_COLOR).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(4);
+            layout.left(infoLeft);
             layout.top(infoY);
             layout.width(infoWidth);
             layout.height(10);
         }));
         card.addChild(infoLine(Component.translatable("gui.building.price", building.amount()), infoWidth, CARD_TEXT_COLOR).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(4);
+            layout.left(infoLeft);
             layout.top(infoY + 12);
             layout.width(infoWidth);
             layout.height(10);
         }));
         card.addChild(infoLine(Component.translatable("gui.building.author", building.author()), infoWidth, CARD_TEXT_COLOR).layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(4);
+            layout.left(infoLeft);
             layout.top(infoY + 24);
             layout.width(infoWidth);
             layout.height(10);

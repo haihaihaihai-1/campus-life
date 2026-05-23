@@ -4,7 +4,7 @@
 }
 
 .simukraft_shell_panel {
-  background: rect(#ff444444);
+  background: rect(#80000000);
 }
 
 .simukraft_badge {

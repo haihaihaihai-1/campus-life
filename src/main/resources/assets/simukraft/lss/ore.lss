@@ -1,18 +1,18 @@
 .simukraft_panel {
-  background: built-in(ui-ore:BORDER_7);
+  background: sprite(simukraft:textures/gui/ore_styles.png, 128, 128, 128, 128, 3, 3, 3, 5);
   padding-all: 10;
 }
 
 .simukraft_shell_panel {
-  background: rect(#ff444444);
+  background: rect(#80000000);
 }
 
 .simukraft_badge {
-  background: built-in(ui-ore:RECT2);
+  background: sprite(simukraft:textures/gui/ore_styles.png, 24, 0, 3, 5, 1, 3, 1, 1);
 }
 
 .simukraft_grid_panel {
-  background: group(rect(#44202020), built-in(ui-ore:BORDER_7));
+  background: group(rect(#44202020), sprite(simukraft:textures/gui/ore_styles.png, 128, 128, 128, 128, 3, 3, 3, 5));
   padding-all: 8;
 }
 
@@ -21,27 +21,37 @@
 }
 
 .simukraft_card_content_panel {
-  background: group(rect(#22ffffff), built-in(ui-ore:RECT));
+  background: group(rect(#22ffffff), sprite(simukraft:textures/gui/ore_styles.png, 21, 0, 3, 4, 1, 1, 1, 2));
 }
 
 .simukraft_card_slot {
-  background: built-in(ui-ore:SLOT_LIGHT);
+  background: sprite(simukraft:textures/gui/ore_styles.png, 15, 0, 3, 3, 1, 1, 1, 1);
+}
+
+button:host {
+  base-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 0, 5, 7, 2, 2, 2, 4);
+  hover-background: sprite(simukraft:textures/gui/ore_styles.png, 5, 0, 5, 7, 2, 2, 2, 4);
+  pressed-background: sprite(simukraft:textures/gui/ore_styles.png, 5, 0, 5, 7, 2, 2, 2, 4) color(#dddddd);
+}
+
+button:disabled:host {
+  base-background: sprite(simukraft:textures/gui/ore_styles.png, 10, 0, 5, 7, 2, 2, 2, 4);
 }
 
 button.simukraft_large_button:host {
-  base-background: built-in(ui-ore:BTN_RECT_DEFAULT);
-  hover-background: built-in(ui-ore:BTN_RECT_HOVER);
-  pressed-background: built-in(ui-ore:BTN_RECT_HOVER) color(#dddddd);
+  base-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 7, 13, 14, 2, 2, 2, 3);
+  hover-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 35, 13, 14, 2, 2, 2, 3);
+  pressed-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 35, 13, 14, 2, 2, 2, 3) color(#dddddd);
   padding-all: 6;
   padding-bottom: 7;
 }
 
 button.simukraft_large_button:disabled:host {
-  base-background: built-in(ui-ore:BTN_RECT_DISABLED);
+  base-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 21, 13, 14, 2, 2, 2, 3);
 }
 
 button.simukraft_card_button:host {
-  base-background: built-in(ui-ore:BTN_RECT_HOVER);
-  hover-background: built-in(ui-ore:BTN_RECT_HOVER);
-  pressed-background: built-in(ui-ore:BTN_RECT_HOVER) color(#dddddd);
+  base-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 35, 13, 14, 2, 2, 2, 3);
+  hover-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 35, 13, 14, 2, 2, 2, 3);
+  pressed-background: sprite(simukraft:textures/gui/ore_styles.png, 0, 35, 13, 14, 2, 2, 2, 3) color(#dddddd);
 }

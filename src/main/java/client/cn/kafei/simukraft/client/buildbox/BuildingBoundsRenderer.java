@@ -135,6 +135,8 @@ public final class BuildingBoundsRenderer {
         }
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(false);
         RenderSystem.disableCull();
         RenderSystem.setShader(GameRenderer::getPositionColorShader);
         Tesselator tesselator = Tesselator.getInstance();
@@ -166,6 +168,7 @@ public final class BuildingBoundsRenderer {
             }
         }
         BufferUploader.drawWithShader(buffer.buildOrThrow());
+        RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
     }

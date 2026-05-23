@@ -126,13 +126,6 @@ public final class NpcHireScreen {
             int totalHeight = rows * actualCardHeight + (rows - 1) * CARD_GAP;
             int startX = (screenWidth - totalWidth) / 2;
             int startY = Math.max(TOP_MARGIN, TOP_MARGIN + (availableHeight - totalHeight) / 2);
-            int panelPadding = 12;
-            int panelLeft = Math.max(8, startX - panelPadding);
-            int panelTop = Math.max(TOP_MARGIN - 8, startY - panelPadding);
-            int panelRight = Math.min(screenWidth - 8, startX + totalWidth + panelPadding);
-            int panelBottom = Math.min(screenHeight - BOTTOM_MARGIN, startY + totalHeight + panelPadding);
-            root.addChild(SimuKraftUiTheme.createDecorationLayer(panelLeft, panelTop, panelRight - panelLeft, panelBottom - panelTop, "simukraft_grid_panel"));
-
             for (int i = 0; i < pageCandidates.size(); i++) {
                 int row = i / COLUMNS;
                 int col = i % COLUMNS;
@@ -288,7 +281,7 @@ public final class NpcHireScreen {
             card.addChild(levelBadge(candidate.skillLevel()).layout(layout -> {
                 layout.positionType(TaffyPosition.ABSOLUTE);
                 layout.left(textLeft);
-                layout.top(46);
+                layout.top(42);
                 layout.width(34);
                 layout.height(12);
             }));
