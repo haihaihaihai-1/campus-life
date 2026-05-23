@@ -40,6 +40,11 @@ public final class BuildingBoundsRenderer {
     // 住宅控制盒手动打开的建筑边界，按控制盒位置索引以便再次点击时关闭。
     private static final Map<BlockPos, DisplayedBuildingBounds> DISPLAYED_BUILDING_BOUNDS = new ConcurrentHashMap<>();
     private static UUID previewPlayerId;
+    private static long intrusionCacheRevision = Long.MIN_VALUE;
+    private static BlockPos intrusionCacheOrigin = BlockPos.ZERO;
+    private static int intrusionCacheRotation = Integer.MIN_VALUE;
+    private static List<PreviewIntrusion> cachedIntrusions = List.of();
+    private static List<AABB> cachedTouchedBuildingBounds = List.of();
 
     private BuildingBoundsRenderer() {
     }
@@ -52,6 +57,7 @@ public final class BuildingBoundsRenderer {
     public static void clearAll() {
         DISPLAYED_BUILDING_BOUNDS.clear();
         previewPlayerId = null;
+        clearPreviewDetectionCache();
     }
 
     public static boolean isBuildingBoundsVisible(BlockPos controlBoxPos) {
@@ -179,34 +185,8 @@ public final class BuildingBoundsRenderer {
     }
 
     private static void renderIntrusions(PoseStack poseStack, Vec3 cameraPos, Minecraft minecraft) {
-        List<PreviewBlockData> blocks = BuildingPreviewManager.getPreviewBlocks();
-        AABB previewBounds = previewBounds(blocks);
-        for (PreviewBlockData block : blocks) {
-            BlockState worldState = minecraft.level.getBlockState(block.pos());
-            boolean inPlacedBuilding = minecraft.level instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel
-                    && minecraft.getSingleplayerServer() != null
-                    && minecraft.getSingleplayerServer().getLevel(clientLevel.dimension()) != null
-                    && PlacedBuildingService.intersects(minecraft.getSingleplayerServer().getLevel(clientLevel.dimension()), block.pos());
-            if (worldState.isAir() && !inPlacedBuilding) {
-                continue;
-            }
-            int color = worldState.getBlock() == block.state().getBlock() ? COLOR_INTRUSION_AIR : COLOR_INTRUSION_BLOCK;
-            renderBox(poseStack, cameraPos, new AABB(block.pos()), color);
-        }
-        if (minecraft.level instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel && minecraft.getSingleplayerServer() != null) {
-            var serverLevel = minecraft.getSingleplayerServer().getLevel(clientLevel.dimension());
-            if (serverLevel != null) {
-                // 仅当预览与既有建筑相邻或侵入时显示对方线框，平时不污染视野。
-                for (PlacedBuildingRecord building : PlacedBuildingService.getBuildings(serverLevel)) {
-                    AABB buildingBounds = new AABB(building.minPos().getX(), building.minPos().getY(), building.minPos().getZ(), building.maxPos().getX() + 1, building.maxPos().getY() + 1, building.maxPos().getZ() + 1);
-                    if (previewBounds != null && previewTouchesOrIntersects(previewBounds, buildingBounds)) {
-                        renderWireBox(poseStack, cameraPos, buildingBounds, COLOR_SELECTED_BUILDING);
-                    }
-                }
-            }
-        }
+        renderCachedIntrusions(poseStack, cameraPos, minecraft);
     }
-
     private static void renderSelectedBuildingBounds(PoseStack poseStack, Vec3 cameraPos) {
         if (DISPLAYED_BUILDING_BOUNDS.isEmpty()) {
             return;
@@ -247,6 +227,97 @@ public final class BuildingBoundsRenderer {
 
     private static boolean previewTouchesOrIntersects(AABB previewBounds, AABB buildingBounds) {
         return previewBounds.inflate(BUILDING_CONTACT_EPSILON).intersects(buildingBounds);
+    }
+
+    private static void renderCachedIntrusions(PoseStack poseStack, Vec3 cameraPos, Minecraft minecraft) {
+        ensurePreviewDetectionCache(minecraft);
+        for (PreviewIntrusion intrusion : cachedIntrusions) {
+            renderBox(poseStack, cameraPos, new AABB(intrusion.pos()), intrusion.color());
+        }
+        for (AABB buildingBounds : cachedTouchedBuildingBounds) {
+            renderWireBox(poseStack, cameraPos, buildingBounds, COLOR_SELECTED_BUILDING);
+        }
+    }
+
+    private static void ensurePreviewDetectionCache(Minecraft minecraft) {
+        long revision = BuildingPreviewManager.getPreviewRevision();
+        BlockPos origin = BuildingPreviewManager.getPreviewOrigin();
+        int rotation = BuildingPreviewManager.getRotationDegrees();
+        if (revision == intrusionCacheRevision && origin.equals(intrusionCacheOrigin) && rotation == intrusionCacheRotation) {
+            return;
+        }
+
+        intrusionCacheRevision = revision;
+        intrusionCacheOrigin = origin.immutable();
+        intrusionCacheRotation = rotation;
+        cachedIntrusions = List.of();
+        cachedTouchedBuildingBounds = List.of();
+        if (minecraft.level == null) {
+            return;
+        }
+
+        List<PreviewBlockData> blocks = BuildingPreviewManager.getPreviewBlocks();
+        AABB previewBounds = previewBounds(blocks);
+        List<PlacedBuildingRecord> buildings = previewPlacedBuildings(minecraft);
+        List<PreviewIntrusion> intrusions = new java.util.ArrayList<>();
+        for (PreviewBlockData block : blocks) {
+            BlockState worldState = minecraft.level.getBlockState(block.pos());
+            boolean inPlacedBuilding = intersectsPlacedBuilding(buildings, block.pos());
+            if (worldState.isAir() && !inPlacedBuilding) {
+                continue;
+            }
+            int color = worldState.getBlock() == block.state().getBlock() ? COLOR_INTRUSION_AIR : COLOR_INTRUSION_BLOCK;
+            intrusions.add(new PreviewIntrusion(block.pos().immutable(), color));
+        }
+
+        List<AABB> touchedBuildingBounds = new java.util.ArrayList<>();
+        if (previewBounds != null) {
+            for (PlacedBuildingRecord building : buildings) {
+                AABB bounds = buildingBounds(building);
+                if (previewTouchesOrIntersects(previewBounds, bounds)) {
+                    touchedBuildingBounds.add(bounds);
+                }
+            }
+        }
+        cachedIntrusions = List.copyOf(intrusions);
+        cachedTouchedBuildingBounds = List.copyOf(touchedBuildingBounds);
+    }
+
+    private static List<PlacedBuildingRecord> previewPlacedBuildings(Minecraft minecraft) {
+        if (!(minecraft.level instanceof net.minecraft.client.multiplayer.ClientLevel clientLevel) || minecraft.getSingleplayerServer() == null) {
+            return List.of();
+        }
+        var serverLevel = minecraft.getSingleplayerServer().getLevel(clientLevel.dimension());
+        return serverLevel == null ? List.of() : PlacedBuildingService.getBuildings(serverLevel);
+    }
+
+    private static boolean intersectsPlacedBuilding(List<PlacedBuildingRecord> buildings, BlockPos pos) {
+        for (PlacedBuildingRecord building : buildings) {
+            if (contains(building, pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean contains(PlacedBuildingRecord building, BlockPos pos) {
+        BlockPos min = building.minPos();
+        BlockPos max = building.maxPos();
+        return pos.getX() >= Math.min(min.getX(), max.getX()) && pos.getX() <= Math.max(min.getX(), max.getX())
+                && pos.getY() >= Math.min(min.getY(), max.getY()) && pos.getY() <= Math.max(min.getY(), max.getY())
+                && pos.getZ() >= Math.min(min.getZ(), max.getZ()) && pos.getZ() <= Math.max(min.getZ(), max.getZ());
+    }
+
+    private static AABB buildingBounds(PlacedBuildingRecord building) {
+        return new AABB(building.minPos().getX(), building.minPos().getY(), building.minPos().getZ(), building.maxPos().getX() + 1, building.maxPos().getY() + 1, building.maxPos().getZ() + 1);
+    }
+
+    private static void clearPreviewDetectionCache() {
+        intrusionCacheRevision = Long.MIN_VALUE;
+        intrusionCacheOrigin = BlockPos.ZERO;
+        intrusionCacheRotation = Integer.MIN_VALUE;
+        cachedIntrusions = List.of();
+        cachedTouchedBuildingBounds = List.of();
     }
 
     private static void renderWireBox(PoseStack poseStack, Vec3 cameraPos, AABB bounds, int color) {
@@ -334,5 +405,8 @@ public final class BuildingBoundsRenderer {
     }
 
     private record DisplayedBuildingBounds(AABB bounds, List<BlockPos> residentialPoiPositions) {
+    }
+
+    private record PreviewIntrusion(BlockPos pos, int color) {
     }
 }

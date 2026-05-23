@@ -63,8 +63,11 @@ public final class ResidentialControlBoxService {
         if (byControlBoxPoi != null) {
             return byControlBoxPoi;
         }
-        PlacedBuildingRecord byContainedPos = PlacedBuildingService.findByContainedPos(level, controlBoxPos);
-        return byContainedPos != null ? byContainedPos : findByRecordedControlBox(level, controlBoxPos);
+        PlacedBuildingRecord byRecordedControlBox = findByRecordedControlBox(level, controlBoxPos);
+        if (byRecordedControlBox != null) {
+            return byRecordedControlBox;
+        }
+        return PlacedBuildingService.findByContainedPos(level, controlBoxPos);
     }
 
     private static PlacedBuildingRecord findByRecordedControlBox(ServerLevel level, BlockPos controlBoxPos) {

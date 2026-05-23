@@ -22,6 +22,7 @@ public final class BuildingPreviewManager {
     private static boolean active;
     private static String buildingName = "";
     private static PreviewMesh cachedMesh = PreviewMesh.EMPTY;
+    private static long previewRevision;
     private BuildingPreviewManager() {
     }
 
@@ -87,6 +88,7 @@ public final class BuildingPreviewManager {
         buildingName = "";
         cachedMesh.close();
         cachedMesh = PreviewMesh.EMPTY;
+        previewRevision++;
     }
 
     public static List<PreviewBlockData> getPreviewBlocks() {
@@ -117,12 +119,17 @@ public final class BuildingPreviewManager {
         return cachedMesh;
     }
 
+    public static long getPreviewRevision() {
+        return previewRevision;
+    }
+
     private static void rebuildBlocks(BuildingStructure structure) {
         PREVIEW_BLOCKS.clear();
         List<BuildingBlockData> blocks = BuildingStructureService.resolvePlacedBlocks(structure, previewOrigin, rotationDegrees);
         for (BuildingBlockData block : blocks) {
             PREVIEW_BLOCKS.add(new PreviewBlockData(block.relativePos(), block.state(), 15728880));
         }
+        previewRevision++;
         rebuildMesh();
     }
 
@@ -133,7 +140,8 @@ public final class BuildingPreviewManager {
         for (PreviewBlockData block : snapshot) {
             PREVIEW_BLOCKS.add(new PreviewBlockData(block.pos().offset(dx, dy, dz), block.state(), block.packedLight()));
         }
-        rebuildMesh();
+        cachedMesh.offsetOrigin(dx, dy, dz);
+        previewRevision++;
     }
 
     private static void rebuildMesh() {

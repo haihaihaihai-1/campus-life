@@ -6,7 +6,6 @@ import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
@@ -52,7 +51,7 @@ public final class PreviewMeshBuilder {
         MeshLayerBuilder tripwire = new MeshLayerBuilder();
         List<PreviewBlockData> entityBlocks = new ArrayList<>();
         BlockPos meshOrigin = findMeshOrigin(allBlocks);
-        // 预览世界只暴露建筑自身方块，避免模型剔除时误读取真实世界相邻方块。
+        // 预览视图只暴露建筑自身方块，避免模型剔除读取真实世界相邻方块。
         BlockAndTintGetter previewView = new PreviewBlockView(minecraft.level, allBlocks);
 
         ModelBlockRenderer modelRenderer = minecraft.getBlockRenderer().getModelRenderer();
@@ -65,7 +64,7 @@ public final class PreviewMeshBuilder {
                 }
                 BakedModel model = minecraft.getBlockRenderer().getBlockModel(state);
                 if (model.isCustomRenderer()) {
-                    // 箱子、床等方块实体渲染不进普通 mesh，交给后续单独处理。
+                    // 箱子、床等方块实体渲染不进普通 mesh，后续如需显示可单独处理。
                     entityBlocks.add(block);
                     continue;
                 }
@@ -78,7 +77,7 @@ public final class PreviewMeshBuilder {
 
                     RandomSource random = RandomSource.create();
                     PoseStack poseStack = new PoseStack();
-                    // 顶点坐标相对 meshOrigin 存储，渲染时再整体平移，减少浮点精度问题。
+                    // 顶点坐标相对 meshOrigin 存储，渲染时整体平移，减少浮点精度问题。
                     poseStack.translate(block.pos().getX() - meshOrigin.getX(), block.pos().getY() - meshOrigin.getY(), block.pos().getZ() - meshOrigin.getZ());
                     modelRenderer.tesselateBlock(
                             previewView,
@@ -182,7 +181,7 @@ public final class PreviewMeshBuilder {
 
         @Override
         public BlockState getBlockState(BlockPos pos) {
-            // 未在投影内的坐标返回空气，这样内部贴合面会被正确剔除。
+            // 未在投影内的坐标返回空气，使内部贴合面能被正确剔除。
             return states.getOrDefault(pos.asLong(), Blocks.AIR.defaultBlockState());
         }
 
@@ -233,12 +232,10 @@ public final class PreviewMeshBuilder {
         private VertexBuffer upload() {
             MeshData mesh = buffer.build();
             if (mesh == null) {
-                SimuKraft.LOGGER.warn("SimuKraft: PreviewMeshBuilder – BufferBuilder.build() returned null (0 vertices written)");
                 return null;
             }
-            SimuKraft.LOGGER.info("SimuKraft: PreviewMeshBuilder – uploading mesh with {} vertices", mesh.drawState().vertexCount());
             try {
-                // 上传到 GPU 后 MeshData 必须关闭，否则大建筑反复预览会堆积堆外内存。
+                // MeshData 上传 GPU 后必须关闭，避免大型建筑反复预览堆积堆外内存。
                 VertexBuffer vertexBuffer = new VertexBuffer(VertexBuffer.Usage.STATIC);
                 vertexBuffer.bind();
                 vertexBuffer.upload(mesh);

@@ -1,6 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
+import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireFirePacket;
 import common.cn.kafei.simukraft.network.npc.state.EmploymentStateRequestPacket;
 import common.cn.kafei.simukraft.network.npc.state.EmploymentStateResponsePacket;
@@ -8,10 +9,10 @@ import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
-import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.AlignContent;
+import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.FlexDirection;
-import dev.vfyjxf.taffy.style.TaffyPosition;
+import dev.vfyjxf.taffy.style.FlexWrap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -26,9 +27,15 @@ public class BuildBoxScreenOpener {
     private static final int MAIN_PANEL_HEIGHT = 200;
     private static final int CATEGORY_BUTTON_WIDTH = 110;
     private static final int CATEGORY_BUTTON_HEIGHT = 20;
-    private static final int CATEGORY_BUTTON_SPACING = 3;
-    private static final int CATEGORY_PANEL_WIDTH = 540;
-    private static final int CATEGORY_PANEL_HEIGHT = 205;
+    private static final int CATEGORY_BUTTON_GAP = 4;
+    private static final float CATEGORY_TITLE_LEFT_RATIO = 0.30F;
+    private static final float CATEGORY_TITLE_TOP_RATIO = 0.29F;
+    private static final float CATEGORY_TITLE_WIDTH_RATIO = 0.40F;
+    private static final float CATEGORY_TITLE_HEIGHT_RATIO = 0.20F;
+    private static final float CATEGORY_GRID_LEFT_RATIO = 0.11F;
+    private static final float CATEGORY_GRID_TOP_RATIO = 0.625F;
+    private static final float CATEGORY_GRID_WIDTH_RATIO = 0.78F;
+    private static final float CATEGORY_GRID_HEIGHT_RATIO = 0.32F;
 
     public static void open(BlockPos buildBoxPos) {
         PacketDistributor.sendToServer(new EmploymentStateRequestPacket(buildBoxPos, "build_box"));
@@ -43,84 +50,48 @@ public class BuildBoxScreenOpener {
     }
 
     private static ModularUI createUi(BlockPos buildBoxPos, EmploymentStateResponsePacket state) {
-        int screenWidth = Math.max(320, Minecraft.getInstance().getWindow().getGuiScaledWidth());
-        int screenHeight = Math.max(240, Minecraft.getInstance().getWindow().getGuiScaledHeight());
-        UIElement root = new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.heightPercent(100);
-            layout.alignItems(AlignItems.CENTER);
-            layout.justifyContent(AlignContent.CENTER);
-        });
-        root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
+        SimuKraftFlexLayout.ScreenSize screenSize = SimuKraftFlexLayout.screenSize();
+        UIElement root = SimuKraftFlexLayout.root(screenSize);
+        UIElement page = SimuKraftFlexLayout.pageColumn();
+        root.addChild(page);
 
-        Button doneButton = new Button();
-        doneButton.setText(Component.translatable("gui.button.done"));
-        doneButton.setOnClick(event -> close());
-        doneButton.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(10);
-            layout.top(10);
-            layout.width(50);
-            layout.height(24);
-        });
-        root.addChild(doneButton);
+        SimuKraftFlexLayout.addTopChrome(root, screenSize, Component.translatable("gui.button.done"), BuildBoxScreenOpener::close);
+        page.addChild(SimuKraftFlexLayout.spacer(1));
 
-        UIElement copyrightLabel = textElement(Component.translatable("gui.copyright"), 200, TextTexture.TextType.RIGHT, SimuKraftUiTheme.TEXT_MUTED_COLOR);
-        copyrightLabel.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.right(10);
-            layout.top(10);
-            layout.width(200);
-            layout.height(16);
-        });
-        root.addChild(copyrightLabel);
+        int panelWidth = Math.min(MAIN_PANEL_WIDTH, Math.max(280, screenSize.width() - 24));
+        UIElement centerContainer = SimuKraftFlexLayout.centeredColumn(panelWidth, MAIN_PANEL_WIDTH, MAIN_PANEL_HEIGHT, 0);
 
-        UIElement centerContainer = new UIElement().layout(layout -> {
-            layout.width(MAIN_PANEL_WIDTH);
-            layout.height(MAIN_PANEL_HEIGHT);
-            layout.paddingAll(14);
-            layout.flexDirection(FlexDirection.COLUMN);
-            layout.alignItems(AlignItems.CENTER);
-            layout.gapAll(0);
-            layout.marginTop(-60);
-        });
-
-        centerContainer.addChild(textElement(Component.translatable("gui.build_box.title"), 360, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_PRIMARY_COLOR).layout(layout -> {
-            layout.width(360);
+        int textWidth = Math.max(240, panelWidth - 28);
+        centerContainer.addChild(textElement(Component.translatable("gui.build_box.title"), textWidth, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_PRIMARY_COLOR).layout(layout -> {
+            layout.width(textWidth);
             layout.height(20);
             layout.marginBottom(4);
         }));
-        centerContainer.addChild(textElement(Component.translatable(state.statusKey()), 360, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_INFO_COLOR).layout(layout -> {
-            layout.width(360);
+        centerContainer.addChild(textElement(Component.translatable(state.statusKey()), textWidth, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_INFO_COLOR).layout(layout -> {
+            layout.width(textWidth);
             layout.height(16);
             layout.marginBottom(4);
         }));
-        centerContainer.addChild(textElement(Component.translatable("gui.build_box.instruction"), 360, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_WARNING_COLOR).layout(layout -> {
-            layout.width(360);
+        centerContainer.addChild(textElement(Component.translatable("gui.build_box.instruction"), textWidth, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_WARNING_COLOR).layout(layout -> {
+            layout.width(textWidth);
             layout.height(16);
-            layout.marginBottom(44);
+            layout.marginBottom(Math.max(12, Math.min(44, screenSize.height() / 6)));
         }));
 
-        UIElement row1 = new UIElement().layout(layout -> {
-            layout.flexDirection(FlexDirection.ROW);
-            layout.gapAll(BUTTON_SPACING);
-            layout.marginBottom(BUTTON_SPACING);
-        });
+        UIElement row1 = SimuKraftFlexLayout.row(BUTTON_SPACING);
         row1.addChild(createButtonSlot("gui.build_box.hire_builder", () -> handleHireBuilder(buildBoxPos), !state.hasAnyEmployee()));
         row1.addChild(createButtonSlot("gui.build_box.select_building", () -> handleSelectBuilding(buildBoxPos), state.builderCitizenId() != null));
         row1.addChild(createButtonSlot("gui.build_box.fire_employee", () -> handleFireEmployee(buildBoxPos, state), state.hasAnyEmployee()));
         centerContainer.addChild(row1);
 
-        UIElement row2 = new UIElement().layout(layout -> {
-            layout.flexDirection(FlexDirection.ROW);
-            layout.gapAll(BUTTON_SPACING);
-        });
+        UIElement row2 = SimuKraftFlexLayout.row(BUTTON_SPACING);
         row2.addChild(createButtonSlot("gui.build_box.hire_planner", () -> handleHirePlanner(buildBoxPos), !state.hasAnyEmployee()));
         row2.addChild(createButtonSlot("gui.build_box.plan_area", () -> handlePlanArea(buildBoxPos), state.plannerCitizenId() != null));
         row2.addChild(createButtonSlot("gui.build_box.employee_info", BuildBoxScreenOpener::handleEmployeeInfo, true));
         centerContainer.addChild(row2);
 
-        root.addChild(centerContainer);
+        page.addChild(centerContainer);
+        page.addChild(SimuKraftFlexLayout.spacer(1));
 
         return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
@@ -128,54 +99,33 @@ public class BuildBoxScreenOpener {
     }
 
     private static UIElement textElement(Component text, int width, TextTexture.TextType type, int color) {
-        UIElement element = new UIElement();
-        element.style(style -> style.backgroundTexture(new TextTexture(text.getString())
-                .setWidth(width)
-                .setType(type)
-                .setColor(color)
-                .setDropShadow(true)));
-        return element;
+        return SimuKraftFlexLayout.text(text, width, color, type, true);
     }
 
     private static UIElement createButtonSlot(String translationKey, Runnable action, boolean active) {
-        UIElement slot = new UIElement().layout(layout -> {
-            layout.width(BUTTON_WIDTH);
-            layout.height(BUTTON_HEIGHT);
-        });
         Button button = new Button();
         button.setText(Component.translatable(translationKey));
         if (active) {
             button.setOnClick(event -> action.run());
         }
         button.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(0);
-            layout.top(0);
             layout.width(BUTTON_WIDTH);
             layout.height(BUTTON_HEIGHT);
         });
-        slot.addChild(button);
         button.setActive(active);
-        return slot;
+        return button;
     }
 
     private static UIElement createCategoryButtonSlot(String translationKey, BlockPos buildBoxPos) {
-        UIElement slot = new UIElement().layout(layout -> {
-            layout.width(CATEGORY_BUTTON_WIDTH);
-            layout.height(CATEGORY_BUTTON_HEIGHT);
-        });
         Button button = new Button();
         button.setText(Component.translatable(translationKey));
         button.setOnClick(event -> handleBuildingCategory(buildBoxPos, translationKey));
         button.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(0);
-            layout.top(0);
             layout.width(CATEGORY_BUTTON_WIDTH);
             layout.height(CATEGORY_BUTTON_HEIGHT);
+            layout.flexShrink(0);
         });
-        slot.addChild(button);
-        return slot;
+        return button;
     }
 
     private static void close() {
@@ -199,85 +149,50 @@ public class BuildBoxScreenOpener {
     }
 
     private static ModularUI createSelectBuildingUi(BlockPos buildBoxPos) {
-        int screenWidth = Math.max(320, Minecraft.getInstance().getWindow().getGuiScaledWidth());
-        int screenHeight = Math.max(240, Minecraft.getInstance().getWindow().getGuiScaledHeight());
-        UIElement root = new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.heightPercent(100);
-            layout.alignItems(AlignItems.CENTER);
-            layout.justifyContent(AlignContent.CENTER);
-        });
-        root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
+        SimuKraftFlexLayout.ScreenSize screenSize = SimuKraftFlexLayout.screenSize();
+        UIElement root = SimuKraftFlexLayout.root(screenSize);
+        int screenWidth = screenSize.width();
+        int screenHeight = screenSize.height();
+        CategoryRegions regions = resolveCategoryRegions(screenWidth, screenHeight);
 
-        Button doneButton = new Button();
-        doneButton.setText(Component.translatable("gui.button.done"));
-        doneButton.setOnClick(event -> close());
-        doneButton.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(10);
-            layout.top(10);
-            layout.width(50);
-            layout.height(24);
-        });
-        root.addChild(doneButton);
+        SimuKraftFlexLayout.addTopChrome(root, screenSize, Component.translatable("gui.button.done"), BuildBoxScreenOpener::close);
 
-        UIElement copyrightLabel = textElement(Component.translatable("gui.copyright"), 200, TextTexture.TextType.RIGHT, SimuKraftUiTheme.TEXT_MUTED_COLOR);
-        copyrightLabel.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.right(10);
-            layout.top(10);
-            layout.width(200);
-            layout.height(16);
-        });
-        root.addChild(copyrightLabel);
-
-        UIElement centerContainer = new UIElement().layout(layout -> {
-            layout.width(CATEGORY_PANEL_WIDTH);
-            layout.height(CATEGORY_PANEL_HEIGHT);
-            layout.paddingAll(14);
+        UIElement titleRegion = SimuKraftFlexLayout.absoluteRegion(regions.titleLeft(), regions.titleTop(), regions.titleWidth(), regions.titleHeight());
+        titleRegion.layout(layout -> {
             layout.flexDirection(FlexDirection.COLUMN);
             layout.alignItems(AlignItems.CENTER);
-            layout.gapAll(0);
-            layout.marginTop(-30);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(Math.max(6, regions.titleHeight() / 12));
         });
-
-        centerContainer.addChild(textElement(Component.translatable("gui.select_building.title"), 480, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_PRIMARY_COLOR).layout(layout -> {
-            layout.width(480);
+        titleRegion.addChild(textElement(Component.translatable("gui.select_building.title"), regions.titleWidth(), TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_PRIMARY_COLOR).layout(layout -> {
+            layout.widthPercent(100);
             layout.height(20);
-            layout.marginBottom(4);
         }));
-        centerContainer.addChild(textElement(Component.translatable("gui.select_building.status_working"), 480, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_INFO_COLOR).layout(layout -> {
-            layout.width(480);
+        titleRegion.addChild(textElement(Component.translatable("gui.select_building.status_working"), regions.titleWidth(), TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_INFO_COLOR).layout(layout -> {
+            layout.widthPercent(100);
             layout.height(16);
-            layout.marginBottom(4);
         }));
-        centerContainer.addChild(textElement(Component.translatable("gui.select_building.instruction"), 480, TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_WARNING_COLOR).layout(layout -> {
-            layout.width(480);
+        titleRegion.addChild(textElement(Component.translatable("gui.select_building.instruction"), regions.titleWidth(), TextTexture.TextType.NORMAL, SimuKraftUiTheme.TEXT_WARNING_COLOR).layout(layout -> {
+            layout.widthPercent(100);
             layout.height(16);
-            layout.marginBottom(56);
         }));
+        root.addChild(titleRegion);
 
-        UIElement row1 = new UIElement().layout(layout -> {
+        UIElement gridRegion = SimuKraftFlexLayout.absoluteRegion(regions.gridLeft(), regions.gridTop(), regions.gridWidth(), regions.gridHeight());
+        gridRegion.layout(layout -> {
             layout.flexDirection(FlexDirection.ROW);
-            layout.width(CATEGORY_BUTTON_WIDTH * 4 + CATEGORY_BUTTON_SPACING * 3);
-            layout.gapAll(CATEGORY_BUTTON_SPACING);
-            layout.marginBottom(CATEGORY_BUTTON_SPACING);
+            layout.flexWrap(FlexWrap.WRAP);
+            layout.alignContent(AlignContent.FLEX_START);
+            layout.alignItems(AlignItems.FLEX_START);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(CATEGORY_BUTTON_GAP);
         });
-        row1.addChild(createCategoryButtonSlot("gui.category.residential", buildBoxPos));
-        row1.addChild(createCategoryButtonSlot("gui.category.commercial", buildBoxPos));
-        row1.addChild(createCategoryButtonSlot("gui.category.industrial", buildBoxPos));
-        row1.addChild(createCategoryButtonSlot("gui.category.other", buildBoxPos));
-        centerContainer.addChild(row1);
-
-        UIElement row2 = new UIElement().layout(layout -> {
-            layout.flexDirection(FlexDirection.ROW);
-            layout.width(CATEGORY_BUTTON_WIDTH * 4 + CATEGORY_BUTTON_SPACING * 3);
-            layout.gapAll(CATEGORY_BUTTON_SPACING);
-        });
-        row2.addChild(createCategoryButtonSlot("gui.category.public", buildBoxPos));
-        centerContainer.addChild(row2);
-
-        root.addChild(centerContainer);
+        gridRegion.addChild(createCategoryButtonSlot("gui.category.residential", buildBoxPos));
+        gridRegion.addChild(createCategoryButtonSlot("gui.category.commercial", buildBoxPos));
+        gridRegion.addChild(createCategoryButtonSlot("gui.category.industrial", buildBoxPos));
+        gridRegion.addChild(createCategoryButtonSlot("gui.category.other", buildBoxPos));
+        gridRegion.addChild(createCategoryButtonSlot("gui.category.public", buildBoxPos));
+        root.addChild(gridRegion);
 
         return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
@@ -313,4 +228,33 @@ public class BuildBoxScreenOpener {
             close();
         }
     }
+
+    private static CategoryRegions resolveCategoryRegions(int screenWidth, int screenHeight) {
+        return new CategoryRegions(
+                clamp(Math.round(screenWidth * CATEGORY_TITLE_LEFT_RATIO), 0, screenWidth - 1),
+                clamp(Math.round(screenHeight * CATEGORY_TITLE_TOP_RATIO), 0, screenHeight - 1),
+                clamp(Math.round(screenWidth * CATEGORY_TITLE_WIDTH_RATIO), 1, screenWidth),
+                clamp(Math.round(screenHeight * CATEGORY_TITLE_HEIGHT_RATIO), 1, screenHeight),
+                clamp(Math.round(screenWidth * CATEGORY_GRID_LEFT_RATIO), 0, screenWidth - 1),
+                clamp(Math.round(screenHeight * CATEGORY_GRID_TOP_RATIO), 0, screenHeight - 1),
+                clamp(Math.round(screenWidth * CATEGORY_GRID_WIDTH_RATIO), 1, screenWidth),
+                clamp(Math.round(screenHeight * CATEGORY_GRID_HEIGHT_RATIO), 1, screenHeight)
+        );
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private record CategoryRegions(int titleLeft,
+                                   int titleTop,
+                                   int titleWidth,
+                                   int titleHeight,
+                                   int gridLeft,
+                                   int gridTop,
+                                   int gridWidth,
+                                   int gridHeight) {
+    }
 }
+
+

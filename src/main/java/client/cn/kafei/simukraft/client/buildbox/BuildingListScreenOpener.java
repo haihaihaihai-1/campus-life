@@ -1,6 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
+import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup;
 import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
@@ -9,6 +10,10 @@ import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import common.cn.kafei.simukraft.building.BuildingStructure;
 import common.cn.kafei.simukraft.building.BuildingStructureService;
+import dev.vfyjxf.taffy.style.AlignContent;
+import dev.vfyjxf.taffy.style.AlignItems;
+import dev.vfyjxf.taffy.style.FlexDirection;
+import dev.vfyjxf.taffy.style.FlexWrap;
 import dev.vfyjxf.taffy.style.TaffyPosition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -27,11 +32,27 @@ import java.util.Optional;
 @EventBusSubscriber(value = Dist.CLIENT)
 public final class BuildingListScreenOpener {
     private static final int CARD_TEXT_COLOR = SimuKraftUiTheme.CARD_TEXT_COLOR;
-    private static final int BUILDINGS_PER_PAGE = 6;
-    private static final int COLUMNS = 3;
+    private static final int MAX_BUILDINGS_PER_PAGE = 12;
     private static final int CARD_GAP = 10;
-    private static final int TOP_MARGIN = 80;
-    private static final int BOTTOM_MARGIN = 50;
+    private static final int MIN_BUTTON_WIDTH = 50;
+    private static final int MIN_BUTTON_HEIGHT = 20;
+    private static final float TITLE_LEFT_RATIO = 0.153F;
+    private static final float TITLE_TOP_RATIO = 0.038F;
+    private static final float TITLE_WIDTH_RATIO = 0.70F;
+    private static final float TITLE_HEIGHT_RATIO = 0.124F;
+    private static final float CARD_LEFT_RATIO = 0.068F;
+    private static final float CARD_TOP_RATIO = 0.168F;
+    private static final float CARD_WIDTH_RATIO = 0.864F;
+    private static final float CARD_HEIGHT_RATIO = 0.728F;
+    private static final float SELECTED_INFO_HEIGHT_RATIO = 0.04F;
+    private static final float PAGER_LEFT_RATIO = 0.19F;
+    private static final float PAGER_TOP_RATIO = 0.874F;
+    private static final float PAGER_WIDTH_RATIO = 0.61F;
+    private static final float PAGER_HEIGHT_RATIO = 0.07F;
+    private static final float CONFIRM_LEFT_RATIO = 0.79F;
+    private static final float CONFIRM_TOP_RATIO = 0.874F;
+    private static final float CONFIRM_WIDTH_RATIO = 0.16F;
+    private static final float CONFIRM_HEIGHT_RATIO = 0.07F;
     private static final int PREFERRED_CARD_WIDTH = 180;
     private static final int MIN_CARD_WIDTH = 160;
     private static final int PREFERRED_CARD_HEIGHT = 80;
@@ -78,99 +99,74 @@ public final class BuildingListScreenOpener {
     }
 
     private static ModularUI createUi(String category, BlockPos buildBoxPos) {
-        int screenWidth = Math.max(320, Minecraft.getInstance().getWindow().getGuiScaledWidth());
-        int screenHeight = Math.max(240, Minecraft.getInstance().getWindow().getGuiScaledHeight());
+        SimuKraftFlexLayout.ScreenSize screenSize = SimuKraftFlexLayout.screenSize();
+        int screenWidth = screenSize.width();
+        int screenHeight = screenSize.height();
+        RegionMetrics regions = resolveRegions(screenWidth, screenHeight);
+        GridMetrics grid = resolveGridMetrics(regions.cardRegion().width(), regions.cardRegion().height());
         List<BuildingCacheService.BuildingMeta> buildings = BuildingCacheService.getBuildings(category);
-        int pageCount = totalPages(buildings);
+        int pageCount = totalPages(buildings, grid.perPage());
         currentPage = Math.max(0, Math.min(currentPage, pageCount - 1));
 
-        UIElement root = new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.heightPercent(100);
-        });
-        root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
+        UIElement root = SimuKraftFlexLayout.root(screenSize);
 
-        Button backButton = new Button();
-        backButton.setText(Component.translatable("gui.button.back"));
-        backButton.setOnClick(event -> BuildBoxScreenOpener.open(buildBoxPos));
-        backButton.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(5);
-            layout.top(5);
-            layout.width(45);
-            layout.height(20);
-        });
-        root.addChild(backButton);
-
-        root.addChild(textElement(Component.translatable("gui.building_list.title", categoryName(category)), screenWidth, SimuKraftUiTheme.TEXT_PRIMARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(0);
-            layout.top(25);
-            layout.width(screenWidth);
-            layout.height(14);
-        }));
+        SimuKraftFlexLayout.addTopChrome(root, screenSize, Component.translatable("gui.button.back"), () -> BuildBoxScreenOpener.open(buildBoxPos));
 
         Component status = buildings.isEmpty()
                 ? Component.translatable("gui.building_list.empty_dir", BuildingCacheService.categoryDirectory(category).toString())
                 : Component.translatable("gui.building_list.status", buildings.size());
         int statusColor = buildings.isEmpty() ? SimuKraftUiTheme.TEXT_ERROR_COLOR : SimuKraftUiTheme.TEXT_SUCCESS_COLOR;
-        root.addChild(textElement(status, screenWidth, statusColor, TextTexture.TextType.NORMAL).layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(0);
-            layout.top(45);
-            layout.width(screenWidth);
-            layout.height(14);
+        UIElement titleRegion = absoluteRegion(regions.titleRegion());
+        titleRegion.layout(layout -> {
+            layout.flexDirection(FlexDirection.COLUMN);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.alignItems(AlignItems.CENTER);
+            layout.gapAll(Math.max(4, regions.titleRegion().height() / 12));
+        });
+        titleRegion.addChild(textElement(Component.translatable("gui.building_list.title", categoryName(category)), regions.titleRegion().width(), SimuKraftUiTheme.TEXT_PRIMARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
+            layout.widthPercent(100);
+            layout.height(18);
         }));
+        titleRegion.addChild(textElement(status, regions.titleRegion().width(), statusColor, TextTexture.TextType.NORMAL).layout(layout -> {
+            layout.widthPercent(100);
+            layout.height(18);
+        }));
+        root.addChild(titleRegion);
 
-        List<BuildingCacheService.BuildingMeta> pageBuildings = pageBuildings(buildings, currentPage);
-        int availableWidth = screenWidth - 40;
-        int availableHeight = screenHeight - TOP_MARGIN - BOTTOM_MARGIN - 50;
-        int maxCardWidth = (availableWidth - (COLUMNS - 1) * CARD_GAP) / COLUMNS;
-        int rows = (int) Math.ceil((double) Math.max(1, pageBuildings.size()) / COLUMNS);
-        int actualCardWidth = Math.max(MIN_CARD_WIDTH, Math.min(PREFERRED_CARD_WIDTH, maxCardWidth));
-        int maxCardHeight = rows > 0 ? (availableHeight - (rows - 1) * CARD_GAP) / rows : PREFERRED_CARD_HEIGHT;
-        int actualCardHeight = Math.max(MIN_CARD_HEIGHT, Math.min(PREFERRED_CARD_HEIGHT, maxCardHeight));
-        int totalWidth = COLUMNS * actualCardWidth + (COLUMNS - 1) * CARD_GAP;
-        int totalHeight = rows * actualCardHeight + (rows - 1) * CARD_GAP;
-        int startX = (screenWidth - totalWidth) / 2;
-        int startY = Math.max(TOP_MARGIN, TOP_MARGIN + (availableHeight - totalHeight) / 2);
+        List<BuildingCacheService.BuildingMeta> pageBuildings = pageBuildings(buildings, currentPage, grid.perPage());
+        UIElement cardRegion = absoluteRegion(regions.cardRegion());
+        cardRegion.layout(layout -> {
+            layout.flexDirection(FlexDirection.ROW);
+            layout.flexWrap(FlexWrap.WRAP);
+            layout.alignContent(AlignContent.CENTER);
+            layout.alignItems(AlignItems.CENTER);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(CARD_GAP);
+            layout.paddingAll(4);
+        });
         for (int i = 0; i < pageBuildings.size(); i++) {
-            int row = i / COLUMNS;
-            int col = i % COLUMNS;
-            int x = startX + col * (actualCardWidth + CARD_GAP);
-            int y = startY + row * (actualCardHeight + CARD_GAP);
-            root.addChild(createBuildingCard(pageBuildings.get(i), x, y, actualCardWidth, actualCardHeight, categoryColor(category)));
+            cardRegion.addChild(createBuildingCard(pageBuildings.get(i), grid.cardWidth(), grid.cardHeight(), categoryColor(category)));
         }
-
-        if (pageCount > 1) {
-            root.addChild(textElement(Component.translatable("gui.pagination.info", currentPage + 1, pageCount), screenWidth, SimuKraftUiTheme.TEXT_SECONDARY_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
-                layout.positionType(TaffyPosition.ABSOLUTE);
-                layout.left(0);
-                layout.top(screenHeight - 40);
-                layout.width(screenWidth);
-                layout.height(12);
-            }));
-        }
+        root.addChild(cardRegion);
 
         if (selectedBuildingFileName != null) {
-            root.addChild(textElement(Component.translatable("gui.building_list.selected", selectedBuildingFileName), screenWidth, SimuKraftUiTheme.TEXT_WARNING_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
-                layout.positionType(TaffyPosition.ABSOLUTE);
-                layout.left(0);
-                layout.top(screenHeight - 60);
-                layout.width(screenWidth);
+            UIElement infoRegion = absoluteRegion(regions.selectedInfoRegion());
+            infoRegion.setAllowHitTest(false);
+            infoRegion.layout(layout -> {
+                layout.flexDirection(FlexDirection.COLUMN);
+                layout.alignItems(AlignItems.CENTER);
+                layout.justifyContent(AlignContent.CENTER);
+            });
+            infoRegion.addChild(textElement(Component.translatable("gui.building_list.selected", selectedBuildingFileName), regions.selectedInfoRegion().width(), SimuKraftUiTheme.TEXT_WARNING_COLOR, TextTexture.TextType.NORMAL).layout(layout -> {
+                layout.widthPercent(100);
                 layout.height(12);
             }));
+            root.addChild(infoRegion);
         }
 
         Button prevButton = new Button();
         prevButton.setText(Component.translatable("gui.pagination.previous"));
-        prevButton.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(screenWidth / 2 - 100);
-            layout.top(screenHeight - 30);
-            layout.width(80);
-            layout.height(20);
-        });
+        layoutButtonInRegion(prevButton, regions.pagerRegion(), 0.25F, 0.82F);
         if (currentPage > 0) {
             prevButton.setOnClick(event -> {
                 currentPage--;
@@ -179,17 +175,10 @@ public final class BuildingListScreenOpener {
         } else {
             prevButton.setActive(false);
         }
-        root.addChild(prevButton);
 
         Button nextButton = new Button();
         nextButton.setText(Component.translatable("gui.pagination.next"));
-        nextButton.layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(screenWidth / 2 + 20);
-            layout.top(screenHeight - 30);
-            layout.width(80);
-            layout.height(20);
-        });
+        layoutButtonInRegion(nextButton, regions.pagerRegion(), 0.25F, 0.82F);
         if (currentPage < pageCount - 1) {
             nextButton.setOnClick(event -> {
                 currentPage++;
@@ -198,22 +187,54 @@ public final class BuildingListScreenOpener {
         } else {
             nextButton.setActive(false);
         }
-        root.addChild(nextButton);
+
+        UIElement pageLabel = textElement(Component.translatable("gui.pagination.info", currentPage + 1, pageCount), regions.pagerRegion().width() / 3, SimuKraftUiTheme.TEXT_SECONDARY_COLOR, TextTexture.TextType.NORMAL);
+        pageLabel.layout(layout -> {
+            layout.width(Math.max(80, regions.pagerRegion().width() / 3));
+            layout.height(14);
+        });
+
+        UIElement pagerRegion = absoluteRegion(regions.pagerRegion());
+        pagerRegion.layout(layout -> {
+            layout.flexDirection(FlexDirection.ROW);
+            layout.alignItems(AlignItems.CENTER);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(Math.max(8, regions.pagerRegion().width() / 28));
+        });
+        pagerRegion.addChild(prevButton);
+        pagerRegion.addChild(pageLabel);
+        pagerRegion.addChild(nextButton);
+        root.addChild(pagerRegion);
+
+        Button confirmButton = new Button();
+        confirmButton.setText(Component.translatable("gui.button.select"));
+        layoutButtonInRegion(confirmButton, regions.confirmRegion(), 0.88F, 0.82F);
+        if (selectedBuildingFileName != null) {
+            confirmButton.setOnClick(event -> confirmSelectedBuilding());
+        } else {
+            confirmButton.setActive(false);
+        }
+        UIElement confirmRegion = absoluteRegion(regions.confirmRegion());
+        confirmRegion.layout(layout -> {
+            layout.flexDirection(FlexDirection.ROW);
+            layout.alignItems(AlignItems.CENTER);
+            layout.justifyContent(AlignContent.CENTER);
+        });
+        confirmRegion.addChild(confirmButton);
+        root.addChild(confirmRegion);
 
         return new ModularUI(SimuKraftUiTheme.createUi(root)).shouldCloseOnEsc(true).shouldCloseOnKeyInventory(false);
     }
 
-    private static UIElement createBuildingCard(BuildingCacheService.BuildingMeta building, int x, int y, int width, int height, int accentColor) {
+    private static UIElement createBuildingCard(BuildingCacheService.BuildingMeta building, int width, int height, int accentColor) {
         boolean selected = building.structureFileName().equals(selectedBuildingFileName);
         int buttonInset = 2;
         int buttonWidth = Math.max(1, width - buttonInset * 2);
         int buttonHeight = Math.max(1, height - buttonInset * 2);
         UIElement wrapper = new UIElement().layout(layout -> {
-            layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(x);
-            layout.top(y);
             layout.width(width);
             layout.height(height);
+            layout.flexShrink(0);
         });
         wrapper.addChild(SimuKraftUiTheme.createDecorationLayer(3, 4, width - 4, height - 4, "simukraft_card_shadow"));
 
@@ -230,21 +251,7 @@ public final class BuildingListScreenOpener {
         card.addClass("simukraft_card_button");
         card.setOnClick(event -> {
             selectedBuildingFileName = building.structureFileName();
-            Minecraft minecraft = Minecraft.getInstance();
-            if (minecraft != null && minecraft.player != null) {
-                var loadedStructure = BuildingStructureLoader.load(building);
-                Component message = loadedStructure.isPresent()
-                        ? Component.translatable("message.simukraft.building_list.loaded", building.name(), loadedStructure.get().format().name() + " " + loadedStructure.get().size().toShortString())
-                        : Component.translatable("message.simukraft.building_list.load_failed", building.name(), building.structureFileName());
-                minecraft.player.displayClientMessage(message, true);
-                Optional<BuildingStructure> structure = BuildingStructureService.loadStructure(building);
-                if (structure.isPresent()) {
-                    pendingPreview = new PendingPreview(building, currentBuildBoxPos, structure.get());
-                    minecraft.setScreen(null);
-                } else {
-                    minecraft.player.displayClientMessage(Component.translatable("message.simukraft.building_preview.open_failed", building.name()), false);
-                }
-            }
+            reopen();
         });
         card.addChild(SimuKraftUiTheme.createDecorationLayer(6, 7, buttonWidth - 12, buttonHeight - 14, "simukraft_card_content_panel"));
 
@@ -323,17 +330,110 @@ public final class BuildingListScreenOpener {
         return element;
     }
 
-    private static List<BuildingCacheService.BuildingMeta> pageBuildings(List<BuildingCacheService.BuildingMeta> buildings, int page) {
-        int start = Math.max(0, page) * BUILDINGS_PER_PAGE;
-        int end = Math.min(start + BUILDINGS_PER_PAGE, buildings.size());
+    private static RegionMetrics resolveRegions(int screenWidth, int screenHeight) {
+        RegionBox titleRegion = relativeBox(screenWidth, screenHeight, TITLE_LEFT_RATIO, TITLE_TOP_RATIO, TITLE_WIDTH_RATIO, TITLE_HEIGHT_RATIO);
+        RegionBox rawCardRegion = relativeBox(screenWidth, screenHeight, CARD_LEFT_RATIO, CARD_TOP_RATIO, CARD_WIDTH_RATIO, CARD_HEIGHT_RATIO);
+        RegionBox pagerRegion = relativeBox(screenWidth, screenHeight, PAGER_LEFT_RATIO, PAGER_TOP_RATIO, PAGER_WIDTH_RATIO, PAGER_HEIGHT_RATIO);
+        RegionBox confirmRegion = relativeBox(screenWidth, screenHeight, CONFIRM_LEFT_RATIO, CONFIRM_TOP_RATIO, CONFIRM_WIDTH_RATIO, CONFIRM_HEIGHT_RATIO);
+        int cardBottomLimit = Math.max(rawCardRegion.top() + MIN_CARD_HEIGHT, Math.min(rawCardRegion.bottom(), pagerRegion.top() - 4));
+        RegionBox cardRegion = new RegionBox(
+                rawCardRegion.left(),
+                rawCardRegion.top(),
+                rawCardRegion.width(),
+                Math.max(MIN_CARD_HEIGHT, cardBottomLimit - rawCardRegion.top())
+        );
+        int selectedInfoHeight = Math.max(16, Math.round(screenHeight * SELECTED_INFO_HEIGHT_RATIO));
+        RegionBox selectedInfoRegion = new RegionBox(
+                cardRegion.left(),
+                Math.max(cardRegion.top(), cardRegion.bottom() - selectedInfoHeight),
+                cardRegion.width(),
+                selectedInfoHeight
+        );
+        return new RegionMetrics(
+                titleRegion,
+                cardRegion,
+                selectedInfoRegion,
+                pagerRegion,
+                confirmRegion
+        );
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static UIElement absoluteRegion(RegionBox region) {
+        return SimuKraftFlexLayout.absoluteRegion(region.left(), region.top(), region.width(), region.height());
+    }
+
+    private static RegionBox relativeBox(int screenWidth, int screenHeight, float leftRatio, float topRatio, float widthRatio, float heightRatio) {
+        int left = clamp(Math.round(screenWidth * leftRatio), 0, screenWidth - 1);
+        int top = clamp(Math.round(screenHeight * topRatio), 0, screenHeight - 1);
+        int width = clamp(Math.round(screenWidth * widthRatio), 1, screenWidth - left);
+        int height = clamp(Math.round(screenHeight * heightRatio), 1, screenHeight - top);
+        return new RegionBox(left, top, width, height);
+    }
+
+    private static void layoutButtonInRegion(Button button, RegionBox region, float widthRatio, float heightRatio) {
+        int width = clamp(Math.round(region.width() * widthRatio), Math.min(MIN_BUTTON_WIDTH, region.width()), region.width());
+        int height = clamp(Math.round(region.height() * heightRatio), Math.min(MIN_BUTTON_HEIGHT, region.height()), region.height());
+        button.layout(layout -> {
+            layout.width(width);
+            layout.height(height);
+        });
+    }
+
+    private static GridMetrics resolveGridMetrics(int regionWidth, int regionHeight) {
+        int availableWidth = Math.max(MIN_CARD_WIDTH, regionWidth - 8);
+        int columns = Math.max(1, (availableWidth + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP));
+        int cardWidth = Math.max(MIN_CARD_WIDTH, Math.min(PREFERRED_CARD_WIDTH, (availableWidth - (columns - 1) * CARD_GAP) / columns));
+        int availableHeight = Math.max(MIN_CARD_HEIGHT, regionHeight - 8);
+        int rows = Math.max(1, (availableHeight + CARD_GAP) / (MIN_CARD_HEIGHT + CARD_GAP));
+        int cardHeight = Math.max(MIN_CARD_HEIGHT, Math.min(PREFERRED_CARD_HEIGHT, (availableHeight - (rows - 1) * CARD_GAP) / rows));
+        int perPage = Math.max(1, Math.min(MAX_BUILDINGS_PER_PAGE, columns * rows));
+        return new GridMetrics(columns, rows, perPage, cardWidth, cardHeight);
+    }
+
+    private static List<BuildingCacheService.BuildingMeta> pageBuildings(List<BuildingCacheService.BuildingMeta> buildings, int page, int perPage) {
+        int start = Math.max(0, page) * perPage;
+        int end = Math.min(start + perPage, buildings.size());
         if (start >= end) {
             return new ArrayList<>();
         }
         return new ArrayList<>(buildings.subList(start, end));
     }
 
-    private static int totalPages(List<BuildingCacheService.BuildingMeta> buildings) {
-        return Math.max(1, (int) Math.ceil(Math.max(1, buildings.size()) / 6.0D));
+    private static int totalPages(List<BuildingCacheService.BuildingMeta> buildings, int perPage) {
+        return Math.max(1, (int) Math.ceil(Math.max(1, buildings.size()) / (double) Math.max(1, perPage)));
+    }
+
+    private static void confirmSelectedBuilding() {
+        if (selectedBuildingFileName == null || currentCategory == null || currentBuildBoxPos == null) {
+            return;
+        }
+        Optional<BuildingCacheService.BuildingMeta> selectedBuilding = BuildingCacheService.getBuildings(currentCategory).stream()
+                .filter(building -> selectedBuildingFileName.equals(building.structureFileName()))
+                .findFirst();
+        if (selectedBuilding.isEmpty()) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null || minecraft.player == null) {
+            return;
+        }
+        BuildingCacheService.BuildingMeta building = selectedBuilding.get();
+        var loadedStructure = BuildingStructureLoader.load(building);
+        Component message = loadedStructure.isPresent()
+                ? Component.translatable("message.simukraft.building_list.loaded", building.name(), loadedStructure.get().format().name() + " " + loadedStructure.get().size().toShortString())
+                : Component.translatable("message.simukraft.building_list.load_failed", building.name(), building.structureFileName());
+        minecraft.player.displayClientMessage(message, true);
+        Optional<BuildingStructure> structure = BuildingStructureService.loadStructure(building);
+        if (structure.isPresent()) {
+            pendingPreview = new PendingPreview(building, currentBuildBoxPos, structure.get());
+            minecraft.setScreen(null);
+        } else {
+            minecraft.player.displayClientMessage(Component.translatable("message.simukraft.building_preview.open_failed", building.name()), false);
+        }
     }
 
     private static String categoryName(String category) {
@@ -366,5 +466,21 @@ public final class BuildingListScreenOpener {
     }
 
     private record PendingPreview(BuildingCacheService.BuildingMeta building, BlockPos buildBoxPos, BuildingStructure structure) {
+    }
+
+    private record GridMetrics(int columns, int rows, int perPage, int cardWidth, int cardHeight) {
+    }
+
+    private record RegionMetrics(RegionBox titleRegion,
+                                 RegionBox cardRegion,
+                                 RegionBox selectedInfoRegion,
+                                 RegionBox pagerRegion,
+                                 RegionBox confirmRegion) {
+    }
+
+    private record RegionBox(int left, int top, int width, int height) {
+        private int bottom() {
+            return top + height;
+        }
     }
 }

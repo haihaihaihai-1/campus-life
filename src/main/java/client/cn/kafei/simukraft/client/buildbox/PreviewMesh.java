@@ -9,7 +9,7 @@ import java.util.List;
 public final class PreviewMesh implements AutoCloseable {
     public static final PreviewMesh EMPTY = new PreviewMesh(BlockPos.ZERO, null, null, null, null, null, Collections.emptyList());
 
-    private final BlockPos origin;
+    private BlockPos origin;
     private VertexBuffer solidBuffer;
     private VertexBuffer cutoutMippedBuffer;
     private VertexBuffer cutoutBuffer;
@@ -29,6 +29,13 @@ public final class PreviewMesh implements AutoCloseable {
 
     public BlockPos origin() {
         return origin;
+    }
+
+    public void offsetOrigin(int dx, int dy, int dz) {
+        if (this == EMPTY) {
+            return;
+        }
+        origin = origin.offset(dx, dy, dz);
     }
 
     public VertexBuffer solidBuffer() {

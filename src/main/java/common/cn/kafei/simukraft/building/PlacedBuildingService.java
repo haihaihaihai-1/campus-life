@@ -15,6 +15,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@SuppressWarnings("null")
 public final class PlacedBuildingService {
     // 已完成建筑属于存档数据，缓存键必须包含存档和维度。
     private static final ConcurrentMap<String, List<PlacedBuildingRecord>> BY_DIMENSION = new ConcurrentHashMap<>();
@@ -112,6 +113,21 @@ public final class PlacedBuildingService {
         return null;
     }
 
+    public static boolean isOccupiedByOtherBuilding(ServerLevel level, UUID ignoredBuildingId, BlockPos pos) {
+        if (level == null || pos == null) {
+            return false;
+        }
+        for (PlacedBuildingRecord record : getBuildings(level)) {
+            if (ignoredBuildingId != null && ignoredBuildingId.equals(record.buildingId())) {
+                continue;
+            }
+            if (containsRecordedBlock(record, pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void ensureCityPoisRegistered(ServerLevel level) {
         if (level == null) {
             return;
@@ -177,6 +193,20 @@ public final class PlacedBuildingService {
         return pos.getX() >= Math.min(min.getX(), max.getX()) && pos.getX() <= Math.max(min.getX(), max.getX())
                 && pos.getY() >= Math.min(min.getY(), max.getY()) && pos.getY() <= Math.max(min.getY(), max.getY())
                 && pos.getZ() >= Math.min(min.getZ(), max.getZ()) && pos.getZ() <= Math.max(min.getZ(), max.getZ());
+    }
+
+    private static boolean containsRecordedBlock(PlacedBuildingRecord record, BlockPos worldPos) {
+        if (!isInside(worldPos, record.minPos(), record.maxPos())) {
+            return false;
+        }
+        return record.blocks().stream().anyMatch(block -> worldPos.equals(resolveWorldPos(record, block.relativePos())));
+    }
+
+    private static BlockPos resolveWorldPos(PlacedBuildingRecord record, BlockPos storedPos) {
+        if (isInside(storedPos, record.minPos(), record.maxPos())) {
+            return storedPos;
+        }
+        return record.worldOrigin().offset(storedPos);
     }
 
     private static List<BuildingPoiInstance> mergePoiInstances(List<BuildingPoiInstance> existing, List<BuildingPoiInstance> additions) {
