@@ -2,6 +2,7 @@ package common.cn.kafei.simukraft.planner;
 
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.citizen.CitizenData;
+import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenLevelService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
 import common.cn.kafei.simukraft.citizen.CitizenSkillSnapshot;
@@ -354,13 +355,7 @@ public final class PlannerWorkService {
         if (!ServerConfig.plannerPauseAtNight()) {
             return false;
         }
-        int time = (int) Math.floorMod(level.getDayTime(), 24000L);
-        int start = ServerConfig.builderRestStartTime();
-        int end = ServerConfig.builderRestEndTime();
-        if (start == end) {
-            return false;
-        }
-        return start < end ? (time >= start && time < end) : (time >= start || time < end);
+        return CitizenHomeRestService.isRestTime(level);
     }
 
     private static void addXp(TaskRuntime taskRuntime, int blocks) {

@@ -1,6 +1,7 @@
 package common.cn.kafei.simukraft.farmland;
 
 import common.cn.kafei.simukraft.citizen.CitizenData;
+import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
 import common.cn.kafei.simukraft.citizen.CitizenTeleportService;
 import common.cn.kafei.simukraft.citizen.CitizenWorkStatus;
@@ -90,6 +91,12 @@ public final class FarmlandFarmingService {
             data.setRunning(false);
             manager.persist(data);
             clearActiveTarget(boxRuntime);
+            return;
+        }
+        if (CitizenHomeRestService.isRestTime(level)) {
+            clearActiveTarget(boxRuntime);
+            boxRuntime.setVisual(ItemStack.EMPTY, false);
+            idle(boxRuntime, gameTime);
             return;
         }
         CitizenEntity farmerEntity = CitizenTeleportService.findCitizenEntity(level, farmer.uuid());

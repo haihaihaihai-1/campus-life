@@ -2,6 +2,7 @@ package common.cn.kafei.simukraft.building;
 
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.citizen.CitizenData;
+import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenHousingService;
 import common.cn.kafei.simukraft.citizen.CitizenLevelService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
@@ -477,16 +478,7 @@ public final class BuilderConstructionService {
         if (!ServerConfig.builderPauseAtNight()) {
             return false;
         }
-        int time = (int) Math.floorMod(level.getDayTime(), 24000L);
-        int start = ServerConfig.builderRestStartTime();
-        int end = ServerConfig.builderRestEndTime();
-        if (start == end) {
-            return false;
-        }
-        if (start < end) {
-            return time >= start && time < end;
-        }
-        return time >= start || time < end;
+        return CitizenHomeRestService.isRestTime(level);
     }
 
     private static void persistTaskAsync(ServerLevel level, TaskRuntime taskRuntime, BuildingTaskData snapshot) {

@@ -118,7 +118,8 @@ public final class CitizenHomeRestService {
         }
     }
 
-    private static boolean isRestTime(ServerLevel level) {
+    // isRestTime：统一夜间休息窗口，建筑师、规划师、农民和回家服务共用同一判定。
+    public static boolean isRestTime(ServerLevel level) {
         int time = (int) Math.floorMod(level.getDayTime(), 24000L);
         int start = ServerConfig.builderRestStartTime();
         int end = ServerConfig.builderRestEndTime();
