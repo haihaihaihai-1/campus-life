@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.citizen;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.lowdragmc.lowdraglib2.client.shader.LDLibRenderTypes;
 import common.cn.kafei.simukraft.SimuKraft;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorBorderTexture;
@@ -11,6 +13,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class CitizenAvatarFactory {
     private static final int FRAME_BACKGROUND = 0xFF7A8085;
     private static final int FRAME_INNER = 0xFF646A6F;

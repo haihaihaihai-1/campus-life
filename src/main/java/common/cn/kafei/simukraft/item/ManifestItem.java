@@ -4,6 +4,7 @@ import common.cn.kafei.simukraft.building.BuildingStructure;
 import common.cn.kafei.simukraft.building.BuildingStructureService;
 import common.cn.kafei.simukraft.building.BuildingBlockData;
 import common.cn.kafei.simukraft.building.BuildingTaskData;
+import common.cn.kafei.simukraft.clientbridge.ClientInteractionBridge;
 import common.cn.kafei.simukraft.job.CitizenEmploymentService;
 import common.cn.kafei.simukraft.material.GenericContainerAccess;
 import common.cn.kafei.simukraft.network.toast.InfoToastService;
@@ -31,8 +32,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -64,7 +63,7 @@ public final class ManifestItem extends Item {
     public @Nonnull InteractionResultHolder<ItemStack> use(@Nonnull Level level, @Nonnull Player player, @Nonnull InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
-            openManifestScreen(stack, hand);
+            ClientInteractionBridge.openManifest(stack, hand);
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
@@ -271,13 +270,6 @@ public final class ManifestItem extends Item {
                 .map(citizen -> citizen.uuid())
                 .orElse(null);
     }
-
-    private void openManifestScreen(@Nonnull ItemStack stack, @Nonnull InteractionHand hand) {
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            client.cn.kafei.simukraft.client.manifest.ManifestScreen.open(stack, hand);
-        }
-    }
-
     private static CompoundTag customTag(ItemStack stack) {
         return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
     }

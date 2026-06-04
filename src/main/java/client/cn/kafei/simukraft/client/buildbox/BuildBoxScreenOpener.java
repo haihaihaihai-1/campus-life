@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireFirePacket;
@@ -19,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public class BuildBoxScreenOpener {
     private static final int BUTTON_WIDTH = 120;
     private static final int BUTTON_HEIGHT = 24;

@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.city.chunk;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -66,13 +67,7 @@ public record CityChunkSyncPacket(UUID currentCityId,
     }
 
     public static void handle(CityChunkSyncPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            var cache = client.cn.kafei.simukraft.client.city.ClientCityChunkCache.getInstance();
-            Map<UUID, client.cn.kafei.simukraft.client.city.ClientCityChunkCache.CityCoreEntry> cores = new ConcurrentHashMap<>();
-            packet.cityCores().forEach((cityId, core) -> cores.put(cityId, new client.cn.kafei.simukraft.client.city.ClientCityChunkCache.CityCoreEntry(core.pos(), core.cityName())));
-            cache.updateAllCityChunks(packet.currentCityId(), packet.cityChunks());
-            cache.updateAllCityCores(cores);
-        });
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleCityChunkSync(packet));
     }
 
     public record CityCoreEntry(BlockPos pos, String cityName) {

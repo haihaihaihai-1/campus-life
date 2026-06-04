@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.city.ClientCityChunkCache;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
 import client.cn.kafei.simukraft.client.toast.ClientInfoToast;
@@ -14,6 +16,7 @@ import net.minecraft.network.chat.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+@OnlyIn(Dist.CLIENT)
 public final class BuildingPreviewManager {
     private static final List<PreviewBlockData> PREVIEW_BLOCKS = new ArrayList<>();
     private static BlockPos previewOrigin = BlockPos.ZERO;

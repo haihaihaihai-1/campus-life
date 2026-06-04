@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
@@ -30,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class PreviewMeshBuilder {
     private PreviewMeshBuilder() {
     }

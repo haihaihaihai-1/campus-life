@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.farmland;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraScreen;
@@ -25,6 +27,7 @@ import org.lwjgl.glfw.GLFW;
  */
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class FarmlandAreaScreen extends Screen implements FreeCameraScreen {
     private static final int MAX_LENGTH = 33;
     private static final int MAX_HALF_WIDTH = 16;

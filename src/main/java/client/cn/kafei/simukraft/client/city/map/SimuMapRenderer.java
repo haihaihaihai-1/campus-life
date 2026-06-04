@@ -1,11 +1,14 @@
 package client.cn.kafei.simukraft.client.city.map;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.platform.NativeImage;
 
 /**
  * 地图渲染器。
  * 将 {@link SimuMapRegionData} 的颜色和高度数据渲染到 {@link NativeImage}。
  */
+@OnlyIn(Dist.CLIENT)
 public class SimuMapRenderer {
 
     private static float shadowStrength = 0.4f;

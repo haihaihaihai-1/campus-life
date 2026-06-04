@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.manifest;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.item.ManifestItem;
 import common.cn.kafei.simukraft.network.manifest.ManifestTogglePacket;
 import net.minecraft.client.Minecraft;
@@ -21,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class ManifestScreen extends Screen {
     private static final int MIN_PAGE_WIDTH = 145;
     private static final int MAX_PAGE_WIDTH = 260;

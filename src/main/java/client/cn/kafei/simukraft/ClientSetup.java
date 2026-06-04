@@ -8,43 +8,24 @@ import client.cn.kafei.simukraft.client.buildbox.BuildingPreviewManager;
 import client.cn.kafei.simukraft.client.city.ClientCityChunkCache;
 import client.cn.kafei.simukraft.client.city.ClientCityMapTerrainCache;
 import client.cn.kafei.simukraft.client.city.map.SimuMapManager;
+import client.cn.kafei.simukraft.client.farmland.FarmlandHoverPreview;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
-import client.cn.kafei.simukraft.client.fluid.ClientFluidExtensions;
-import client.cn.kafei.simukraft.client.input.SimuKraftKeyMappings;
 import client.cn.kafei.simukraft.client.path.NpcPathDebugRenderer;
-import client.cn.kafei.simukraft.client.renderer.CitizenRenderer;
 import client.cn.kafei.simukraft.client.selection.TwoPointSelectionManager;
-import client.cn.kafei.simukraft.client.selection.TwoPointSelectionRenderer;
 import common.cn.kafei.simukraft.SimuKraft;
-import common.cn.kafei.simukraft.registry.ModEntities;
-import net.neoforged.bus.api.IEventBus;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModLoadingContext;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
-import net.neoforged.neoforge.client.gui.ConfigurationScreen;
-import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 
-@SuppressWarnings("null")
-@EventBusSubscriber(modid = SimuKraft.MOD_ID)
+@OnlyIn(Dist.CLIENT)
+@EventBusSubscriber(modid = SimuKraft.MOD_ID, value = Dist.CLIENT)
 public final class ClientSetup {
     private ClientSetup() {
-    }
-
-    public static void registerModBusEvents(IEventBus modEventBus) {
-        modEventBus.addListener(ClientSetup::onRegisterRenderers);
-        modEventBus.addListener(ClientFluidExtensions::register);
-        modEventBus.addListener(SimuKraftKeyMappings::register);
-        NeoForge.EVENT_BUS.addListener(BuildingBoundsRenderer::onRender);
-        NeoForge.EVENT_BUS.addListener(TwoPointSelectionRenderer::onRender);
-        NeoForge.EVENT_BUS.addListener(NpcPathDebugRenderer::onRender);
-        // 注册 NeoForge 内置配置屏，让模组列表里"模拟大都市"的配置按钮能打开 GUI 配置页（含规划师计费等）。
-        ModLoadingContext.get().getActiveContainer().registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
     }
 
     @SubscribeEvent
@@ -71,7 +52,7 @@ public final class ClientSetup {
         FreeCameraManager.deactivate();
         TwoPointSelectionManager.clear();
         NpcPathDebugRenderer.clear();
-        client.cn.kafei.simukraft.client.farmland.FarmlandHoverPreview.clear();
+        FarmlandHoverPreview.clear();
     }
 
     @SubscribeEvent
@@ -87,9 +68,5 @@ public final class ClientSetup {
             return;
         }
         SimuMapManager.getInstance().onClientChunkLoaded((net.minecraft.world.level.Level) event.getLevel(), event.getChunk());
-    }
-
-    private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(ModEntities.CITIZEN.get(), CitizenRenderer::new);
     }
 }

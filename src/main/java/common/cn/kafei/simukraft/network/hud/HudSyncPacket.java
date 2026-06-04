@@ -1,6 +1,6 @@
 package common.cn.kafei.simukraft.network.hud;
 
-import client.cn.kafei.simukraft.client.ClientSimukraftData;
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -42,12 +42,6 @@ public record HudSyncPacket(int currentDay, int worldPopulation, String cityName
     }
 
     public static void handle(HudSyncPacket packet, IPayloadContext context) {
-        ClientSimukraftData.setCurrentDay(packet.currentDay());
-        ClientSimukraftData.setCurrentPopulation(packet.worldPopulation());
-        ClientSimukraftData.setCurrentCityName(packet.cityName());
-        ClientSimukraftData.setCurrentCityFunds(packet.cityFunds());
-        ClientSimukraftData.setCurrentCityPopulation(packet.cityPopulation());
-        ClientSimukraftData.setPermissionLevel(packet.permissionLevel());
-        ClientSimukraftData.setCreativeMode(packet.creativeMode());
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleHudSync(packet));
     }
 }

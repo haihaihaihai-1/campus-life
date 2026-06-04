@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.city.map;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
 import net.minecraft.core.BlockPos;
@@ -61,7 +62,7 @@ public record CityCoreMapResponsePacket(BlockPos pos, UUID cityId, String cityNa
     }
 
     public static void handle(CityCoreMapResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.city.CityCoreScreenOpener.openMap(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleCityCoreMapResponse(packet));
     }
 
     public record ChunkEntry(int chunkX, int chunkZ) {

@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.industrial;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
 import client.cn.kafei.simukraft.client.building.BuildingIntegrityUi;
 import client.cn.kafei.simukraft.client.hire.NpcHireScreen;
@@ -38,6 +40,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.List;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class IndustrialControlBoxScreenOpener {
     private static final int MAX_PANEL_WIDTH = 480;
     private static final int MAX_PANEL_HEIGHT = 300;

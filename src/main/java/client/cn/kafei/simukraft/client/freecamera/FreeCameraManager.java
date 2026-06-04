@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.freecamera;
 
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
@@ -11,6 +12,7 @@ import net.neoforged.neoforge.client.event.RenderFrameEvent;
 
 @SuppressWarnings("null")
 @EventBusSubscriber(value = Dist.CLIENT)
+@OnlyIn(Dist.CLIENT)
 public final class FreeCameraManager {
     private static boolean active;
     private static Vec3 position = Vec3.ZERO;

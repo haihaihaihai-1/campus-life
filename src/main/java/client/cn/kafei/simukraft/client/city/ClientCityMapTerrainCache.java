@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.city;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.city.map.SimuChunkScanner;
 import client.cn.kafei.simukraft.client.city.map.SimuMapStorage;
 import net.minecraft.client.Minecraft;
@@ -27,6 +29,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class ClientCityMapTerrainCache {
     private static final ClientCityMapTerrainCache INSTANCE = new ClientCityMapTerrainCache();
     private static final int MAX_CACHED_COLUMNS = 262144;

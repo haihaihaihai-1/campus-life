@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.client.Minecraft;
 
@@ -14,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@OnlyIn(Dist.CLIENT)
 public final class BuildingCacheService {
     private static final String ROOT_DIR = "simukraftbuilding";
     private static final Map<String, List<BuildingMeta>> CACHE = new ConcurrentHashMap<>();

@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.farmland;
 
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
 import common.cn.kafei.simukraft.network.farmland.FarmlandBoxBoundsRequestPacket;
 import common.cn.kafei.simukraft.registry.ModBlocks;
@@ -22,6 +23,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 
 @SuppressWarnings("null")
 @EventBusSubscriber(value = Dist.CLIENT)
+@OnlyIn(Dist.CLIENT)
 public final class FarmlandHoverPreview {
     private static final double SHOW_AFTER_TICKS = 20.0D; // 1 秒
 

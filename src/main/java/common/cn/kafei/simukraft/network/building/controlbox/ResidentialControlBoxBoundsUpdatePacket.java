@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.building.controlbox;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -48,12 +49,6 @@ public record ResidentialControlBoxBoundsUpdatePacket(BlockPos controlBoxPos,
     }
 
     public static void handle(ResidentialControlBoxBoundsUpdatePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer.updateDisplayedBuildingBounds(
-                packet.controlBoxPos(),
-                packet.hasBuildingBounds(),
-                packet.boundsMin(),
-                packet.boundsMax(),
-                packet.residentialPoiPositions()
-        ));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleResidentialControlBoxBoundsUpdate(packet));
     }
 }

@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.selection.TwoPointSelectionScreen;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
@@ -22,6 +24,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.Map;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class PlannerOperationScreenOpener {
     private static final int BUTTON_WIDTH = 150;
     private static final int BUTTON_HEIGHT = 24;

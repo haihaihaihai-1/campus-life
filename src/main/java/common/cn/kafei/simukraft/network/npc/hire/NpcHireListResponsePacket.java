@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.npc.hire;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -50,7 +51,7 @@ public record NpcHireListResponsePacket(BlockPos sourcePos, String sourceType, S
     }
 
     public static void handle(NpcHireListResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.hire.NpcHireScreen.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleNpcHireListResponse(packet));
     }
 
     public record HireCandidate(UUID citizenId, String name, String gender, int age, double health, double hunger,

@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen;
@@ -24,6 +26,7 @@ import net.minecraft.world.level.block.Blocks;
 import java.util.List;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class BuildingConfirmScreen extends ModularUIScreen {
     private static final int MIN_BUTTON_WIDTH = 80;
     private static final int MIN_BUTTON_HEIGHT = 22;

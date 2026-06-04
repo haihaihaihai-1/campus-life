@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.building;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -17,6 +18,6 @@ public record BuildingCacheReloadPacket() implements CustomPacketPayload {
     }
 
     public static void handle(BuildingCacheReloadPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.buildbox.BuildingCacheService.reload());
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleBuildingCacheReload(packet));
     }
 }

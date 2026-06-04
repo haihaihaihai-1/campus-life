@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraScreen;
 import client.cn.kafei.simukraft.client.input.SimuKraftKeyMappings;
@@ -14,6 +16,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class BuildingPreviewScreen extends Screen implements FreeCameraScreen {
     private final Screen parent;
     private final BuildingCacheService.BuildingMeta building;

@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.hire;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.BuildBoxScreenOpener;
 import client.cn.kafei.simukraft.client.industrial.IndustrialControlBoxScreenOpener;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
@@ -33,6 +35,7 @@ import java.util.List;
 import java.util.UUID;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class NpcHireScreen {
     private static final int CARD_TEXT_COLOR = SimuKraftUiTheme.CARD_TEXT_COLOR;
     private static final int MAX_NPC_PER_PAGE = 12;

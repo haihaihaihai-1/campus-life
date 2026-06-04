@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.ui;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.SimuKraft;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorBorderTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
@@ -12,6 +14,7 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.List;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class SimuKraftUiTheme {
     public static final ResourceLocation DEFAULT_STYLESHEET = StylesheetManager.ORE;
     public static final int CITY_CORE_BACKGROUND_COLOR = 0xFF444444;

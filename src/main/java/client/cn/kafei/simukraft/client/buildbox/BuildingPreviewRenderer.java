@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import common.cn.kafei.simukraft.SimuKraft;
@@ -17,6 +18,7 @@ import org.joml.Matrix4f;
 
 @SuppressWarnings("null")
 @EventBusSubscriber(modid = SimuKraft.MOD_ID, value = Dist.CLIENT)
+@OnlyIn(Dist.CLIENT)
 public final class BuildingPreviewRenderer {
     private static boolean loggedOnce;
 

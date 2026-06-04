@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.mixin;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
 import net.minecraft.client.Camera;
 import net.minecraft.client.player.LocalPlayer;
@@ -13,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Camera.class)
+@OnlyIn(Dist.CLIENT)
 public abstract class MixinCamera {
     @Shadow
     protected abstract void setPosition(Vec3 position);

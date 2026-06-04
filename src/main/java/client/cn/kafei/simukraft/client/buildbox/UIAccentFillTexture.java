@@ -1,10 +1,13 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 final class UIAccentFillTexture implements IGuiTexture {
     private final int color;
 

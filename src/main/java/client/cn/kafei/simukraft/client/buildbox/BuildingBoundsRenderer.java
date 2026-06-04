@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -28,6 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class BuildingBoundsRenderer {
     private static final int COLOR_CITY_BORDER = 0x553C66FF;
     private static final int COLOR_INTRUSION_AIR = 0x60FFFF00;

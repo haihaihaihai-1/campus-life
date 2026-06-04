@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.city.map;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
@@ -23,6 +25,7 @@ import java.util.function.Consumer;
 /**
  * 地图 region 的本地磁盘缓存。
  */
+@OnlyIn(Dist.CLIENT)
 public class SimuMapStorage {
     private static final Logger LOGGER = LogUtils.getLogger();
 

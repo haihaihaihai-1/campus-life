@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.farmland;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.hire.NpcHireScreen;
 import client.cn.kafei.simukraft.client.selection.TwoPointSelectionScreen;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
@@ -25,6 +27,7 @@ import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class FarmlandBoxScreenOpener {
     private static final int PANEL_WIDTH = 340;
     private static final int PANEL_HEIGHT = 220;

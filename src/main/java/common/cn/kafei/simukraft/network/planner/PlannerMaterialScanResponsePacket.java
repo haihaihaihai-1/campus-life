@@ -1,6 +1,6 @@
 package common.cn.kafei.simukraft.network.planner;
 
-import client.cn.kafei.simukraft.client.buildbox.PlannerMaterialSelectionScreenOpener;
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.planner.PlanOperation;
 import net.minecraft.core.BlockPos;
@@ -69,7 +69,7 @@ public record PlannerMaterialScanResponsePacket(BlockPos buildBoxPos,
     }
 
     public static void handle(PlannerMaterialScanResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> PlannerMaterialSelectionScreenOpener.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handlePlannerMaterialScanResponse(packet));
     }
 
     private static void writeCountMap(RegistryFriendlyByteBuf buffer, Map<String, Integer> map) {

@@ -1,6 +1,7 @@
 package common.cn.kafei.simukraft.block;
 
 import common.cn.kafei.simukraft.building.BuilderConstructionService;
+import common.cn.kafei.simukraft.clientbridge.ClientInteractionBridge;
 import common.cn.kafei.simukraft.job.CitizenEmploymentService;
 import common.cn.kafei.simukraft.registry.ModSoundEvents;
 import net.minecraft.core.BlockPos;
@@ -22,7 +23,7 @@ public class BuildBoxBlock extends Block {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide()) {
-            ClientOpener.open(pos);
+            ClientInteractionBridge.openBuildBox(pos);
         } else {
             level.playSound(null, pos, ModSoundEvents.BUILD_BOX_OPEN.get(), SoundSource.BLOCKS, 1.0F, 1.0F);
         }
@@ -55,11 +56,5 @@ public class BuildBoxBlock extends Block {
 
     private static void releaseAssignedCitizen(net.minecraft.server.level.ServerLevel level, BlockPos pos, String role) {
         CitizenEmploymentService.fireAssigned(level, CitizenEmploymentService.workplaceId("build_box", role, pos), "build_box", role, pos, "build_box_removed");
-    }
-
-    private static final class ClientOpener {
-        static void open(BlockPos pos) {
-            client.cn.kafei.simukraft.client.buildbox.BuildBoxScreenOpener.open(pos);
-        }
     }
 }

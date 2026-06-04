@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.farmland;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
@@ -26,6 +28,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
  */
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class FarmlandCropScreen {
     private static final int ITEM_HEIGHT = 22;
 

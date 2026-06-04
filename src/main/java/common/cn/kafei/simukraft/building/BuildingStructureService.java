@@ -1,6 +1,5 @@
 package common.cn.kafei.simukraft.building;
 
-import client.cn.kafei.simukraft.client.buildbox.BuildingCacheService;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,23 +18,6 @@ import java.util.Optional;
 @SuppressWarnings("null")
 public final class BuildingStructureService {
     private BuildingStructureService() {
-    }
-
-    public static Optional<BuildingStructure> loadStructure(BuildingCacheService.BuildingMeta meta) {
-        if (meta == null) {
-            return Optional.empty();
-        }
-        return loadStructure(new BuildingCatalog.BuildingDefinition(
-                meta.category(),
-                meta.name(),
-                meta.size(),
-                meta.amount(),
-                meta.author(),
-                meta.metaFileName(),
-                meta.structureFileName(),
-                BuildingCacheService.categoryDirectory(meta.category()).resolve(meta.metaFileName()),
-                BuildingCacheService.categoryDirectory(meta.category()).resolve(meta.structureFileName())
-        ));
     }
 
     public static Optional<BuildingStructure> loadStructure(String category, String buildingFileName) {

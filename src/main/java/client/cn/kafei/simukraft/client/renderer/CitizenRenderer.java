@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.renderer;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.vertex.PoseStack;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
@@ -16,6 +18,7 @@ import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public class CitizenRenderer extends MobRenderer<CitizenEntity, CitizenModel> {
     private static final ResourceLocation DEFAULT_TEXTURE = ResourceLocation.fromNamespaceAndPath(SimuKraft.MOD_ID, "textures/entity/male/custom_male_entity_0.png");
     private final CitizenModel slimModel;

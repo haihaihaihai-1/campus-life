@@ -1,4 +1,4 @@
-package client.cn.kafei.simukraft.mixin;
+package common.cn.kafei.simukraft.mixin;
 
 import common.cn.kafei.simukraft.fluid.MilkBucketPlacementService;
 import net.minecraft.world.InteractionHand;

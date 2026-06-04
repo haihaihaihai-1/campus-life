@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.farmland;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.farmland.FarmlandBoxView;
 import net.minecraft.core.BlockPos;
@@ -78,6 +79,6 @@ public record FarmlandBoxOpenResponsePacket(BlockPos boxPos,
     }
 
     public static void handle(FarmlandBoxOpenResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.farmland.FarmlandBoxScreenOpener.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleFarmlandBoxOpenResponse(packet));
     }
 }

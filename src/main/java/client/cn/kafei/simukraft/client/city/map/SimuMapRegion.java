@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.city.map;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
  * 表示一个 512x512 方块的地图 region。
  * 同时管理 CPU 侧数据和 GPU 纹理资源。
  */
+@OnlyIn(Dist.CLIENT)
 public class SimuMapRegion {
     private static final Logger LOGGER = LogUtils.getLogger();
 

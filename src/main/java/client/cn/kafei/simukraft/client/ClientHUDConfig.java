@@ -1,5 +1,8 @@
 package client.cn.kafei.simukraft.client;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+@OnlyIn(Dist.CLIENT)
 public final class ClientHUDConfig {
     private static final Anchor DEFAULT_ANCHOR = Anchor.TOP_RIGHT;
     private static final int DEFAULT_POS_X = -5;

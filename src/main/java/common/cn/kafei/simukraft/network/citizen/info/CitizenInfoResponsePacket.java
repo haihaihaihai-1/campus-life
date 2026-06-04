@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.citizen.info;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.citizen.CitizenData;
 import common.cn.kafei.simukraft.citizen.CitizenLevelService;
@@ -114,7 +115,7 @@ public record CitizenInfoResponsePacket(UUID citizenId, String name, String gend
     }
 
     public static void handle(CitizenInfoResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.citizen.CitizenScreenOpener.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleCitizenInfoResponse(packet));
     }
 
     private static String poiName(CityPoiManager poiManager, UUID poiId) {

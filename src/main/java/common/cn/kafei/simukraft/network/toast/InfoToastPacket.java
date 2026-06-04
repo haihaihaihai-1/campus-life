@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.toast;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
@@ -48,6 +49,6 @@ public record InfoToastPacket(Component title, Component message, String style, 
     }
 
     public static void handle(InfoToastPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.toast.ClientInfoToast.show(packet.title(), packet.message(), packet.style(), packet.iconStack()));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleInfoToast(packet));
     }
 }

@@ -1,6 +1,5 @@
 package common.cn.kafei.simukraft.building;
 
-import client.cn.kafei.simukraft.client.buildbox.BuildingCacheService;
 import net.minecraft.core.BlockPos;
 
 import java.nio.charset.StandardCharsets;
@@ -12,14 +11,6 @@ import java.util.Locale;
 
 public final class BuildingMetadataReader {
     private BuildingMetadataReader() {
-    }
-
-    public static List<BuildingPoiDefinition> readPoiDefinitions(BuildingCacheService.BuildingMeta meta) {
-        if (meta == null) {
-            return List.of();
-        }
-        Path file = BuildingCacheService.categoryDirectory(meta.category()).resolve(meta.metaFileName());
-        return readPoiDefinitions(file);
     }
 
     public static List<BuildingPoiDefinition> readPoiDefinitions(BuildingCatalog.BuildingDefinition definition) {

@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.selection;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.PlannerOperationScreenOpener;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraScreen;
@@ -24,6 +26,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import javax.annotation.Nullable;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class TwoPointSelectionScreen extends Screen implements FreeCameraScreen {
     private static final double REACH_DISTANCE = 128.0D;
 

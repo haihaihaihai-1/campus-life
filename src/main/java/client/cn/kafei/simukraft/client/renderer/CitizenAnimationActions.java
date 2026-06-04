@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.renderer;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
 import common.cn.kafei.simukraft.job.CityJobType;
 import net.minecraft.client.model.PlayerModel;
@@ -7,6 +9,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class CitizenAnimationActions {
     private CitizenAnimationActions() {
     }

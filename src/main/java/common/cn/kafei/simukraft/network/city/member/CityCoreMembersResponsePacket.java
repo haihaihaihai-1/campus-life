@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.city.member;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.city.CityData;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
@@ -60,7 +61,7 @@ public record CityCoreMembersResponsePacket(BlockPos pos, UUID cityId, String ci
     }
 
     public static void handle(CityCoreMembersResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.city.CityCoreScreenOpener.openMembers(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleCityCoreMembersResponse(packet));
     }
 
     public record MemberEntry(UUID playerId, String playerName, CityPermissionLevel permissionLevel) {

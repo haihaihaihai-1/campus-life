@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.city.map;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.core.BlockPos;
@@ -18,6 +20,7 @@ import java.util.Objects;
  * Simukraft 自有方块颜色映射系统。
  * 为方块状态计算 ARGB 地图颜色，完全独立于 FTB/Xaero。
  */
+@OnlyIn(Dist.CLIENT)
 public class SimuBlockColors {
     private static final SimuBlockColors INSTANCE = new SimuBlockColors();
     private final Map<Block, Integer> colorOverrides = new HashMap<>();

@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -17,6 +19,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class BuildingStructureLoader {
     private BuildingStructureLoader() {
     }

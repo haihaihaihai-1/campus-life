@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.controlbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
 import client.cn.kafei.simukraft.client.building.BuildingIntegrityUi;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
@@ -28,6 +30,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class ResidentialControlBoxScreenOpener {
     private static final int PANEL_WIDTH = 320;
     private static final int PANEL_HEIGHT = 208;

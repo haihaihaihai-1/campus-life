@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.industrial;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.industrial.IndustrialControlBoxView;
 import net.minecraft.core.BlockPos;
@@ -145,7 +146,7 @@ public record IndustrialControlBoxOpenResponsePacket(BlockPos boxPos,
     }
 
     public static void handle(IndustrialControlBoxOpenResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.industrial.IndustrialControlBoxScreenOpener.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleIndustrialControlBoxOpenResponse(packet));
     }
 
     public record RecipeEntry(String id, String name, List<ItemEntry> inputs, List<ItemEntry> outputs) {

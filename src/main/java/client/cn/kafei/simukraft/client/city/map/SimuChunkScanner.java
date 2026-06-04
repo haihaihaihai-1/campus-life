@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.city.map;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -16,6 +18,7 @@ import org.slf4j.Logger;
 
 import java.util.Objects;
 
+@OnlyIn(Dist.CLIENT)
 public class SimuChunkScanner {
     private static final Logger LOGGER = LogUtils.getLogger();
 

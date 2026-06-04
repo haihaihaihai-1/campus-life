@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.citizen;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.ui.SimuKraftWindowFrame;
@@ -27,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class CitizenScreenOpener {
     private CitizenScreenOpener() {
     }

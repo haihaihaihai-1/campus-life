@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.building.controlbox;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.building.controlbox.ResidentialControlBoxView;
 import net.minecraft.core.BlockPos;
@@ -144,7 +145,7 @@ public record ResidentialControlBoxOpenResponsePacket(BlockPos controlBoxPos,
     }
 
     public static void handle(ResidentialControlBoxOpenResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.controlbox.ResidentialControlBoxScreenOpener.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleResidentialControlBoxOpenResponse(packet));
     }
 
     public record ResidentEntry(UUID citizenId, String name) {

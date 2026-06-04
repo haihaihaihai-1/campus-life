@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.building.controlbox;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.building.controlbox.ResidentialControlBoxView;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -31,6 +32,6 @@ public record ResidentialControlBoxViewUpdatePacket(ResidentialControlBoxOpenRes
     }
 
     public static void handle(ResidentialControlBoxViewUpdatePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.controlbox.ResidentialControlBoxScreenOpener.refreshIfOpen(packet.view()));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleResidentialControlBoxViewUpdate(packet));
     }
 }

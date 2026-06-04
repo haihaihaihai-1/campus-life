@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import client.cn.kafei.simukraft.client.ui.SimuKraftClientUiPreferences;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
@@ -42,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class PlannerMaterialSelectionScreenOpener {
     private static final int MAX_CONTENT_WIDTH = 760;
     private static final int MIN_CONTENT_WIDTH = 300;

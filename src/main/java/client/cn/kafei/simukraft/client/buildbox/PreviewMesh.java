@@ -1,11 +1,14 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.vertex.VertexBuffer;
 import net.minecraft.core.BlockPos;
 
 import java.util.Collections;
 import java.util.List;
 
+@OnlyIn(Dist.CLIENT)
 public final class PreviewMesh implements AutoCloseable {
     public static final PreviewMesh EMPTY = new PreviewMesh(BlockPos.ZERO, null, null, null, null, null, Collections.emptyList());
 

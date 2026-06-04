@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.city.map;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -21,6 +23,7 @@ import java.util.concurrent.Executors;
  * 客户端地图管理器。
  * 只扫描客户端已经加载的 FULL chunk，并将结果写入本地 region 缓存。
  */
+@OnlyIn(Dist.CLIENT)
 public class SimuMapManager {
     private static final Logger LOGGER = LogUtils.getLogger();
 

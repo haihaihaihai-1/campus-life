@@ -1,10 +1,13 @@
 package client.cn.kafei.simukraft.client.renderer;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public class CitizenModel extends PlayerModel<CitizenEntity> {
     public CitizenModel(ModelPart root, boolean slim) {
         super(root, slim);

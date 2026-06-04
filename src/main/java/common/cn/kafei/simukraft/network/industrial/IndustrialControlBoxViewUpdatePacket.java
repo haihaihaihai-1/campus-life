@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.industrial;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.industrial.IndustrialControlBoxView;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -31,6 +32,6 @@ public record IndustrialControlBoxViewUpdatePacket(IndustrialControlBoxOpenRespo
     }
 
     public static void handle(IndustrialControlBoxViewUpdatePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.industrial.IndustrialControlBoxScreenOpener.refreshIfOpen(packet.view()));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleIndustrialControlBoxViewUpdate(packet));
     }
 }

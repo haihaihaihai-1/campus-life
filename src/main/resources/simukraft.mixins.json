@@ -1,13 +1,7 @@
 {
   "required": true,
-  "package": "client.cn.kafei.simukraft.mixin",
+  "package": "common.cn.kafei.simukraft.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": [
-    "MixinCamera",
-    "MixinEntity",
-    "MixinKeyboardHandler",
-    "MixinMouseHandler"
-  ],
   "mixins": [
     "MixinMilkBucketItem"
   ],

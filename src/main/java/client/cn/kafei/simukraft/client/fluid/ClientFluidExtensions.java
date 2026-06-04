@@ -1,11 +1,14 @@
 package client.cn.kafei.simukraft.client.fluid;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.registry.ModFluidTypes;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 
+@OnlyIn(Dist.CLIENT)
 public final class ClientFluidExtensions {
     private static final ResourceLocation MILK_STILL = ResourceLocation.fromNamespaceAndPath(SimuKraft.MOD_ID, "block/milk_still");
     private static final ResourceLocation MILK_FLOWING = ResourceLocation.fromNamespaceAndPath(SimuKraft.MOD_ID, "block/milk_flow");

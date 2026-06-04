@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.farmland;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -30,6 +31,6 @@ public record FarmlandBoxBoundsResponsePacket(BlockPos pos, boolean hasPlot, Blo
     }
 
     public static void handle(FarmlandBoxBoundsResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.farmland.FarmlandHoverPreview.receiveBounds(packet.pos(), packet.hasPlot(), packet.min(), packet.max()));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleFarmlandBoxBoundsResponse(packet));
     }
 }

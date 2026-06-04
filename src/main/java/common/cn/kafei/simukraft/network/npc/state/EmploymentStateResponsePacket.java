@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.npc.state;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.citizen.CitizenData;
 import common.cn.kafei.simukraft.citizen.CitizenManager;
@@ -74,7 +75,7 @@ public record EmploymentStateResponsePacket(BlockPos sourcePos, String sourceTyp
     }
 
     public static void handle(EmploymentStateResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.buildbox.BuildBoxScreenOpener.applyEmploymentState(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleEmploymentStateResponse(packet));
     }
 
     public boolean hasAnyEmployee() {

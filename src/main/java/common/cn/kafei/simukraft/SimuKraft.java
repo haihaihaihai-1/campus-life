@@ -37,7 +37,6 @@ import common.cn.kafei.simukraft.registry.ModFluids;
 import common.cn.kafei.simukraft.registry.ModItems;
 import common.cn.kafei.simukraft.registry.ModRecipeSerializers;
 import common.cn.kafei.simukraft.registry.ModSoundEvents;
-import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -50,7 +49,6 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.config.ModConfigEvent;
-import net.neoforged.fml.loading.FMLEnvironment;
 import org.slf4j.Logger;
 
 @Mod(SimuKraft.MOD_ID)
@@ -72,9 +70,6 @@ public final class SimuKraft {
         modEventBus.register(ModNetwork.class);
         modEventBus.addListener(this::onConfigLoading);
         modEventBus.addListener(this::onConfigReloading);
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            client.cn.kafei.simukraft.ClientSetup.registerModBusEvents(modEventBus);
-        }
         NeoForge.EVENT_BUS.register(CityPlacementRestrictionHandler.class);
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         NeoForge.EVENT_BUS.addListener(this::onPlayerLoggedIn);

@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.path;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.path.PathResult;
 import common.cn.kafei.simukraft.path.PathWaypoint;
@@ -109,7 +110,7 @@ public record NpcPathDebugSyncPacket(UUID citizenId, boolean success, String rea
     }
 
     public static void handle(NpcPathDebugSyncPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.path.NpcPathDebugRenderer.update(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleNpcPathDebugSync(packet));
     }
 
     public record PathPoint(double x, double y, double z, String mode) {

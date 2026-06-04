@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.path;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.toast.ClientInfoToast;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
@@ -28,6 +30,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class NpcPathDebugRenderer {
     private static final Map<UUID, DebugPath> PATHS = new ConcurrentHashMap<>();
     private static final double MARKER_RADIUS = 0.12D;

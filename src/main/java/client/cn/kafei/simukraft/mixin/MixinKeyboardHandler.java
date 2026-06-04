@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.mixin;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraManager;
 import client.cn.kafei.simukraft.client.freecamera.FreeCameraScreen;
 import client.cn.kafei.simukraft.client.path.NpcPathDebugRenderer;
@@ -12,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(KeyboardHandler.class)
+@OnlyIn(Dist.CLIENT)
 public final class MixinKeyboardHandler {
     @Inject(method = "keyPress", at = @At("HEAD"), cancellable = true)
     private void simukraft$keyPress(long window, int key, int scanCode, int action, int modifiers, CallbackInfo callbackInfo) {

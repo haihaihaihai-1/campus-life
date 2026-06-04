@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.network.city.core;
 
+import common.cn.kafei.simukraft.network.clientbound.ClientboundNetworkBridge;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.city.CityData;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
@@ -118,7 +119,7 @@ public record CityCoreOpenResponsePacket(BlockPos pos, boolean hasCity, UUID cit
     }
 
     public static void handle(CityCoreOpenResponsePacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> client.cn.kafei.simukraft.client.city.CityCoreScreenOpener.open(packet));
+        context.enqueueWork(() -> ClientboundNetworkBridge.handleCityCoreOpenResponse(packet));
     }
 
     public record FinanceEntry(long time, String actorName, double amount, double balanceAfter, FinanceTransactionData.Type type, String reason) {

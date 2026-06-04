@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.buildbox;
 
+import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.toast.ClientInfoToast;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
@@ -31,6 +32,7 @@ import java.util.Optional
 ;
 @SuppressWarnings("null")
 @EventBusSubscriber(value = Dist.CLIENT)
+@OnlyIn(Dist.CLIENT)
 public final class BuildingListScreenOpener {
     private static final int CARD_TEXT_COLOR = SimuKraftUiTheme.CARD_TEXT_COLOR;
     private static final int MAX_BUILDINGS_PER_PAGE = 12;
@@ -428,7 +430,7 @@ public final class BuildingListScreenOpener {
                 ? Component.translatable("message.simukraft.building_list.loaded", building.name(), loadedStructure.get().format().name() + " " + loadedStructure.get().size().toShortString())
                 : Component.translatable("message.simukraft.building_list.load_failed", building.name(), building.structureFileName());
         ClientInfoToast.show(Component.translatable("toast.simukraft.title"), message, loadedStructure.isPresent() ? "success" : "warning");
-        Optional<BuildingStructure> structure = BuildingStructureService.loadStructure(building);
+        Optional<BuildingStructure> structure = BuildingStructureService.loadStructure(building.category(), building.metaFileName());
         if (structure.isPresent()) {
             pendingPreview = new PendingPreview(building, currentBuildBoxPos, structure.get());
             minecraft.setScreen(null);

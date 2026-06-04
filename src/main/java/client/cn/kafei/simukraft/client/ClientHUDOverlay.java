@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client;
 
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -10,6 +12,7 @@ import java.util.Locale;
 import java.util.Objects;
 
 @SuppressWarnings("null")
+@OnlyIn(Dist.CLIENT)
 public final class ClientHUDOverlay {
     private static final int HUD_COLOR = 0xFFFFFF;
     private static final String[] WEEKDAYS = {
