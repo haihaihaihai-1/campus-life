@@ -40,7 +40,7 @@ final class GenericContainerMachineAdapter implements IndustrialMachineAdapter {
     public Map<String, Integer> countOutputs(IndustrialMachineOperationContext context, Map<String, IndustrialItemStackSpec> expectedOutputs) {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (GenericContainerAccess.SlotSnapshot snapshot : GenericContainerAccess.snapshotSlots(context.level(), context.machinePos())) {
-            String key = IndustrialMachineOutputMatcher.matchingKey(snapshot.stack(), expectedOutputs);
+            String key = IndustrialMachineOutputMatcher.matchingKey(snapshot.stack(), expectedOutputs, context.level().registryAccess());
             if (!key.isBlank()) {
                 counts.merge(key, snapshot.stack().getCount(), Integer::sum);
             }
@@ -66,7 +66,7 @@ final class GenericContainerMachineAdapter implements IndustrialMachineAdapter {
             return List.of();
         }
         for (GenericContainerAccess.SlotSnapshot snapshot : GenericContainerAccess.snapshotSlots(context.level(), context.machinePos())) {
-            String key = IndustrialMachineOutputMatcher.matchingKey(snapshot.stack(), expectedOutputs);
+            String key = IndustrialMachineOutputMatcher.matchingKey(snapshot.stack(), expectedOutputs, context.level().registryAccess());
             int remaining = remainingByKey.getOrDefault(key, 0);
             if (key.isBlank() || remaining <= 0) {
                 continue;
@@ -76,7 +76,8 @@ final class GenericContainerMachineAdapter implements IndustrialMachineAdapter {
             if (!simulate) {
                 int extracted = 0;
                 for (int i = 0; i < amount; i++) {
-                    if (!GenericContainerAccess.consumeSingleItemAtSlot(context.level(), context.machinePos(), snapshot.slot(), snapshot.access(), snapshot.side(), expectedOutputs.get(key)::matches)) {
+                    if (!GenericContainerAccess.consumeSingleItemAtSlot(context.level(), context.machinePos(), snapshot.slot(), snapshot.access(), snapshot.side(),
+                            candidate -> expectedOutputs.get(key).matches(candidate, context.level().registryAccess()))) {
                         break;
                     }
                     extracted++;

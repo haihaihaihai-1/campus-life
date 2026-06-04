@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.industrial;
 
+import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.List;
@@ -10,20 +11,24 @@ final class IndustrialMachineOutputMatcher {
     private IndustrialMachineOutputMatcher() {
     }
 
-    static Map<String, Integer> countMatchingStack(ItemStack stack, Map<String, IndustrialItemStackSpec> expectedOutputs) {
-        String key = matchingKey(stack, expectedOutputs);
+    static Map<String, Integer> countMatchingStack(ItemStack stack,
+                                                   Map<String, IndustrialItemStackSpec> expectedOutputs,
+                                                   HolderLookup.Provider registries) {
+        String key = matchingKey(stack, expectedOutputs, registries);
         if (key.isBlank()) {
             return Map.of();
         }
         return Map.of(key, stack.getCount());
     }
 
-    static String matchingKey(ItemStack stack, Map<String, IndustrialItemStackSpec> expectedOutputs) {
+    static String matchingKey(ItemStack stack,
+                              Map<String, IndustrialItemStackSpec> expectedOutputs,
+                              HolderLookup.Provider registries) {
         if (stack == null || stack.isEmpty()) {
             return "";
         }
         for (Map.Entry<String, IndustrialItemStackSpec> entry : expectedOutputs.entrySet()) {
-            if (entry.getValue().matches(stack)) {
+            if (entry.getValue().matches(stack, registries)) {
                 return entry.getKey();
             }
         }

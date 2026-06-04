@@ -11,11 +11,11 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.common.NeoForge;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @SuppressWarnings("null")
@@ -100,7 +100,7 @@ public final class IndustrialMachineOperationService {
                                 OutputPolicy outputPolicy,
                                 String stepKey,
                                 long gameTime) {
-        List<IndustrialDefinition.ItemRequirement> machineInputs = machineInputs(recipe, step);
+        List<IndustrialDefinition.InputRequirement> machineInputs = machineInputs(recipe, step);
         List<IndustrialDefinition.ProductOutput> machineOutputs = machineOutputs(recipe, step);
         if (machineOutputs.isEmpty()) {
             setStatus(manager, data, "gui.simukraft.industrial.status.invalid_step", step.type());
@@ -118,7 +118,8 @@ public final class IndustrialMachineOperationService {
             setStatus(manager, data, "gui.simukraft.industrial.status.machine_missing", step.point());
             return Result.WAITING_RETRY;
         }
-        if (!IndustrialInventoryService.hasInputs(level, inputContainers, machineInputs)) {
+        Optional<IndustrialInputPlan> inputPlan = IndustrialInventoryService.planInputs(level, inputContainers, machineInputs, 1);
+        if (inputPlan.isEmpty()) {
             setStatus(manager, data, "gui.simukraft.industrial.status.missing_inputs", "");
             return Result.WAITING_RETRY;
         }
@@ -128,19 +129,19 @@ public final class IndustrialMachineOperationService {
             setStatus(manager, data, "gui.simukraft.industrial.status.machine_no_adapter", step.point());
             return Result.WAITING_RETRY;
         }
-        List<ItemStack> inputStacks = inputStacks(machineInputs);
+        List<ItemStack> inputStacks = inputPlan.get().toStacks(level.registryAccess());
         if (!inputStacks.isEmpty()) {
             if (!adapter.canAcceptInputs(context, inputStacks)) {
                 setStatus(manager, data, "gui.simukraft.industrial.status.machine_input_blocked", step.point());
                 return Result.WAITING_RETRY;
             }
-            List<ItemStack> consumed = consumeInputs(level, inputContainers, machineInputs);
+            Optional<List<ItemStack>> consumed = IndustrialInventoryService.consumePlannedInputs(level, inputContainers, inputPlan.get());
             if (consumed.isEmpty()) {
                 setStatus(manager, data, "gui.simukraft.industrial.status.missing_inputs", "");
                 return Result.WAITING_RETRY;
             }
-            if (!adapter.insertInputs(context, consumed)) {
-                rollbackInputs(level, inputContainers, consumed);
+            if (!adapter.insertInputs(context, consumed.get())) {
+                rollbackInputs(level, inputContainers, consumed.get());
                 setStatus(manager, data, "gui.simukraft.industrial.status.machine_input_blocked", step.point());
                 return Result.WAITING_RETRY;
             }
@@ -309,39 +310,12 @@ public final class IndustrialMachineOperationService {
         return new IndustrialMachineOperationContext(level, data, building, definition, recipe, step, worker, entity, machinePos, inputContainers, outputContainers, data.machineState());
     }
 
-    private static List<IndustrialDefinition.ItemRequirement> machineInputs(IndustrialDefinition.RecipeDefinition recipe, IndustrialDefinition.StepDefinition step) {
+    private static List<IndustrialDefinition.InputRequirement> machineInputs(IndustrialDefinition.RecipeDefinition recipe, IndustrialDefinition.StepDefinition step) {
         return step.inputsOverride() ? step.inputs() : recipe.inputs();
     }
 
     private static List<IndustrialDefinition.ProductOutput> machineOutputs(IndustrialDefinition.RecipeDefinition recipe, IndustrialDefinition.StepDefinition step) {
         return step.outputsOverride() ? step.outputs() : recipe.outputs();
-    }
-
-    private static List<ItemStack> inputStacks(List<IndustrialDefinition.ItemRequirement> inputs) {
-        List<ItemStack> stacks = new ArrayList<>();
-        for (IndustrialDefinition.ItemRequirement input : inputs) {
-            ItemStack stack = IndustrialInventoryService.stackForItem(input.itemId(), input.potionId(), input.count());
-            if (!stack.isEmpty()) {
-                stacks.add(stack);
-            }
-        }
-        return List.copyOf(stacks);
-    }
-
-    private static List<ItemStack> consumeInputs(ServerLevel level, List<BlockPos> inputContainers, List<IndustrialDefinition.ItemRequirement> inputs) {
-        List<ItemStack> consumed = new ArrayList<>();
-        for (IndustrialDefinition.ItemRequirement input : inputs) {
-            ItemStack stack = IndustrialInventoryService.stackForItem(input.itemId(), input.potionId(), input.count());
-            if (stack.isEmpty()) {
-                continue;
-            }
-            if (!IndustrialInventoryService.consumeInput(level, inputContainers, input.itemId(), input.potionId(), input.count())) {
-                rollbackInputs(level, inputContainers, consumed);
-                return List.of();
-            }
-            consumed.add(stack);
-        }
-        return List.copyOf(consumed);
     }
 
     private static void rollbackInputs(ServerLevel level, List<BlockPos> inputContainers, List<ItemStack> consumed) {
@@ -364,7 +338,7 @@ public final class IndustrialMachineOperationService {
     private static Map<String, IndustrialItemStackSpec> expectedOutputSpecs(List<IndustrialDefinition.ProductOutput> outputs) {
         Map<String, IndustrialItemStackSpec> specs = new LinkedHashMap<>();
         for (IndustrialDefinition.ProductOutput output : outputs) {
-            specs.putIfAbsent(outputKey(output.itemId(), output.potionId()), IndustrialItemStackSpec.of(output.itemId(), output.potionId()));
+            specs.putIfAbsent(outputKey(output), output.spec());
         }
         return Map.copyOf(specs);
     }
@@ -372,13 +346,13 @@ public final class IndustrialMachineOperationService {
     private static Map<String, Integer> expectedOutputCounts(List<IndustrialDefinition.ProductOutput> outputs) {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (IndustrialDefinition.ProductOutput output : outputs) {
-            counts.merge(outputKey(output.itemId(), output.potionId()), Math.max(1, output.baseAmount()), Integer::sum);
+            counts.merge(outputKey(output), Math.max(1, output.baseAmount()), Integer::sum);
         }
         return Map.copyOf(counts);
     }
 
-    private static String outputKey(String itemId, String potionId) {
-        return (itemId != null ? itemId : "") + "|" + (potionId != null ? potionId : "");
+    private static String outputKey(IndustrialDefinition.ProductOutput output) {
+        return output.spec().displayKey();
     }
 
     private static String stepKey(IndustrialBoxData data,

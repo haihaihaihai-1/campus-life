@@ -30,7 +30,14 @@ public record IndustrialControlBoxView(BlockPos boxPos,
     public record RecipeEntry(String id, String name, List<ItemEntry> inputs, List<ItemEntry> outputs) {
     }
 
-    public record ItemEntry(String itemId, String potionId, int count) {
+    public record ItemEntry(String itemId, String potionId, int count, String connector, String itemSpec) {
+        public ItemEntry(String itemId, String potionId, int count) {
+            this(itemId, potionId, count, "", IndustrialItemStackSpec.of(itemId, potionId).serialized());
+        }
+
+        public ItemEntry(IndustrialItemStackSpec spec, int count, String connector) {
+            this(spec.displayItemId(), spec.potionId(), count, connector, spec.serialized());
+        }
     }
 
     public record PointMarker(String id, String kind, BlockPos pos, int color) {

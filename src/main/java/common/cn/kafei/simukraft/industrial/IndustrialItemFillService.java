@@ -7,8 +7,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
+@SuppressWarnings("null")
 public final class IndustrialItemFillService {
     private static final int DEFAULT_TARGET_COUNT = 64;
 
@@ -20,7 +25,8 @@ public final class IndustrialItemFillService {
                                     IndustrialDefinition definition,
                                     IndustrialDefinition.StepDefinition step,
                                     Vec3 origin) {
-        if (step.item().isBlank() || step.slot() < 0) {
+        List<FillCandidate> candidates = candidates(level, step);
+        if (candidates.isEmpty() || step.slot() < 0) {
             return ActionResult.INVALID_STEP;
         }
         BlockPos targetPos = IndustrialControlBoxService.resolvePoint(building, definition, step.point(), origin);
@@ -35,12 +41,8 @@ public final class IndustrialItemFillService {
         if (sourceContainers.isEmpty()) {
             return ActionResult.MISSING_INPUTS;
         }
-        ItemStack targetStack = IndustrialInventoryService.stackForItem(step.item(), 1);
-        if (targetStack.isEmpty()) {
-            return ActionResult.INVALID_STEP;
-        }
         ItemStack current = GenericSlotAccess.stackAt(level, targetPos, step.slot());
-        if (!current.isEmpty() && !ItemStack.isSameItemSameComponents(current, targetStack)) {
+        if (!current.isEmpty() && candidates.stream().noneMatch(candidate -> candidate.matches(level, current))) {
             return ActionResult.TARGET_BLOCKED;
         }
         int targetCount = targetCount(step);
@@ -52,24 +54,76 @@ public final class IndustrialItemFillService {
         if (need <= 0) {
             return ActionResult.SUCCESS;
         }
-        int available = IndustrialInventoryService.countInput(level, sourceContainers, step.item(), "");
-        if (available <= 0) {
+        boolean hadAvailableCandidate = false;
+        for (FillCandidate candidate : candidates) {
+            if (!current.isEmpty() && !candidate.matches(level, current)) {
+                continue;
+            }
+            int available = IndustrialInventoryService.countInput(level, sourceContainers, candidate.spec());
+            if (available <= 0) {
+                continue;
+            }
+            hadAvailableCandidate = true;
+            ItemStack targetStack = candidate.stack(level, need);
+            int insertable = GenericSlotAccess.countInsertable(level, targetPos, step.slot(), targetStack);
+            int moveCount = Math.min(need, Math.min(available, insertable));
+            if (moveCount <= 0) {
+                continue;
+            }
+            return moveCandidate(level, sourceContainers, targetPos, step.slot(), candidate, moveCount);
+        }
+        return hadAvailableCandidate ? ActionResult.TARGET_BLOCKED : ActionResult.MISSING_INPUTS;
+    }
+
+    private static ActionResult moveCandidate(ServerLevel level,
+                                              List<BlockPos> sourceContainers,
+                                              BlockPos targetPos,
+                                              int slot,
+                                              FillCandidate candidate,
+                                              int moveCount) {
+        Optional<List<ItemStack>> consumed = IndustrialInventoryService.consumeInputStacks(level, sourceContainers, candidate.spec(), moveCount);
+        if (consumed.isEmpty()) {
             return ActionResult.MISSING_INPUTS;
         }
-        int insertable = GenericSlotAccess.countInsertable(level, targetPos, step.slot(), targetStack.copyWithCount(need));
-        int moveCount = Math.min(need, Math.min(available, insertable));
-        if (moveCount <= 0) {
-            return ActionResult.TARGET_BLOCKED;
+        List<ItemStack> leftovers = new ArrayList<>();
+        int inserted = 0;
+        for (ItemStack stack : consumed.get()) {
+            int before = stack.getCount();
+            ItemStack remaining = GenericSlotAccess.insert(level, targetPos, slot, stack);
+            inserted += before - remaining.getCount();
+            if (!remaining.isEmpty()) {
+                leftovers.add(remaining);
+            }
         }
-        if (!IndustrialInventoryService.consumeInput(level, sourceContainers, step.item(), "", moveCount)) {
-            return ActionResult.MISSING_INPUTS;
+        if (!leftovers.isEmpty()) {
+            IndustrialInventoryService.insertItems(level, sourceContainers, leftovers);
         }
-        ItemStack remaining = GenericSlotAccess.insert(level, targetPos, step.slot(), targetStack.copyWithCount(moveCount));
-        if (!remaining.isEmpty()) {
-            IndustrialInventoryService.insertItem(level, sourceContainers, remaining);
-            return remaining.getCount() < moveCount ? ActionResult.SUCCESS : ActionResult.TARGET_BLOCKED;
+        return inserted > 0 ? ActionResult.SUCCESS : ActionResult.TARGET_BLOCKED;
+    }
+
+    private static List<FillCandidate> candidates(ServerLevel level, IndustrialDefinition.StepDefinition step) {
+        List<IndustrialItemStackSpec> specs = new ArrayList<>();
+        if (step.itemSpecs() != null && !step.itemSpecs().isEmpty()) {
+            specs.addAll(step.itemSpecs());
+        } else if (step.inputsOverride()) {
+            IndustrialInputRequirements.flattenItems(step.inputs()).forEach(input -> specs.add(input.spec()));
+        } else if (step.itemSpec() != null && !step.itemSpec().isEmpty()) {
+            specs.add(step.itemSpec());
+        } else if (!step.item().isBlank()) {
+            specs.add(IndustrialItemStackSpec.of(step.item(), ""));
         }
-        return ActionResult.SUCCESS;
+        Set<String> seen = new LinkedHashSet<>();
+        List<FillCandidate> candidates = new ArrayList<>();
+        for (IndustrialItemStackSpec spec : specs) {
+            if (spec == null || spec.isEmpty() || !seen.add(spec.displayKey())) {
+                continue;
+            }
+            FillCandidate candidate = new FillCandidate(spec);
+            if (!candidate.stack(level, 1).isEmpty()) {
+                candidates.add(candidate);
+            }
+        }
+        return List.copyOf(candidates);
     }
 
     private static int targetCount(IndustrialDefinition.StepDefinition step) {
@@ -98,5 +152,19 @@ public final class IndustrialItemFillService {
         INVALID_STEP,
         MISSING_INPUTS,
         TARGET_BLOCKED
+    }
+
+    private record FillCandidate(IndustrialItemStackSpec spec) {
+        private ItemStack stack(ServerLevel level, int count) {
+            return spec.stack(Math.max(1, count), level.registryAccess());
+        }
+
+        private ItemStack stack(int count) {
+            return spec.stack(Math.max(1, count));
+        }
+
+        private boolean matches(ServerLevel level, ItemStack current) {
+            return spec.matches(current, level.registryAccess());
+        }
     }
 }

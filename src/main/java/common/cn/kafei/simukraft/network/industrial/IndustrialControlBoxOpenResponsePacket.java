@@ -66,8 +66,8 @@ public record IndustrialControlBoxOpenResponsePacket(BlockPos boxPos,
                         .toList(),
                 view.recipes().stream()
                         .map(recipe -> new RecipeEntry(recipe.id(), recipe.name(),
-                                recipe.inputs().stream().map(item -> new ItemEntry(item.itemId(), item.potionId(), item.count())).toList(),
-                                recipe.outputs().stream().map(item -> new ItemEntry(item.itemId(), item.potionId(), item.count())).toList()))
+                                recipe.inputs().stream().map(item -> new ItemEntry(item.itemId(), item.potionId(), item.count(), item.connector(), item.itemSpec())).toList(),
+                                recipe.outputs().stream().map(item -> new ItemEntry(item.itemId(), item.potionId(), item.count(), item.connector(), item.itemSpec())).toList()))
                         .toList()
         );
     }
@@ -179,15 +179,21 @@ public record IndustrialControlBoxOpenResponsePacket(BlockPos boxPos,
         }
     }
 
-    public record ItemEntry(String itemId, String potionId, int count) {
+    public record ItemEntry(String itemId, String potionId, int count, String connector, String itemSpec) {
+        public ItemEntry(String itemId, String potionId, int count) {
+            this(itemId, potionId, count, "", "");
+        }
+
         private void encode(RegistryFriendlyByteBuf buffer) {
             buffer.writeUtf(itemId, 128);
             buffer.writeUtf(potionId, 128);
             buffer.writeVarInt(count);
+            buffer.writeUtf(connector, 8);
+            buffer.writeUtf(itemSpec, 4096);
         }
 
         private static ItemEntry decode(RegistryFriendlyByteBuf buffer) {
-            return new ItemEntry(buffer.readUtf(128), buffer.readUtf(128), buffer.readVarInt());
+            return new ItemEntry(buffer.readUtf(128), buffer.readUtf(128), buffer.readVarInt(), buffer.readUtf(8), buffer.readUtf(4096));
         }
     }
 

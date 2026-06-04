@@ -316,13 +316,37 @@ public final class IndustrialControlBoxService {
         return new IndustrialControlBoxView.RecipeEntry(
                 recipe.id(),
                 recipe.name(),
-                recipe.inputs().stream()
-                        .map(input -> new IndustrialControlBoxView.ItemEntry(input.itemId(), input.potionId(), input.count()))
-                        .toList(),
+                inputEntries(recipe.inputs()),
                 recipe.outputs().stream()
-                        .map(output -> new IndustrialControlBoxView.ItemEntry(output.itemId(), output.potionId(), output.baseAmount()))
+                        .map(output -> new IndustrialControlBoxView.ItemEntry(output.spec(), output.baseAmount(), ""))
                         .toList()
         );
+    }
+
+    private static List<IndustrialControlBoxView.ItemEntry> inputEntries(List<IndustrialDefinition.InputRequirement> inputs) {
+        if (inputs == null || inputs.isEmpty()) {
+            return List.of();
+        }
+        List<IndustrialControlBoxView.ItemEntry> entries = new ArrayList<>();
+        for (int i = 0; i < inputs.size(); i++) {
+            appendInputEntry(entries, inputs.get(i), i == 0 ? "" : "+");
+        }
+        return List.copyOf(entries);
+    }
+
+    private static void appendInputEntry(List<IndustrialControlBoxView.ItemEntry> entries,
+                                         IndustrialDefinition.InputRequirement requirement,
+        String connector) {
+        if (requirement instanceof IndustrialDefinition.ItemRequirement item) {
+            entries.add(new IndustrialControlBoxView.ItemEntry(item.spec(), item.count(), connector));
+            return;
+        }
+        if (requirement instanceof IndustrialDefinition.InputRequirementGroup group) {
+            String childConnector = group.logic() == IndustrialDefinition.InputLogic.ANY ? "/" : "+";
+            for (int i = 0; i < group.children().size(); i++) {
+                appendInputEntry(entries, group.children().get(i), i == 0 ? connector : childConnector);
+            }
+        }
     }
 
     private static List<IndustrialControlBoxView.PointMarker> pointMarkers(PlacedBuildingRecord building, IndustrialDefinition definition) {

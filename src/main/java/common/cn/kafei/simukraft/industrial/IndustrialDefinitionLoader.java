@@ -174,53 +174,69 @@ public final class IndustrialDefinitionLoader {
                     id,
                     string(object, "name", id),
                     string(object, "heldItem", ""),
-                    parseInputs(object.getAsJsonArray("inputs")),
-                    parseOutputs(object.getAsJsonArray("outputs")),
+                    parseInputs(object.getAsJsonArray("inputs"), errors, "recipe:" + id + ":inputs"),
+                    parseOutputs(object.getAsJsonArray("outputs"), errors, "recipe:" + id + ":outputs"),
                     parseSteps(object.getAsJsonArray("steps"), errors, id)
             ));
         }
         return recipes;
     }
 
-    private static List<IndustrialDefinition.ItemRequirement> parseInputs(JsonArray array) {
-        List<IndustrialDefinition.ItemRequirement> inputs = new ArrayList<>();
+    private static List<IndustrialDefinition.InputRequirement> parseInputs(JsonArray array, List<String> errors, String context) {
+        List<IndustrialDefinition.InputRequirement> inputs = new ArrayList<>();
         if (array == null) {
             return inputs;
         }
-        for (JsonElement element : array) {
-            JsonObject object = asObject(element);
-            if (object == null) {
-                continue;
-            }
-            String item = string(object, "item", "");
-            int count = Math.max(1, integer(object, "count", integer(object, "amount", 1)));
-            boolean consume = bool(object, "consume", true);
-            String potion = string(object, "potion", "");
-            if (!item.isBlank()) {
-                inputs.add(new IndustrialDefinition.ItemRequirement(item, count, consume, potion));
+        for (int i = 0; i < array.size(); i++) {
+            IndustrialDefinition.InputRequirement requirement = parseInputRequirement(array.get(i), errors, context + ":" + i);
+            if (requirement != null) {
+                inputs.add(requirement);
             }
         }
         return List.copyOf(inputs);
     }
 
-    private static List<IndustrialDefinition.ProductOutput> parseOutputs(JsonArray array) {
+    private static IndustrialDefinition.InputRequirement parseInputRequirement(JsonElement element, List<String> errors, String context) {
+        JsonObject object = asObject(element);
+        if (object == null) {
+            return null;
+        }
+        JsonArray anyInputs = arrayAny(object, "or", "anyOf", "any", "或");
+        if (anyInputs != null) {
+            return inputGroup(IndustrialDefinition.InputLogic.ANY, anyInputs, errors, context + ":or");
+        }
+        JsonArray allInputs = arrayAny(object, "and", "allOf", "all", "与");
+        if (allInputs != null) {
+            return inputGroup(IndustrialDefinition.InputLogic.ALL, allInputs, errors, context + ":and");
+        }
+        int count = Math.max(1, integer(object, "count", integer(object, "amount", 1)));
+        boolean consume = bool(object, "consume", true);
+        IndustrialItemStackSpec spec = IndustrialItemSpecJsonParser.parse(object, errors, context);
+        return spec.isEmpty() ? null : new IndustrialDefinition.ItemRequirement(spec, count, consume);
+    }
+
+    private static IndustrialDefinition.InputRequirement inputGroup(IndustrialDefinition.InputLogic logic, JsonArray array, List<String> errors, String context) {
+        List<IndustrialDefinition.InputRequirement> children = parseInputs(array, errors, context);
+        return children.isEmpty() ? null : new IndustrialDefinition.InputRequirementGroup(logic, children);
+    }
+
+    private static List<IndustrialDefinition.ProductOutput> parseOutputs(JsonArray array, List<String> errors, String context) {
         List<IndustrialDefinition.ProductOutput> outputs = new ArrayList<>();
         if (array == null) {
             return outputs;
         }
-        for (JsonElement element : array) {
-            JsonObject object = asObject(element);
+        for (int i = 0; i < array.size(); i++) {
+            JsonObject object = asObject(array.get(i));
             if (object == null) {
                 continue;
             }
-            String item = string(object, "item", "");
             int baseAmount = Math.max(1, integer(object, "baseAmount", integer(object, "count", 1)));
             int randomRange = Math.max(0, integer(object, "randomRange", 0));
             double probability = Math.max(0.0D, Math.min(1.0D, decimal(object, "probability", 1.0D)));
             boolean ignoreMultiplier = bool(object, "ignoreMultiplier", false);
-            String potion = string(object, "potion", "");
-            if (!item.isBlank()) {
-                outputs.add(new IndustrialDefinition.ProductOutput(item, potion, baseAmount, randomRange, probability, ignoreMultiplier));
+            IndustrialItemStackSpec spec = IndustrialItemSpecJsonParser.parse(object, errors, context + ":" + i);
+            if (!spec.isEmpty()) {
+                outputs.add(new IndustrialDefinition.ProductOutput(spec, baseAmount, randomRange, probability, ignoreMultiplier));
             }
         }
         return List.copyOf(outputs);
@@ -257,7 +273,7 @@ public final class IndustrialDefinitionLoader {
             appendRepeatedSteps(steps, object, errors, recipeId, index);
             return;
         }
-        steps.add(parseStepDefinition(object));
+        steps.add(parseStepDefinition(object, errors, recipeId + ":" + index));
     }
 
     private static void appendRepeatedSteps(List<IndustrialDefinition.StepDefinition> steps,
@@ -293,7 +309,7 @@ public final class IndustrialDefinitionLoader {
         }
     }
 
-    private static IndustrialDefinition.StepDefinition parseStepDefinition(JsonObject object) {
+    private static IndustrialDefinition.StepDefinition parseStepDefinition(JsonObject object, List<String> errors, String context) {
         return new IndustrialDefinition.StepDefinition(
                 string(object, "type", ""),
                 string(object, "point", ""),
@@ -301,6 +317,8 @@ public final class IndustrialDefinitionLoader {
                 string(object, "input", ""),
                 string(object, "output", ""),
                 string(object, "item", ""),
+                IndustrialItemSpecJsonParser.parse(object, errors, context + ":item"),
+                IndustrialItemSpecJsonParser.parseList(arrayAny(object, "items"), errors, context + ":items"),
                 Math.max(1, integer(object, "ticks", 1)),
                 bool(object, "swing", false),
                 Math.max(0.1D, decimal(object, "range", 1.5D)),
@@ -324,8 +342,8 @@ public final class IndustrialDefinitionLoader {
                 integer(object, "thresholdCount", integer(object, "threshold", -1)),
                 object.has("inputs"),
                 object.has("outputs"),
-                parseInputs(object.getAsJsonArray("inputs")),
-                parseOutputs(object.getAsJsonArray("outputs"))
+                parseInputs(object.getAsJsonArray("inputs"), errors, context + ":inputs"),
+                parseOutputs(object.getAsJsonArray("outputs"), errors, context + ":outputs")
         );
     }
 
@@ -429,6 +447,18 @@ public final class IndustrialDefinitionLoader {
             }
         }
         return fallback;
+    }
+
+    private static JsonArray arrayAny(JsonObject object, String... keys) {
+        if (object == null) {
+            return null;
+        }
+        for (String key : keys) {
+            if (object.has(key) && object.get(key).isJsonArray()) {
+                return object.getAsJsonArray(key);
+            }
+        }
+        return null;
     }
 
     private static int integer(JsonObject object, String key, int fallback) {

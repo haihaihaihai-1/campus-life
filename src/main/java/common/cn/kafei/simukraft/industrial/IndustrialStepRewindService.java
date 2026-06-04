@@ -3,6 +3,8 @@ package common.cn.kafei.simukraft.industrial;
 import common.cn.kafei.simukraft.material.GenericSlotAccess;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -85,18 +87,36 @@ final class IndustrialStepRewindService {
     }
 
     private static boolean isSlotBelowThreshold(IndustrialMachineOperationContext context, IndustrialDefinition.StepDefinition fillStep) {
-        if (fillStep.slot() < 0 || fillStep.item().isBlank()) {
+        if (fillStep.slot() < 0) {
             return false;
         }
-        ItemStack expected = IndustrialInventoryService.stackForItem(fillStep.item(), 1);
-        if (expected.isEmpty()) {
+        List<IndustrialItemStackSpec> specs = fillSpecs(fillStep);
+        if (specs.isEmpty()) {
             return false;
         }
         ItemStack current = GenericSlotAccess.stackAt(context.level(), context.machinePos(), fillStep.slot());
-        if (current.isEmpty() || !ItemStack.isSameItemSameComponents(current, expected)) {
+        if (current.isEmpty()) {
+            return true;
+        }
+        boolean matches = specs.stream().anyMatch(spec -> spec.matches(current, context.level().registryAccess()));
+        if (!matches) {
             return true;
         }
         return fillStep.thresholdCount() >= 0 && current.getCount() <= fillStep.thresholdCount();
+    }
+
+    private static List<IndustrialItemStackSpec> fillSpecs(IndustrialDefinition.StepDefinition fillStep) {
+        List<IndustrialItemStackSpec> specs = new ArrayList<>();
+        if (fillStep.itemSpecs() != null && !fillStep.itemSpecs().isEmpty()) {
+            specs.addAll(fillStep.itemSpecs());
+        } else if (fillStep.inputsOverride()) {
+            IndustrialInputRequirements.flattenItems(fillStep.inputs()).forEach(input -> specs.add(input.spec()));
+        } else if (fillStep.itemSpec() != null && !fillStep.itemSpec().isEmpty()) {
+            specs.add(fillStep.itemSpec());
+        } else if (!fillStep.item().isBlank()) {
+            specs.add(IndustrialItemStackSpec.of(fillStep.item(), ""));
+        }
+        return List.copyOf(specs);
     }
 
     private static boolean isFillStep(IndustrialDefinition.StepDefinition step) {

@@ -126,7 +126,7 @@ public final class IndustrialEntityActionService {
      * matchingDrops: 查找符合步骤过滤条件的掉落物。
      */
     private static List<ItemEntity> matchingDrops(ServerLevel level, PlacedBuildingRecord building, IndustrialDefinition definition, IndustrialDefinition.StepDefinition step, CitizenEntity worker) {
-        return level.getEntitiesOfClass(ItemEntity.class, actionBounds(building, definition, step, worker), drop -> drop.isAlive() && matchesDrop(step, drop.getItem()))
+        return level.getEntitiesOfClass(ItemEntity.class, actionBounds(building, definition, step, worker), drop -> drop.isAlive() && matchesDrop(level, step, drop.getItem()))
                 .stream()
                 .sorted(Comparator.comparingDouble(drop -> worker != null ? drop.distanceToSqr(worker) : 0.0D))
                 .toList();
@@ -218,11 +218,11 @@ public final class IndustrialEntityActionService {
         return remaining;
     }
 
-    private static boolean matchesDrop(IndustrialDefinition.StepDefinition step, ItemStack stack) {
+    private static boolean matchesDrop(ServerLevel level, IndustrialDefinition.StepDefinition step, ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
             return false;
         }
-        return step.item().isBlank() || IndustrialItemStackSpec.of(step.item(), "").matches(stack);
+        return step.itemSpec().isEmpty() || step.itemSpec().matches(stack, level.registryAccess());
     }
 
     private static Optional<EntityType<?>> entityType(String id) {

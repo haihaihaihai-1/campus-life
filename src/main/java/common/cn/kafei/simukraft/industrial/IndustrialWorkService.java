@@ -138,8 +138,10 @@ public final class IndustrialWorkService {
         String type = step.type().toLowerCase(Locale.ROOT);
         return switch (type) {
             case "set_held_item" -> {
-                String itemId = !step.item().isBlank() ? step.item() : recipe.effectiveHeldItem(definition.heldItem());
-                CitizenJobVisualService.setMainHandOverride(worker.uuid(), IndustrialInventoryService.stackForItem(itemId, 1));
+                IndustrialItemStackSpec spec = !step.itemSpec().isEmpty()
+                        ? step.itemSpec()
+                        : IndustrialItemStackSpec.of(recipe.effectiveHeldItem(definition.heldItem()), "");
+                CitizenJobVisualService.setMainHandOverride(worker.uuid(), spec.stack(1, level.registryAccess()));
                 yield StepResult.PROGRESSED;
             }
             case "move_to" -> moveTo(level, data, boxRuntime, building, definition, worker, entity, step);
@@ -263,7 +265,7 @@ public final class IndustrialWorkService {
                                          long gameTime) {
         String containerId = containerName(step.container(), step.output(), "output");
         List<BlockPos> containers = IndustrialControlBoxService.resolveContainerPositions(building, definition, containerId);
-        ItemStack stack = IndustrialInventoryService.stackForItem(step.item(), Math.max(1, step.count()));
+        ItemStack stack = step.itemSpec().stack(Math.max(1, step.count()), level.registryAccess());
         if (containers.isEmpty()) {
             setStatus(manager, data, "gui.simukraft.industrial.status.missing_container", containerId);
             return StepResult.WAITING_RETRY;
@@ -272,7 +274,7 @@ public final class IndustrialWorkService {
             setStatus(manager, data, "gui.simukraft.industrial.status.invalid_step", step.type());
             return StepResult.WAITING_RETRY;
         }
-        int stepKey = Objects.hash(data.currentStep(), step.type(), containerId, step.item(), step.count());
+        int stepKey = Objects.hash(data.currentStep(), step.type(), containerId, step.itemSpec().displayKey(), step.count());
         if (boxRuntime.activeStep != stepKey) {
             boxRuntime.activeStep = stepKey;
             boxRuntime.stepStartedAt = gameTime;
@@ -434,7 +436,7 @@ public final class IndustrialWorkService {
                                                  IndustrialDefinition.StepDefinition step) {
         List<BlockPos> containers = IndustrialControlBoxService.resolveContainerPositions(building, definition, containerName(step.container(), step.output(), "output"));
         List<ItemStack> worstCaseOutputs = recipe.outputs().stream()
-                .map(output -> IndustrialInventoryService.stackForItem(output.itemId(), output.potionId(), output.baseAmount() + Math.max(0, output.randomRange())))
+                .map(output -> output.spec().stack(output.baseAmount() + Math.max(0, output.randomRange()), level.registryAccess()))
                 .filter(stack -> !stack.isEmpty())
                 .toList();
         if (containers.isEmpty() || !IndustrialInventoryService.hasOutputSpace(level, containers, worstCaseOutputs)) {

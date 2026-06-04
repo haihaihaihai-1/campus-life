@@ -243,8 +243,21 @@ public final class IndustrialControlBoxScreenOpener {
             layout.flexShrink(0);
         });
         strip.setOverflowVisible(false);
-        items.stream().limit(limit).forEach(item -> strip.addChild(icon(item, metrics.iconSize())));
+        items.stream().limit(limit).forEach(item -> {
+            if (!item.connector().isBlank()) {
+                strip.addChild(connectorLabel(item.connector(), metrics));
+            }
+            strip.addChild(icon(item, metrics.iconSize()));
+        });
         return strip;
+    }
+
+    private static UIElement connectorLabel(String connector, LayoutMetrics metrics) {
+        return label(Component.literal(connector), Horizontal.CENTER, 0xFF222222, metrics.iconSize(), TextWrap.HIDE, false).layout(layout -> {
+            layout.width(connectorWidth(metrics));
+            layout.height(metrics.iconSize());
+            layout.flexShrink(0);
+        });
     }
 
     private static UIElement icon(IndustrialControlBoxOpenResponsePacket.ItemEntry item, int size) {
@@ -252,7 +265,7 @@ public final class IndustrialControlBoxScreenOpener {
             layout.width(size);
             layout.height(size);
             layout.flexShrink(0);
-        }).style(style -> style.backgroundTexture(new ItemStackTexture(stack(item.itemId(), item.potionId(), item.count()))));
+        }).style(style -> style.backgroundTexture(new ItemStackTexture(stack(item))));
     }
 
     private static Button panelTopButton(String key, int width, int height, Runnable action) {
@@ -405,8 +418,15 @@ public final class IndustrialControlBoxScreenOpener {
         PacketDistributor.sendToServer(new IndustrialControlBoxDemolishPacket(packet.boxPos()));
     }
 
-    private static ItemStack stack(String itemId, String potionId, int count) {
-        ItemStack stack = IndustrialItemStackSpec.of(itemId, potionId).stack(count);
+    private static ItemStack stack(IndustrialControlBoxOpenResponsePacket.ItemEntry item) {
+        Minecraft minecraft = Minecraft.getInstance();
+        ItemStack stack = ItemStack.EMPTY;
+        if (item.itemSpec() != null && !item.itemSpec().isBlank() && minecraft.level != null) {
+            stack = IndustrialItemStackSpec.fromSerialized(item.itemSpec()).stack(item.count(), minecraft.level.registryAccess());
+        }
+        if (stack.isEmpty()) {
+            stack = IndustrialItemStackSpec.of(item.itemId(), item.potionId()).stack(item.count());
+        }
         return stack.isEmpty() ? IndustrialItemStackSpec.of("minecraft:barrier", "").stack(1) : stack;
     }
 
@@ -440,7 +460,7 @@ public final class IndustrialControlBoxScreenOpener {
         int iconGap = clamp(iconSize / 5, 2, 4);
         int selectorWidth = clamp(Math.round(panelWidth * 0.035F), 12, 18);
         int arrowWidth = clamp(Math.round(panelWidth * 0.050F), 18, 26);
-        int inputStripWidth = clamp(Math.round(panelWidth * 0.200F), 64, 98);
+        int inputStripWidth = clamp(Math.round(panelWidth * 0.280F), 86, 138);
         int outputStripWidth = clamp(Math.round(panelWidth * 0.180F), 56, 88);
         int inputLimit = Math.max(1, inputStripWidth / Math.max(1, iconSize + iconGap));
         int outputLimit = Math.max(1, outputStripWidth / Math.max(1, iconSize + iconGap));
@@ -451,6 +471,10 @@ public final class IndustrialControlBoxScreenOpener {
 
     private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static int connectorWidth(LayoutMetrics metrics) {
+        return clamp(metrics.iconSize() / 2, 6, 10);
     }
 
     private record LayoutMetrics(int rootPadding,

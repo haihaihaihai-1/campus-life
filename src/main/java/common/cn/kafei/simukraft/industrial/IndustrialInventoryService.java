@@ -2,25 +2,22 @@ package common.cn.kafei.simukraft.industrial;
 
 import common.cn.kafei.simukraft.material.GenericContainerAccess;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @SuppressWarnings("null")
 public final class IndustrialInventoryService {
     private IndustrialInventoryService() {
     }
 
-    public static boolean hasInputs(ServerLevel level, List<BlockPos> containers, List<IndustrialDefinition.ItemRequirement> inputs) {
-        for (IndustrialDefinition.ItemRequirement input : inputs) {
-            if (countItem(level, containers, input) < input.count()) {
-                return false;
-            }
-        }
-        return true;
+    public static boolean hasInputs(ServerLevel level, List<BlockPos> containers, List<IndustrialDefinition.InputRequirement> inputs) {
+        return planInputs(level, containers, inputs, 1).isPresent();
     }
 
     public static boolean hasOutputSpace(ServerLevel level, List<BlockPos> containers, List<ItemStack> outputs) {
@@ -66,41 +63,38 @@ public final class IndustrialInventoryService {
                                        double outputMultiplier,
                                        RandomSource random,
                                        int craftCount) {
-        if (level == null || recipe == null || craftCount <= 0 || !hasInputsForCrafts(level, inputContainers, recipe.inputs(), craftCount)) {
+        if (level == null || recipe == null || craftCount <= 0) {
             return false;
         }
-        List<ItemStack> outputs = buildOutputs(recipe, outputMultiplier, random, craftCount);
-        List<ItemStack> consumed = new ArrayList<>();
-        for (IndustrialDefinition.ItemRequirement input : recipe.inputs()) {
-            if (!input.consume()) {
-                continue;
-            }
-            int consumeCount = safeRequiredCount(input, craftCount);
-            if (!consumeItem(level, input, inputContainers, consumeCount)) {
-                insertItems(level, inputContainers, consumed);
-                return false;
-            }
-            ItemStack stack = stackForItem(input.itemId(), input.potionId(), consumeCount);
-            if (!stack.isEmpty()) {
-                consumed.add(stack);
-            }
+        Optional<IndustrialInputPlan> inputPlan = planInputs(level, inputContainers, recipe.inputs(), craftCount);
+        if (inputPlan.isEmpty()) {
+            return false;
+        }
+        List<ItemStack> outputs = buildOutputs(recipe, outputMultiplier, random, craftCount, level.registryAccess());
+        Optional<List<ItemStack>> consumed = consumePlannedInputs(level, inputContainers, inputPlan.get());
+        if (consumed.isEmpty()) {
+            return false;
         }
         if (!hasOutputSpace(level, outputContainers, outputs)) {
-            insertItems(level, inputContainers, consumed);
+            rollbackInputs(level, inputContainers, consumed.get());
             return false;
         }
         if (!insertOutputs(level, outputContainers, outputs)) {
-            insertItems(level, inputContainers, consumed);
+            rollbackInputs(level, inputContainers, consumed.get());
             return false;
         }
         return true;
     }
 
     public static List<ItemStack> buildOutputs(IndustrialDefinition.RecipeDefinition recipe, double outputMultiplier, RandomSource random) {
-        return buildOutputs(recipe, outputMultiplier, random, 1);
+        return buildOutputs(recipe, outputMultiplier, random, 1, null);
     }
 
-    private static List<ItemStack> buildOutputs(IndustrialDefinition.RecipeDefinition recipe, double outputMultiplier, RandomSource random, int craftCount) {
+    private static List<ItemStack> buildOutputs(IndustrialDefinition.RecipeDefinition recipe,
+                                                double outputMultiplier,
+                                                RandomSource random,
+                                                int craftCount,
+                                                HolderLookup.Provider registries) {
         List<ItemStack> outputs = new ArrayList<>();
         RandomSource safeRandom = random != null ? random : RandomSource.create();
         double safeMultiplier = Math.max(0.0D, outputMultiplier);
@@ -114,7 +108,7 @@ public final class IndustrialInventoryService {
                 if (!output.ignoreMultiplier()) {
                     amount = Math.max(1, (int) Math.floor(amount * safeMultiplier));
                 }
-                ItemStack stack = IndustrialItemStackSpec.of(output.itemId(), output.potionId()).stack(amount);
+                ItemStack stack = output.spec().stack(amount, registries);
                 if (!stack.isEmpty()) {
                     addOutputStack(outputs, stack);
                 }
@@ -131,16 +125,33 @@ public final class IndustrialInventoryService {
         return IndustrialItemStackSpec.of(itemId, potionId).stack(count);
     }
 
+    public static ItemStack stackForSpec(IndustrialItemStackSpec spec, HolderLookup.Provider registries, int count) {
+        return spec != null ? spec.stack(count, registries) : ItemStack.EMPTY;
+    }
+
     public static boolean consumeInput(ServerLevel level, List<BlockPos> containers, String itemId, String potionId, int count) {
+        return consumeInput(level, containers, IndustrialItemStackSpec.of(itemId, potionId), count);
+    }
+
+    public static boolean consumeInput(ServerLevel level, List<BlockPos> containers, IndustrialItemStackSpec spec, int count) {
+        return consumeInputStacks(level, containers, spec, count).isPresent();
+    }
+
+    public static Optional<List<ItemStack>> consumeInputStacks(ServerLevel level, List<BlockPos> containers, IndustrialItemStackSpec spec, int count) {
         if (count <= 0) {
-            return true;
+            return Optional.of(List.of());
         }
-        IndustrialDefinition.ItemRequirement request = new IndustrialDefinition.ItemRequirement(itemId, count, true, potionId != null ? potionId : "");
-        return hasInputs(level, containers, List.of(request)) && consumeItem(level, request, containers, count);
+        IndustrialDefinition.ItemRequirement request = new IndustrialDefinition.ItemRequirement(spec, count, true);
+        Optional<IndustrialInputPlan> plan = planInputs(level, containers, List.<IndustrialDefinition.InputRequirement>of(request), 1);
+        return plan.flatMap(inputPlan -> consumePlannedInputs(level, containers, inputPlan));
     }
 
     public static int countInput(ServerLevel level, List<BlockPos> containers, String itemId, String potionId) {
-        IndustrialDefinition.ItemRequirement request = new IndustrialDefinition.ItemRequirement(itemId, 1, true, potionId != null ? potionId : "");
+        return countInput(level, containers, IndustrialItemStackSpec.of(itemId, potionId));
+    }
+
+    public static int countInput(ServerLevel level, List<BlockPos> containers, IndustrialItemStackSpec spec) {
+        IndustrialDefinition.ItemRequirement request = new IndustrialDefinition.ItemRequirement(spec, 1, true);
         return countItem(level, containers, request);
     }
 
@@ -162,15 +173,42 @@ public final class IndustrialInventoryService {
         return !outputs.isEmpty() && hasOutputSpace(level, containers, outputs) && insertOutputs(level, containers, outputs);
     }
 
+    public static Optional<IndustrialInputPlan> planInputs(ServerLevel level,
+                                                           List<BlockPos> containers,
+                                                           List<IndustrialDefinition.InputRequirement> inputs,
+                                                           int craftCount) {
+        return IndustrialInputPlanner.plan(level, containers, inputs, craftCount);
+    }
+
+    public static Optional<List<ItemStack>> consumePlannedInputs(ServerLevel level,
+                                                                 List<BlockPos> containers,
+                                                                 IndustrialInputPlan plan) {
+        if (plan == null) {
+            return Optional.empty();
+        }
+        List<ItemStack> consumed = new ArrayList<>();
+        for (IndustrialDefinition.ItemRequirement input : plan.consumptions()) {
+            Optional<List<ItemStack>> removed = consumeItem(level, input, containers, Math.max(1, input.count()));
+            if (removed.isEmpty()) {
+                rollbackInputs(level, containers, consumed);
+                return Optional.empty();
+            }
+            for (ItemStack stack : removed.get()) {
+                addOutputStack(consumed, stack);
+            }
+        }
+        return Optional.of(List.copyOf(consumed));
+    }
+
     private static int countItem(ServerLevel level, List<BlockPos> containers, IndustrialDefinition.ItemRequirement input) {
-        IndustrialItemStackSpec spec = IndustrialItemStackSpec.of(input.itemId(), input.potionId());
+        IndustrialItemStackSpec spec = input.spec();
         int count = 0;
         for (BlockPos container : containers) {
             if (!GenericContainerAccess.isContainer(level, container)) {
                 continue;
             }
             for (GenericContainerAccess.SlotSnapshot snapshot : GenericContainerAccess.snapshotSlots(level, container)) {
-                if (spec.matches(snapshot.stack())) {
+                if (spec.matches(snapshot.stack(), level.registryAccess())) {
                     count += snapshot.stack().getCount();
                 }
             }
@@ -185,65 +223,48 @@ public final class IndustrialInventoryService {
         if (level == null || recipe == null || recipe.inputs().isEmpty()) {
             return 0;
         }
-        int craftCount = Integer.MAX_VALUE;
-        boolean hasConsumableInput = false;
-        for (IndustrialDefinition.ItemRequirement input : recipe.inputs()) {
-            int available = countItem(level, containers, input);
-            if (input.consume()) {
-                hasConsumableInput = true;
-                craftCount = Math.min(craftCount, available / Math.max(1, input.count()));
-            } else if (available < input.count()) {
-                return 0;
-            }
-        }
-        return hasConsumableInput ? Math.max(0, craftCount) : hasInputs(level, containers, recipe.inputs()) ? 1 : 0;
+        return IndustrialInputPlanner.availableCraftCount(level, containers, recipe.inputs());
     }
 
-    private static boolean hasInputsForCrafts(ServerLevel level, List<BlockPos> containers, List<IndustrialDefinition.ItemRequirement> inputs, int craftCount) {
-        for (IndustrialDefinition.ItemRequirement input : inputs) {
-            if (countItem(level, containers, input) < safeRequiredCount(input, craftCount)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static int safeRequiredCount(IndustrialDefinition.ItemRequirement input, int craftCount) {
-        int baseCount = Math.max(1, input.count());
-        if (!input.consume()) {
-            return baseCount;
-        }
-        long required = (long) baseCount * Math.max(1, craftCount);
-        return required > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) required;
-    }
-
-    private static boolean consumeItem(ServerLevel level, IndustrialDefinition.ItemRequirement input, List<BlockPos> containers, int count) {
+    private static Optional<List<ItemStack>> consumeItem(ServerLevel level, IndustrialDefinition.ItemRequirement input, List<BlockPos> containers, int count) {
         if (count <= 0) {
-            return false;
+            return Optional.empty();
         }
-        IndustrialItemStackSpec spec = IndustrialItemStackSpec.of(input.itemId(), input.potionId());
+        IndustrialItemStackSpec spec = input.spec();
         int remaining = count;
+        List<ItemStack> consumed = new ArrayList<>();
         for (BlockPos container : containers) {
             if (!GenericContainerAccess.isContainer(level, container)) {
                 continue;
             }
             for (GenericContainerAccess.SlotSnapshot snapshot : GenericContainerAccess.snapshotSlots(level, container)) {
-                if (!spec.matches(snapshot.stack())) {
+                if (!spec.matches(snapshot.stack(), level.registryAccess())) {
                     continue;
                 }
                 int slotCount = Math.min(snapshot.stack().getCount(), remaining);
                 for (int i = 0; i < slotCount; i++) {
-                    if (!GenericContainerAccess.consumeSingleItemAtSlot(level, container, snapshot.slot(), snapshot.access(), snapshot.side(), spec::matches)) {
-                        return false;
+                    ItemStack consumedSingle = snapshot.stack().copyWithCount(1);
+                    if (!GenericContainerAccess.consumeSingleItemAtSlot(level, container, snapshot.slot(), snapshot.access(), snapshot.side(),
+                            stack -> spec.matches(stack, level.registryAccess()))) {
+                        rollbackInputs(level, containers, consumed);
+                        return Optional.empty();
                     }
+                    addOutputStack(consumed, consumedSingle);
                     remaining--;
                     if (remaining <= 0) {
-                        return true;
+                        return Optional.of(List.copyOf(consumed));
                     }
                 }
             }
         }
-        return remaining <= 0;
+        rollbackInputs(level, containers, consumed);
+        return Optional.empty();
+    }
+
+    private static void rollbackInputs(ServerLevel level, List<BlockPos> containers, List<ItemStack> consumed) {
+        if (consumed != null && !consumed.isEmpty()) {
+            insertItems(level, containers, consumed);
+        }
     }
 
     private static void addOutputStack(List<ItemStack> outputs, ItemStack stack) {
