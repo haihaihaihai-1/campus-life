@@ -6,7 +6,7 @@ import net.minecraft.resources.ResourceLocation;
 import java.util.Collection;
 import java.util.Map;
 
-public record PathSnapshot(ResourceLocation dimensionId, BlockPos startPos, BlockPos targetPos, Map<Long, PathCell> cells, int minY, int maxY, long createdAt) {
+public record PathSnapshot(ResourceLocation dimensionId, BlockPos startPos, BlockPos targetPos, Map<Long, PathCell> cells, int minY, int maxY, long createdAt, boolean complete) {
     public PathCell cell(BlockPos pos) {
         return cells.get(PathCell.key(pos));
     }

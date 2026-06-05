@@ -1,0 +1,253 @@
+package common.cn.kafei.simukraft.path;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Regression tests for {@link HybridPathfinder} that lock in the corner-cutting / gap-crossing fixes
+ * ("citizen crosses over block positions more than 2 cells away").
+ *
+ * <p>Each scenario hand-builds an immutable {@link PathSnapshot}; no live world is needed because the
+ * pathfinder reasons purely about the snapshot. The four scenarios mirror the requested cases — a
+ * pit, a waterside, a step lip and a wall corner — and every assertion is an independent oracle that
+ * fails on the pre-fix behaviour and passes on the fixed behaviour.
+ */
+class HybridPathfinderRegressionTest {
+    private static final ResourceLocation DIMENSION = ResourceLocation.fromNamespaceAndPath("minecraft", "overworld");
+
+    /**
+     * Pit: a floor with a three-wide hole in the middle lane. The citizen must detour around it and
+     * no walk segment may pass over the hole.
+     */
+    @Test
+    void pitIsRoutedAroundNeverCrossed() {
+        Scene scene = new Scene();
+        for (int x = 0; x <= 6; x++) {
+            for (int z = 0; z <= 2; z++) {
+                boolean pit = z == 1 && x >= 2 && x <= 4;
+                if (!pit) {
+                    scene.floor(x, 64, z);
+                }
+            }
+        }
+        PathCase result = scene.path(0, 64, 1, 6, 64, 1);
+        assertSuccess(result);
+        assertWalkSegmentsStayOnFloor(result);
+        assertNoDiagonalCornerCut(result);
+    }
+
+    /**
+     * Wall corner: a one-wide L corridor whose inside corner is solid. The diagonal shortcut would
+     * clip the missing corner, so the path must round it.
+     */
+    @Test
+    void wallCornerIsNotCut() {
+        Scene scene = new Scene();
+        scene.floor(0, 64, 0).floor(0, 64, 1).floor(0, 64, 2).floor(1, 64, 2).floor(2, 64, 2);
+        PathCase result = scene.path(0, 64, 0, 2, 64, 2);
+        assertSuccess(result);
+        assertNoDiagonalCornerCut(result);
+        assertWalkSegmentsStayOnFloor(result);
+    }
+
+    /**
+     * Waterside: a swimmer exits onto land whose diagonal corner block is solid. The exit must not
+     * cut the corner and must not be driven as a flat diagonal walk.
+     */
+    @Test
+    void waterExitDoesNotCutCorner() {
+        Scene scene = new Scene();
+        scene.water(0, 64, 0).water(0, 64, 1).floor(1, 64, 1);
+        // The corner column (1, 64, 0) is intentionally absent (solid).
+        PathCase result = scene.path(0, 64, 0, 1, 64, 1);
+        assertSuccess(result);
+        assertNoDiagonalCornerCut(result);
+        assertNoDiagonalVerticalTransitions(result);
+    }
+
+    /**
+     * Step lip: three same-feet cells where the middle stands higher than the chord between the
+     * ends. Smoothing must keep the lip waypoint instead of driving a flat line through it.
+     */
+    @Test
+    void smoothingKeepsRaisedStepLip() {
+        Scene scene = new Scene();
+        scene.cell(0, 64, 0, 63.1D, false, false, false, 1.0D);
+        scene.cell(1, 64, 0, 63.8D, false, false, false, 1.0D);
+        scene.cell(2, 64, 0, 63.1D, false, false, false, 1.0D);
+        PathCase result = scene.path(0, 64, 0, 2, 64, 0);
+        assertSuccess(result);
+        assertTrue(containsBlock(result.result(), 1, 64, 0),
+                "smoothing dropped the raised lip; the follower would walk a flat line through it");
+    }
+
+    /**
+     * Diagonal drop: a one-block drop sits diagonally across an open corner. The descent must be
+     * routed as an orthogonal walk-then-fall, never a single diagonal fall.
+     */
+    @Test
+    void diagonalDropIsRoutedOrthogonally() {
+        Scene scene = new Scene();
+        scene.floor(0, 64, 0).floor(1, 64, 0).floor(0, 64, 1).floor(1, 63, 1);
+        PathCase result = scene.path(0, 64, 0, 1, 63, 1);
+        assertSuccess(result);
+        assertNoDiagonalVerticalTransitions(result);
+    }
+
+    /**
+     * Waterside, elevation change: a swimmer climbs out onto a ledge one block up whose diagonal
+     * corner is solid. The exit must climb orthogonally, never as a single diagonal jump.
+     */
+    @Test
+    void waterExitElevationStaysOrthogonal() {
+        Scene scene = new Scene();
+        scene.water(0, 64, 0).water(0, 64, 1).water(1, 64, 0);
+        scene.cell(1, 65, 1, 65.0D, false, false, false, 1.0D);
+        // Destination-level corners (1,65,0) and (0,65,1) are intentionally absent (solid).
+        PathCase result = scene.path(0, 64, 0, 1, 65, 1);
+        assertSuccess(result);
+        assertNoDiagonalVerticalTransitions(result);
+    }
+
+    /**
+     * Waterside, ladder exit: a swimmer in a one-wide pool whose only way out is a side-wall ladder
+     * must be able to grab the ladder and climb out instead of being trapped.
+     */
+    @Test
+    void waterExitReachesSideLadder() {
+        Scene scene = new Scene();
+        scene.water(0, 64, 0).climb(1, 64, 0).climb(1, 65, 0).floor(2, 65, 0);
+        PathCase result = scene.path(0, 64, 0, 2, 65, 0);
+        assertSuccess(result);
+    }
+
+    private static void assertSuccess(PathCase pathCase) {
+        assertTrue(pathCase.result().success(), () -> "path failed: " + pathCase.result().reason());
+        assertFalse(pathCase.result().waypoints().isEmpty(), "path produced no waypoints");
+    }
+
+    /**
+     * Asserts no jump or fall waypoint is reached by a diagonal step (the orthogonal-only invariant).
+     */
+    private static void assertNoDiagonalVerticalTransitions(PathCase pathCase) {
+        List<PathWaypoint> waypoints = pathCase.result().waypoints();
+        for (int index = 1; index < waypoints.size(); index++) {
+            MovementMode mode = waypoints.get(index).mode();
+            if (mode != MovementMode.JUMP && mode != MovementMode.FALL) {
+                continue;
+            }
+            BlockPos from = waypoints.get(index - 1).blockPos();
+            BlockPos to = waypoints.get(index).blockPos();
+            boolean diagonal = from.getX() != to.getX() && from.getZ() != to.getZ();
+            assertFalse(diagonal, () -> "diagonal " + mode + " transition " + from + " -> " + to);
+        }
+    }
+
+    /**
+     * Asserts every single-step diagonal in the path has both orthogonal corner cells present.
+     */
+    private static void assertNoDiagonalCornerCut(PathCase pathCase) {
+        List<PathWaypoint> waypoints = pathCase.result().waypoints();
+        for (int index = 1; index < waypoints.size(); index++) {
+            BlockPos from = waypoints.get(index - 1).blockPos();
+            BlockPos to = waypoints.get(index).blockPos();
+            if (Math.abs(to.getX() - from.getX()) != 1 || Math.abs(to.getZ() - from.getZ()) != 1) {
+                continue;
+            }
+            int stepX = Integer.signum(to.getX() - from.getX());
+            int stepZ = Integer.signum(to.getZ() - from.getZ());
+            boolean cornerClear = pathCase.snapshot().cell(from.getX() + stepX, from.getY(), from.getZ()) != null
+                    && pathCase.snapshot().cell(from.getX(), from.getY(), from.getZ() + stepZ) != null;
+            assertTrue(cornerClear, () -> "diagonal step " + from + " -> " + to + " cuts a missing corner");
+        }
+    }
+
+    /**
+     * Asserts every same-level walk/run segment stays over an existing walkable cell along its whole
+     * straight line, i.e. the citizen never strides across a gap.
+     */
+    private static void assertWalkSegmentsStayOnFloor(PathCase pathCase) {
+        List<PathWaypoint> waypoints = pathCase.result().waypoints();
+        for (int index = 1; index < waypoints.size(); index++) {
+            PathWaypoint from = waypoints.get(index - 1);
+            PathWaypoint to = waypoints.get(index);
+            if (isActionMode(to.mode()) || from.blockPos().getY() != to.blockPos().getY()) {
+                continue;
+            }
+            int level = to.blockPos().getY();
+            double originX = from.blockPos().getX() + 0.5D;
+            double originZ = from.blockPos().getZ() + 0.5D;
+            double spanX = to.blockPos().getX() - from.blockPos().getX();
+            double spanZ = to.blockPos().getZ() - from.blockPos().getZ();
+            int samples = Math.max(1, (int) Math.ceil(Math.sqrt(spanX * spanX + spanZ * spanZ) / 0.25D));
+            for (int sample = 0; sample <= samples; sample++) {
+                double ratio = (double) sample / samples;
+                int cellX = (int) Math.floor(originX + spanX * ratio);
+                int cellZ = (int) Math.floor(originZ + spanZ * ratio);
+                assertTrue(pathCase.snapshot().cell(cellX, level, cellZ) != null,
+                        () -> "walk segment " + from.blockPos() + " -> " + to.blockPos()
+                                + " crosses non-floor at " + cellX + "," + cellZ);
+            }
+        }
+    }
+
+    private static boolean isActionMode(MovementMode mode) {
+        return mode == MovementMode.JUMP || mode == MovementMode.SWIM || mode == MovementMode.CLIMB || mode == MovementMode.FALL;
+    }
+
+    private static boolean containsBlock(PathResult result, int x, int y, int z) {
+        return result.waypoints().stream()
+                .anyMatch(waypoint -> waypoint.blockPos().getX() == x
+                        && waypoint.blockPos().getY() == y
+                        && waypoint.blockPos().getZ() == z);
+    }
+
+    /**
+     * In-memory builder for an immutable {@link PathSnapshot} scene.
+     */
+    private static final class Scene {
+        private final Map<Long, PathCell> cells = new HashMap<>();
+        private int minY = Integer.MAX_VALUE;
+        private int maxY = Integer.MIN_VALUE;
+
+        private Scene floor(int x, int y, int z) {
+            return cell(x, y, z, y, false, false, false, 1.0D);
+        }
+
+        private Scene water(int x, int y, int z) {
+            return cell(x, y, z, y, true, false, false, 1.8D);
+        }
+
+        private Scene climb(int x, int y, int z) {
+            return cell(x, y, z, y, false, true, false, 2.0D);
+        }
+
+        private Scene cell(int x, int y, int z, double standY, boolean water, boolean climbable, boolean woodenDoor, double cost) {
+            cells.put(PathCell.key(x, y, z), new PathCell(new BlockPos(x, y, z), x, y, z, standY, water, climbable, woodenDoor, cost));
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+            return this;
+        }
+
+        private PathCase path(int startX, int startY, int startZ, int targetX, int targetY, int targetZ) {
+            BlockPos start = new BlockPos(startX, startY, startZ);
+            BlockPos targetBlock = new BlockPos(targetX, targetY, targetZ);
+            PathSnapshot snapshot = new PathSnapshot(DIMENSION, start, targetBlock, Map.copyOf(cells), minY, maxY, 0L, true);
+            Vec3 target = new Vec3(targetX + 0.5D, targetY, targetZ + 0.5D);
+            PathRequest request = new PathRequest(UUID.randomUUID(), DIMENSION, start, target, MovementIntent.WALK, 0L);
+            return new PathCase(HybridPathfinder.find(request, snapshot), snapshot);
+        }
+    }
+
+    private record PathCase(PathResult result, PathSnapshot snapshot) {
+    }
+}

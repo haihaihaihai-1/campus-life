@@ -41,6 +41,9 @@ public final class CitizenNavigationService {
     private static final AtomicInteger THREAD_ID = new AtomicInteger();
     private static final double PASSED_WAYPOINT_DOT_EPSILON = 1.05D;
     private static final double PASSED_WAYPOINT_LATERAL_TOLERANCE = 0.45D;
+    private static final double WALK_PASSED_VERTICAL_TOLERANCE = 1.0D;
+    private static final double ACTION_PASSED_VERTICAL_TOLERANCE = 2.25D;
+    private static final double TURN_DOT_THRESHOLD = 0.906D;
     private static final double STALLED_SOFT_SKIP_DISTANCE = 2.25D;
     private static final double ACTION_START_DISTANCE = 0.65D;
     private static final double CORNER_ARRIVAL_DISTANCE = 0.30D;
@@ -104,7 +107,7 @@ public final class CitizenNavigationService {
             if (!runtime.active.containsKey(citizenId) && runtime.active.size() >= ServerConfig.pathMaxActiveCitizens()) {
                 return false;
             }
-            if (countLoadedCitizens(level) > ServerConfig.pathMaxLoadedCitizenEntities()) {
+            if (countLoadedCitizens(level, runtime) > ServerConfig.pathMaxLoadedCitizenEntities()) {
                 return false;
             }
         }
@@ -271,7 +274,9 @@ public final class CitizenNavigationService {
         if (level == null || changedPos == null) {
             return;
         }
-        runtime(level).pathCache.clear();
+        LevelRuntime runtime = runtime(level);
+        runtime.pathCache.clear();
+        runtime.snapshotCache.clear();
     }
 
     public static void clearServerCaches(MinecraftServer server) {
@@ -318,7 +323,7 @@ public final class CitizenNavigationService {
                 processed++;
                 continue;
             }
-            PathSnapshot snapshot = PathSnapshotBuilder.build(level, currentRequest.startPos(), currentRequest.targetBlockPos(), ServerConfig.pathLocalRadiusBlocks());
+            PathSnapshot snapshot = runtime.snapshotCache.acquire(level, currentRequest.startPos(), currentRequest.targetBlockPos(), ServerConfig.pathLocalRadiusBlocks());
             CompletableFuture<PathResult> future = CompletableFuture.supplyAsync(() -> HybridPathfinder.find(currentRequest, snapshot), executor());
             runtime.pending.put(citizenId, new RunningRequest(future, cacheKey));
             processed++;
@@ -411,13 +416,23 @@ public final class CitizenNavigationService {
         return SaveKey.serverKey(level.getServer()) + "|" + level.dimension().location();
     }
 
-    private static int countLoadedCitizens(ServerLevel level) {
+    /**
+     * Counts the citizen entities loaded in the level, memoizing the result for the current tick so
+     * the many move requests issued per tick share a single full entity scan.
+     */
+    private static int countLoadedCitizens(ServerLevel level, LevelRuntime runtime) {
+        long gameTime = level.getGameTime();
+        if (runtime.loadedCitizenCountTick == gameTime) {
+            return runtime.loadedCitizenCount;
+        }
         int count = 0;
         for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
             if (entity instanceof CitizenEntity) {
                 count++;
             }
         }
+        runtime.loadedCitizenCountTick = gameTime;
+        runtime.loadedCitizenCount = count;
         return count;
     }
 
@@ -612,6 +627,9 @@ public final class CitizenNavigationService {
         private final ConcurrentMap<UUID, Long> cooldowns = new ConcurrentHashMap<>();
         private final ConcurrentMap<UUID, Long> blockedSince = new ConcurrentHashMap<>();
         private final PathResultCache pathCache = new PathResultCache();
+        private final PathSnapshotCache snapshotCache = new PathSnapshotCache();
+        private long loadedCitizenCountTick = Long.MIN_VALUE;
+        private int loadedCitizenCount;
     }
 
     private record RunningRequest(CompletableFuture<PathResult> future, PathCacheKey cacheKey) {
@@ -844,7 +862,10 @@ public final class CitizenNavigationService {
             double segmentX = to.x - from.x;
             double segmentZ = to.z - from.z;
             double segmentLengthSqr = segmentX * segmentX + segmentZ * segmentZ;
-            if (segmentLengthSqr < 0.0001D || Math.abs(position.y - to.y) > 2.25D) {
+            double verticalTolerance = isActionMode(waypoint.mode())
+                    ? ACTION_PASSED_VERTICAL_TOLERANCE
+                    : WALK_PASSED_VERTICAL_TOLERANCE;
+            if (segmentLengthSqr < 0.0001D || Math.abs(position.y - to.y) > verticalTolerance) {
                 return false;
             }
             double progressX = position.x - from.x;
@@ -868,18 +889,34 @@ public final class CitizenNavigationService {
             return !isActionMode(mode) && isTurnWaypoint(index);
         }
 
+        /**
+         * Returns whether the path bends at this waypoint by more than the corner threshold.
+         *
+         * <p>The test uses the actual waypoint positions and the angle between the incoming and
+         * outgoing segments, so it still detects same-quadrant bends that survive smoothing (e.g.
+         * a {@code (+3,+1)} segment into a {@code (+1,+3)} segment), which the previous
+         * sign-comparison missed. The first and last waypoints are never treated as turns: the last
+         * one keeps the looser arrival tolerance so the citizen is not forced to centre exactly on
+         * the goal cell.
+         */
         private boolean isTurnWaypoint(int index) {
             if (index <= 0 || index >= waypoints.size() - 1) {
                 return false;
             }
-            BlockPos previous = waypoints.get(index - 1).blockPos();
-            BlockPos current = waypoints.get(index).blockPos();
-            BlockPos next = waypoints.get(index + 1).blockPos();
-            int inX = Integer.compare(current.getX(), previous.getX());
-            int inZ = Integer.compare(current.getZ(), previous.getZ());
-            int outX = Integer.compare(next.getX(), current.getX());
-            int outZ = Integer.compare(next.getZ(), current.getZ());
-            return inX != outX || inZ != outZ;
+            Vec3 previous = waypoints.get(index - 1).position();
+            Vec3 current = waypoints.get(index).position();
+            Vec3 next = waypoints.get(index + 1).position();
+            double inX = current.x - previous.x;
+            double inZ = current.z - previous.z;
+            double outX = next.x - current.x;
+            double outZ = next.z - current.z;
+            double inLength = Math.sqrt(inX * inX + inZ * inZ);
+            double outLength = Math.sqrt(outX * outX + outZ * outZ);
+            if (inLength < 1.0E-4D || outLength < 1.0E-4D) {
+                return false;
+            }
+            double directionDot = (inX * outX + inZ * outZ) / (inLength * outLength);
+            return directionDot < TURN_DOT_THRESHOLD;
         }
 
         private double arrivalDistance(int index, MovementMode mode) {

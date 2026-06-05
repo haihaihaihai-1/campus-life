@@ -77,7 +77,28 @@ public final class CitizenTeleportService {
     }
 
     public static CitizenEntity findCitizenEntity(ServerLevel level, UUID citizenId) {
-        return reconcileLoadedCitizenEntities(level, citizenId, null);
+        return findLoadedCitizenEntity(level, citizenId);
+    }
+
+    /**
+     * Returns the loaded citizen entity with the given id via the level's O(1) UUID index.
+     *
+     * <p>This read-only lookup replaces a full entity scan for the hot pathfinding callers.
+     * Deduplication of stray duplicate entities is intentionally left to
+     * {@link #reconcileLoadedCitizenEntities} (used by spawn and teleport callers) and to the
+     * per-tick self-reconcile each entity performs, so this fast path performs no discards.
+     *
+     * @param level the server level to query
+     * @param citizenId the citizen UUID
+     * @return the loaded, non-removed citizen entity, or {@code null} if none is loaded
+     */
+    public static CitizenEntity findLoadedCitizenEntity(ServerLevel level, UUID citizenId) {
+        if (level == null || citizenId == null) {
+            return null;
+        }
+        return level.getEntity(citizenId) instanceof CitizenEntity citizenEntity && !citizenEntity.isRemoved()
+                ? citizenEntity
+                : null;
     }
 
     public static CitizenEntity reconcileLoadedCitizenEntities(ServerLevel level, UUID citizenId, Vec3 preferredTarget) {

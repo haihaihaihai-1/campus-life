@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.path;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.tags.BlockTags;
@@ -18,6 +19,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Samples the live world on the server thread into an immutable {@link PathSnapshot}.
+ *
+ * <p>This is the only component that reads the live world for pathfinding; once a snapshot is
+ * frozen the asynchronous search never touches block state again. Each {@link PathCell} records the
+ * exact stand height and traversal class of a column position. Redundant block-state and collision
+ * reads are deduplicated through a per-build {@link SampleCache}, which keeps the produced cell map
+ * identical while removing the overlapping world reads between adjacent vertical samples.
+ */
 @SuppressWarnings("null")
 final class PathSnapshotBuilder {
     private static final int HORIZONTAL_PADDING = 12;
@@ -28,7 +38,47 @@ final class PathSnapshotBuilder {
     private PathSnapshotBuilder() {
     }
 
+    /**
+     * Builds an immutable snapshot covering the volume between {@code start} and {@code target}.
+     *
+     * @param level the server level to sample
+     * @param start the citizen's start block
+     * @param target the destination block
+     * @param radius the local path radius that bounds the sampled box
+     * @return an immutable snapshot of every walkable cell in the bounded volume
+     */
     static PathSnapshot build(ServerLevel level, BlockPos start, BlockPos target, int radius) {
+        SnapshotBounds bounds = bounds(level, start, target, radius);
+        SampleCache cache = new SampleCache(level);
+        Map<Long, PathCell> cells = new HashMap<>();
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
+        boolean complete = true;
+        for (int x = bounds.minX(); x <= bounds.maxX(); x++) {
+            for (int z = bounds.minZ(); z <= bounds.maxZ(); z++) {
+                mutable.set(x, start.getY(), z);
+                if (!hasLoadedChunk(level, mutable)) {
+                    complete = false;
+                    continue;
+                }
+                for (int y = bounds.minY(); y <= bounds.maxY(); y++) {
+                    mutable.set(x, y, z);
+                    PathCell cell = classify(cache, mutable);
+                    if (cell != null) {
+                        cells.put(cell.key(), cell);
+                    }
+                }
+            }
+        }
+        return new PathSnapshot(level.dimension().location(), start.immutable(), target.immutable(), Map.copyOf(cells), bounds.minY(), bounds.maxY(), level.getGameTime(), complete);
+    }
+
+    /**
+     * Computes the sampled box for a request without reading any block state.
+     *
+     * <p>Exposed so callers can test box containment for snapshot reuse using exactly the same
+     * bounds {@link #build} would produce.
+     */
+    static SnapshotBounds bounds(ServerLevel level, BlockPos start, BlockPos target, int radius) {
         int safeRadius = Math.max(16, radius);
         int minX = Math.max(Math.min(start.getX(), target.getX()) - HORIZONTAL_PADDING, start.getX() - safeRadius);
         int maxX = Math.min(Math.max(start.getX(), target.getX()) + HORIZONTAL_PADDING, start.getX() + safeRadius);
@@ -36,31 +86,17 @@ final class PathSnapshotBuilder {
         int maxZ = Math.min(Math.max(start.getZ(), target.getZ()) + HORIZONTAL_PADDING, start.getZ() + safeRadius);
         int minY = Math.max(level.getMinBuildHeight(), Math.min(start.getY(), target.getY()) - VERTICAL_PADDING);
         int maxY = Math.min(level.getMaxBuildHeight() - 2, Math.max(start.getY(), target.getY()) + VERTICAL_PADDING);
-
-        Map<Long, PathCell> cells = new HashMap<>();
-        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                mutable.set(x, start.getY(), z);
-                if (!hasLoadedChunk(level, mutable)) {
-                    continue;
-                }
-                for (int y = minY; y <= maxY; y++) {
-                    mutable.set(x, y, z);
-                    PathCell cell = classify(level, mutable);
-                    if (cell != null) {
-                        cells.put(cell.key(), cell);
-                    }
-                }
-            }
-        }
-        return new PathSnapshot(level.dimension().location(), start.immutable(), target.immutable(), Map.copyOf(cells), minY, maxY, level.getGameTime());
+        return new SnapshotBounds(minX, maxX, minZ, maxZ, minY, maxY);
     }
 
-    private static PathCell classify(ServerLevel level, BlockPos pos) {
-        BlockState foot = level.getBlockState(pos);
-        BlockState head = level.getBlockState(pos.above());
-        BlockState below = level.getBlockState(pos.below());
+    /**
+     * Classifies a single column position into a walkable {@link PathCell}, or {@code null} when the
+     * citizen cannot occupy it.
+     */
+    private static PathCell classify(SampleCache cache, BlockPos pos) {
+        BlockState foot = cache.state(pos);
+        BlockState head = cache.state(pos.above());
+        BlockState below = cache.state(pos.below());
         if (isDangerous(foot) || isDangerous(head) || isDangerous(below)) {
             return null;
         }
@@ -70,31 +106,34 @@ final class PathSnapshotBuilder {
         boolean water = footWater || headWater;
         boolean climbable = isClimbable(foot) || isClimbable(head) || isClimbable(below);
         if (water) {
+            if (!isBodyPassable(cache, pos, foot) || !isBodyPassable(cache, pos.above(), head)) {
+                return null;
+            }
             return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), pos.getY(), true, climbable, false, 1.8D);
         }
-        if (climbable && isBodyPassable(level, pos, foot) && isBodyPassable(level, pos.above(), head)) {
+        if (climbable && isBodyPassable(cache, pos, foot) && isBodyPassable(cache, pos.above(), head)) {
             return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), pos.getY(), false, true, false, 2.0D);
         }
         if (isClosedWoodenLowerDoor(foot) && isMatchingWoodenDoorHead(head)) {
-            double standY = supportTop(level, pos.below(), below);
-            if (!Double.isNaN(standY) && hasNpcClearance(level, pos, standY, pos, pos.above())) {
+            double standY = supportTop(cache, pos.below(), below);
+            if (!Double.isNaN(standY) && hasNpcClearance(cache, pos, standY, pos, pos.above())) {
                 return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), standY, false, false, true, 3.2D);
             }
         }
-        if (!isBodyPassable(level, pos, foot) || !isBodyPassable(level, pos.above(), head)) {
-            if (isLowStandableSurface(foot) && isBodyPassable(level, pos.above(), head)) {
-                double standY = supportTop(level, pos, foot);
-                if (!Double.isNaN(standY) && hasNpcClearance(level, pos, standY, null, null)) {
+        if (!isBodyPassable(cache, pos, foot) || !isBodyPassable(cache, pos.above(), head)) {
+            if (isLowStandableSurface(foot) && isBodyPassable(cache, pos.above(), head)) {
+                double standY = supportTop(cache, pos, foot);
+                if (!Double.isNaN(standY) && hasNpcClearance(cache, pos, standY, null, null)) {
                     return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), standY, false, false, false, 1.05D);
                 }
             }
             return null;
         }
-        double standY = supportTop(level, pos.below(), below);
+        double standY = supportTop(cache, pos.below(), below);
         if (Double.isNaN(standY)) {
             return null;
         }
-        if (!hasNpcClearance(level, pos, standY, null, null)) {
+        if (!hasNpcClearance(cache, pos, standY, null, null)) {
             return null;
         }
         return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), standY, false, false, false, 1.0D);
@@ -104,14 +143,24 @@ final class PathSnapshotBuilder {
         return level.hasChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
     }
 
-    private static boolean isBodyPassable(ServerLevel level, BlockPos pos, BlockState state) {
+    /**
+     * Returns whether the citizen's body can occupy the column at {@code pos} given its block state.
+     */
+    private static boolean isBodyPassable(SampleCache cache, BlockPos pos, BlockState state) {
         if (isOpenDoorOrGate(state)) {
             return true;
         }
-        return state.isAir() || state.getFluidState().is(FluidTags.WATER) || state.getCollisionShape(level, pos).isEmpty() || isClimbable(state);
+        return state.isAir()
+                || state.getFluidState().is(FluidTags.WATER)
+                || cache.shape(pos, state).isEmpty()
+                || isClimbable(state);
     }
 
-    private static boolean hasNpcClearance(ServerLevel level, BlockPos feet, double standY, BlockPos ignoredA, BlockPos ignoredB) {
+    /**
+     * Returns whether the citizen's bounding box, standing at {@code standY} above {@code feet}, is
+     * free of solid collision, ignoring up to two positions (used to exclude an opening door).
+     */
+    private static boolean hasNpcClearance(SampleCache cache, BlockPos feet, double standY, BlockPos ignoredA, BlockPos ignoredB) {
         double centerX = feet.getX() + 0.5D;
         double centerZ = feet.getZ() + 0.5D;
         AABB npcBox = new AABB(
@@ -135,8 +184,8 @@ final class PathSnapshotBuilder {
                     if (mutable.equals(ignoredA) || mutable.equals(ignoredB)) {
                         continue;
                     }
-                    BlockState state = level.getBlockState(mutable);
-                    VoxelShape shape = state.getCollisionShape(level, mutable);
+                    BlockState state = cache.state(mutable);
+                    VoxelShape shape = cache.shape(mutable, state);
                     if (shape.isEmpty()) {
                         continue;
                     }
@@ -151,8 +200,12 @@ final class PathSnapshotBuilder {
         return true;
     }
 
-    private static double supportTop(ServerLevel level, BlockPos supportPos, BlockState supportState) {
-        VoxelShape shape = supportState.getCollisionShape(level, supportPos);
+    /**
+     * Returns the world-space top surface of a supporting block, or {@link Double#NaN} when it has
+     * no collision to stand on.
+     */
+    private static double supportTop(SampleCache cache, BlockPos supportPos, BlockState supportState) {
+        VoxelShape shape = cache.shape(supportPos, supportState);
         if (shape.isEmpty()) {
             return Double.NaN;
         }
@@ -211,5 +264,60 @@ final class PathSnapshotBuilder {
                 || block == Blocks.CACTUS
                 || block == Blocks.SWEET_BERRY_BUSH
                 || block == Blocks.WITHER_ROSE;
+    }
+
+    /**
+     * Inclusive integer bounds of a sampled snapshot box.
+     */
+    record SnapshotBounds(int minX, int maxX, int minZ, int maxZ, int minY, int maxY) {
+        /**
+         * Returns whether this box fully contains {@code other} on all three axes.
+         */
+        boolean contains(SnapshotBounds other) {
+            return minX <= other.minX && maxX >= other.maxX
+                    && minZ <= other.minZ && maxZ >= other.maxZ
+                    && minY <= other.minY && maxY >= other.maxY;
+        }
+    }
+
+    /**
+     * Per-build memoization of block states and collision shapes.
+     *
+     * <p>A single build samples each position's state and shape at most once even though adjacent
+     * vertical samples and overlapping clearance scans request the same positions repeatedly. The
+     * cache lives only for the duration of one synchronous {@link #build} call, so the world cannot
+     * change underneath it and the produced cell map is byte-for-byte identical to an uncached
+     * build.
+     */
+    private static final class SampleCache {
+        private final ServerLevel level;
+        private final Long2ObjectOpenHashMap<BlockState> states = new Long2ObjectOpenHashMap<>();
+        private final Long2ObjectOpenHashMap<VoxelShape> shapes = new Long2ObjectOpenHashMap<>();
+
+        private SampleCache(ServerLevel level) {
+            this.level = level;
+        }
+
+        private BlockState state(BlockPos pos) {
+            long key = pos.asLong();
+            BlockState cached = states.get(key);
+            if (cached != null) {
+                return cached;
+            }
+            BlockState state = level.getBlockState(pos);
+            states.put(key, state);
+            return state;
+        }
+
+        private VoxelShape shape(BlockPos pos, BlockState state) {
+            long key = pos.asLong();
+            VoxelShape cached = shapes.get(key);
+            if (cached != null) {
+                return cached;
+            }
+            VoxelShape shape = state.getCollisionShape(level, pos);
+            shapes.put(key, shape);
+            return shape;
+        }
     }
 }

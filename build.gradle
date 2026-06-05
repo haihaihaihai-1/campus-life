@@ -125,6 +125,14 @@ neoForge {
             sourceSet(sourceSets.main)
         }
     }
+
+    // Bootstraps a real NeoForge environment for JUnit unit tests so they can exercise the
+    // pathfinder against actual Minecraft data classes (BlockPos, Vec3, ...). The pathfinder runs
+    // purely on an immutable snapshot, so these tests need no live world.
+    unitTest {
+        enable()
+        testedMod = mods.named(mod_id)
+    }
 }
 
 // Sets up a dependency configuration called 'localRuntime'.
@@ -145,6 +153,11 @@ dependencies {
     implementation "curse.maven:irisshaders-455508:6661598"
     localRuntime "org.xerial:sqlite-jdbc:3.46.1.0"
     jarJar "org.xerial:sqlite-jdbc:3.46.1.0"
+
+    // Unit testing: JUnit 5 platform used by the moddev unit test bootstrap.
+    testImplementation platform("org.junit:junit-bom:5.10.2")
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
@@ -209,6 +222,10 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+tasks.named('test', Test) {
+    useJUnitPlatform()
 }
 
 // IDEA no longer automatically downloads sources/javadoc jars for dependencies, so we need to explicitly enable the behavior.
