@@ -85,7 +85,7 @@ public final class CommercialStockService {
         Map<String, CommercialOffer.StockRule> rules = new LinkedHashMap<>();
         for (CommercialOffer offer : definition.offers()) {
             CommercialOffer.StockRule rule = offer.stock();
-            if (rule != null && !rule.itemId().isBlank() && rule.max() > 0) {
+            if (rule != null && rule.sqliteBacked()) {
                 rules.putIfAbsent(rule.itemId(), rule);
             }
         }

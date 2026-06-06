@@ -4,6 +4,6 @@ amount:28.0元
 author:枫烨
 description:生产小镇必需物资——玻璃的好地方~
 tags:price_low,material_medium,stage_early
-job_type:glassMaker
+job_type:glass_maker
 job_name:玻璃厂工人
 held_item:minecraft:glass

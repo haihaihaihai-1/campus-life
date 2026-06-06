@@ -15,5 +15,13 @@ public record CommercialControlBoxView(BlockPos boxPos,
                                        boolean hasWorker,
                                        UUID workerId,
                                        String workerName,
-                                       double cityBalance) {
+                                       double cityBalance,
+                                       boolean hasBuildingBounds,
+                                       BlockPos boundsMin,
+                                       BlockPos boundsMax,
+                                       boolean integrityAvailable,
+                                       double integrityPercent,
+                                       int integrityRepairableBlocks,
+                                       int integrityManualRepairBlocks,
+                                       double integrityRepairCost) {
 }

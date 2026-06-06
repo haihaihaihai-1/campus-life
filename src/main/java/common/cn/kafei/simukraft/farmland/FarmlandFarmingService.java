@@ -3,6 +3,7 @@ package common.cn.kafei.simukraft.farmland;
 import common.cn.kafei.simukraft.citizen.CitizenData;
 import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
+import common.cn.kafei.simukraft.citizen.CitizenSelfFeedingService;
 import common.cn.kafei.simukraft.citizen.CitizenTeleportService;
 import common.cn.kafei.simukraft.citizen.CitizenWorkStatus;
 import common.cn.kafei.simukraft.config.ServerConfig;
@@ -97,6 +98,11 @@ public final class FarmlandFarmingService {
         }
         if (CitizenHomeRestService.isRestTime(level)) {
             clearActiveTarget(boxRuntime);
+            boxRuntime.setVisual(ItemStack.EMPTY, false);
+            idle(boxRuntime, gameTime);
+            return;
+        }
+        if (CitizenSelfFeedingService.isSelfFeeding(level, farmer.uuid())) {
             boxRuntime.setVisual(ItemStack.EMPTY, false);
             idle(boxRuntime, gameTime);
             return;

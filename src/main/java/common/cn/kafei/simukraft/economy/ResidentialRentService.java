@@ -33,12 +33,10 @@ import java.util.concurrent.ConcurrentMap;
 
 @SuppressWarnings("null")
 public final class ResidentialRentService {
-    private static final long TICKS_PER_RENT_DAY = 24_000L;
-    private static final long MONEY_COLLECT_DELAY_TICKS = 60L;
+    private static final long TICKS_PER_DAY = 24_000L;
     private static final long RENT_COLLECTION_WINDOW_TICKS = 1_200L;
     private static final ConcurrentMap<String, Long> LAST_COLLECTED_RENT_DAY = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, Long> LAST_PROCESSED_LEVEL_RENT_DAY = new ConcurrentHashMap<>();
-    private static final ConcurrentMap<String, PendingIncomeNotice> PENDING_INCOME_NOTICES = new ConcurrentHashMap<>();
 
     private ResidentialRentService() {
     }
@@ -47,7 +45,6 @@ public final class ResidentialRentService {
         if (level == null || level.isClientSide()) {
             return;
         }
-        processPendingIncomeNotices(level);
         if (!isRentCollectionWindow(level)) {
             return;
         }
@@ -66,14 +63,13 @@ public final class ResidentialRentService {
     private static void collectRentForDay(ServerLevel level, long rentDay) {
         Map<UUID, Double> rentByCity = collectRentByCity(level);
         rentByCity.forEach((cityId, amount) -> collectCityRent(level, cityId, rentDay, amount));
-        schedulePlayerIncomeNotices(level, rentByCity);
+        notifyPlayerIncome(level, rentByCity);
     }
 
     public static void clearServerCaches(MinecraftServer server) {
         String serverKey = SaveScopedCacheKey.serverKey(server);
         LAST_COLLECTED_RENT_DAY.keySet().removeIf(key -> key.startsWith(serverKey + "|"));
         LAST_PROCESSED_LEVEL_RENT_DAY.keySet().removeIf(key -> key.startsWith(serverKey + "|"));
-        PENDING_INCOME_NOTICES.keySet().removeIf(key -> key.startsWith(serverKey + "|"));
     }
 
     private static Map<UUID, Double> collectRentByCity(ServerLevel level) {
@@ -145,33 +141,17 @@ public final class ResidentialRentService {
         }
     }
 
-    private static void schedulePlayerIncomeNotices(ServerLevel level, Map<UUID, Double> rentByCity) {
-        long triggerTick = level.getGameTime() + MONEY_COLLECT_DELAY_TICKS;
+    /** notifyPlayerIncome: 收租窗口触发后立即通知玩家，不再使用延迟计时器。 */
+    private static void notifyPlayerIncome(ServerLevel level, Map<UUID, Double> rentByCity) {
         for (ServerPlayer player : level.players()) {
             double rentAmount = CityService.findPlayerCity(level, player.getUUID())
                     .map(CityData::cityId)
                     .map(cityId -> rentByCity.getOrDefault(cityId, 0.0D))
                     .orElse(0.0D);
-            level.playSound(null, player.blockPosition(), ModSoundEvents.PLAYER_WAKE_UP.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
-            PENDING_INCOME_NOTICES.put(incomeNoticeKey(player), new PendingIncomeNotice(player.getUUID(), triggerTick, rentAmount, 0.0D));
+            level.playSound(null, player.blockPosition(), ModSoundEvents.MONEY_COLLECT.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
+            InfoToastService.money(player, incomeSummary(rentAmount, 0.0D));
+            HudSyncService.syncToPlayer(player, true);
         }
-    }
-
-    private static void processPendingIncomeNotices(ServerLevel level) {
-        long gameTime = level.getGameTime();
-        PENDING_INCOME_NOTICES.entrySet().removeIf(entry -> {
-            PendingIncomeNotice notice = entry.getValue();
-            if (notice.triggerTick() > gameTime) {
-                return false;
-            }
-            ServerPlayer player = level.getServer().getPlayerList().getPlayer(notice.playerId());
-            if (player != null && player.serverLevel() == level) {
-                level.playSound(null, player.blockPosition(), ModSoundEvents.MONEY_COLLECT.get(), SoundSource.PLAYERS, 1.0F, 1.0F);
-                InfoToastService.money(player, incomeSummary(notice.rentAmount(), notice.taxAmount()));
-                HudSyncService.syncToPlayer(player, true);
-            }
-            return true;
-        });
     }
 
     private static Component incomeSummary(double rentAmount, double taxAmount) {
@@ -184,17 +164,15 @@ public final class ResidentialRentService {
         );
     }
 
-    private static String incomeNoticeKey(ServerPlayer player) {
-        return SaveScopedCacheKey.playerKey(player) + "|income_notice";
-    }
-
+    /** isRentCollectionWindow: 只读取原版 dayTime 判断是否处于每日收租窗口。 */
     private static boolean isRentCollectionWindow(ServerLevel level) {
-        long time = Math.floorMod(level.getGameTime(), TICKS_PER_RENT_DAY);
+        long time = Math.floorMod(level.getDayTime(), TICKS_PER_DAY);
         return time < RENT_COLLECTION_WINDOW_TICKS;
     }
 
+    /** rentDay: 使用原版 dayTime 推导自然日编号，避免另起运行计时器。 */
     private static long rentDay(ServerLevel level) {
-        return Math.max(1L, level.getGameTime() / TICKS_PER_RENT_DAY + 1L);
+        return Math.max(1L, level.getDayTime() / TICKS_PER_DAY + 1L);
     }
 
     private static boolean isResidential(PlacedBuildingRecord building) {
@@ -212,6 +190,4 @@ public final class ResidentialRentService {
                 .orElse(0.0D);
     }
 
-    private record PendingIncomeNotice(UUID playerId, long triggerTick, double rentAmount, double taxAmount) {
-    }
 }

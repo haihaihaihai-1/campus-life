@@ -5,6 +5,7 @@ import common.cn.kafei.simukraft.citizen.CitizenData;
 import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenLevelService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
+import common.cn.kafei.simukraft.citizen.CitizenSelfFeedingService;
 import common.cn.kafei.simukraft.citizen.CitizenSkillSnapshot;
 import common.cn.kafei.simukraft.citizen.CitizenTeleportService;
 import common.cn.kafei.simukraft.citizen.CitizenWorkStatus;
@@ -65,6 +66,9 @@ public final class PlannerWorkService {
             Optional<CitizenData> citizen = CitizenService.findCitizen(level, taskRuntime.task.citizenId());
             if (citizen.isEmpty() || citizen.get().dead()) {
                 interruptTask(level, taskRuntime.task.citizenId(), citizen.isPresent() ? "planner_dead" : "planner_missing");
+                continue;
+            }
+            if (CitizenSelfFeedingService.isSelfFeeding(level, citizen.get().uuid())) {
                 continue;
             }
             tickTask(level, citizen.get(), runtime, taskRuntime);

@@ -100,25 +100,44 @@ public final class CommercialDefinitionLoader {
         if (root == null) {
             return new LoadResult(null, List.of("invalid_root"), sourcePath);
         }
-        String id = string(root, "id", fallbackId);
-        String name = string(root, "name", id);
-        CommercialDefinition.JobDefinition job = parseJob(root.getAsJsonObject("job"));
+        String id = stringAny(root, fallbackId, "id", "buildingId", "building_id");
+        String name = stringAny(root, id, "name", "buildingName", "building_name");
+        CommercialDefinition.JobDefinition job = parseJob(root);
+        CommercialDefinition.WorkTime workTime = parseWorkTime(root.getAsJsonObject("workTime"));
         List<CommercialOffer> offers = parseOffers(root.getAsJsonArray("offers"), errors);
+        if (offers.isEmpty()) {
+            offers = CommercialLegacyDefinitionParser.parse(root, errors, MAX_OFFERS, MAX_RESOURCES);
+        }
         if (offers.isEmpty()) {
             errors.add("missing_offers");
         }
-        CommercialDefinition definition = new CommercialDefinition(id, name, job, offers, sourcePath);
+        CommercialDefinition definition = new CommercialDefinition(id, name, job, workTime, offers, sourcePath);
         return new LoadResult(definition, List.copyOf(errors), sourcePath);
     }
 
-    private static CommercialDefinition.JobDefinition parseJob(@Nullable JsonObject object) {
+    private static CommercialDefinition.JobDefinition parseJob(@Nullable JsonObject root) {
+        JsonObject object = root != null ? root.getAsJsonObject("job") : null;
         if (object == null) {
-            return new CommercialDefinition.JobDefinition("commercial_worker", "商业员工", "");
+            return new CommercialDefinition.JobDefinition(
+                    stringAny(root, "commercial_worker", "jobType", "job_type"),
+                    stringAny(root, "商业员工", "jobName", "job_name"),
+                    stringAny(root, "", "heldItem", "held_item")
+            );
         }
         return new CommercialDefinition.JobDefinition(
                 string(object, "id", "commercial_worker"),
                 string(object, "name", string(object, "id", "商业员工")),
                 stringAny(object, "", "heldItem", "held_item")
+        );
+    }
+
+    private static CommercialDefinition.WorkTime parseWorkTime(@Nullable JsonObject object) {
+        if (object == null) {
+            return CommercialDefinition.WorkTime.always();
+        }
+        return new CommercialDefinition.WorkTime(
+                Math.floorMod(integer(object, "start", 0), 24000),
+                Math.floorMod(integer(object, "end", 0), 24000)
         );
     }
 
@@ -191,8 +210,31 @@ public final class CommercialDefinitionLoader {
                 Math.max(0, integer(object, "max", 0)),
                 Math.max(0, integer(object, "initial", 0)),
                 Math.max(0, integerAny(object, 0, "restockAmount", "restock_amount")),
-                Math.max(0L, longAny(object, 0L, "restockInterval", "restock_interval"))
+                Math.max(0L, longAny(object, 0L, "restockInterval", "restock_interval")),
+                parseMaterials(arrayAny(object, "materials", "requiredMaterials", "required_materials"))
         );
+    }
+
+    private static List<CommercialOffer.MaterialRequirement> parseMaterials(@Nullable JsonArray array) {
+        if (array == null || array.isEmpty()) {
+            return List.of();
+        }
+        List<CommercialOffer.MaterialRequirement> materials = new ArrayList<>();
+        int limit = Math.min(array.size(), MAX_RESOURCES);
+        for (int i = 0; i < limit; i++) {
+            JsonObject object = asObject(array.get(i));
+            if (object == null) {
+                continue;
+            }
+            CommercialOffer.MaterialRequirement requirement = new CommercialOffer.MaterialRequirement(
+                    string(object, "item", ""),
+                    Math.max(1, integer(object, "count", integer(object, "amount", 1)))
+            );
+            if (requirement.valid()) {
+                materials.add(requirement);
+            }
+        }
+        return List.copyOf(materials);
     }
 
     @Nullable

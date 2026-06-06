@@ -102,14 +102,31 @@ public final class CitizenManager extends SavedData {
         citizens.clear();
         aiQueue.clear();
         for (int i = 0; i < citizensTag.size(); i++) {
-            CitizenData data = CitizenData.fromTag(citizensTag.getCompound(i));
+            CompoundTag citizenTag = citizensTag.getCompound(i);
+            boolean repairedDeadHousing = deadCitizenHasHome(citizenTag);
+            CitizenData data = CitizenData.fromTag(citizenTag);
             boolean repaired = CitizenEmploymentService.repairLoadedEmployment(level, data);
             putLoadedCitizen(data);
-            if (repaired) {
-                SimuKraft.LOGGER.info("Simukraft: Repaired citizen {} employment during load", data.uuid());
+            if (repaired || repairedDeadHousing) {
+                if (repaired) {
+                    SimuKraft.LOGGER.info("Simukraft: Repaired citizen {} employment during load", data.uuid());
+                }
+                if (repairedDeadHousing) {
+                    SimuKraft.LOGGER.info("Simukraft: Cleared dead citizen {} home during load", data.uuid());
+                }
                 saveCitizenIncremental(data);
             }
         }
+    }
+
+    private static boolean deadCitizenHasHome(CompoundTag tag) {
+        if (tag == null || !tag.hasUUID("HomeId")) {
+            return false;
+        }
+        return tag.getBoolean("Dead")
+                || CitizenWorkStatus.fromName(tag.getString("WorkStatus")) == CitizenWorkStatus.DEAD
+                || CitizenWorkStatus.fromName(tag.getString("Status")) == CitizenWorkStatus.DEAD
+                || CitizenWorkStatus.fromName(tag.getString("JobId")) == CitizenWorkStatus.DEAD;
     }
 
     // putLoadedCitizen：加载 SQLite/SavedData 时统一恢复居民索引和 AI 队列。

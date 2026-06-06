@@ -1,63 +1,77 @@
 {
-  "buildingId": "meatShop",
-  "buildingName": "肉铺",
-  "jobType": "meatShopOwner",
-  "jobName": "屠夫",
-  "shopMode": "NPC_SELL",
-  "heldItem": "minecraft:beef",
-  "workTime": {
-    "start": 100,
-    "end": 12000
+  "id": "meatShop",
+  "name": "肉铺",
+  "job": {
+    "id": "meat_shop_owner",
+    "name": "屠夫",
+    "heldItem": "minecraft:cooked_beef"
   },
-  "restockTime": 101,
-  "requireMaterialsForSale": true,
-  "materials": [
+  "offers": [
     {
-      "item": "minecraft:porkchop",
-      "count": 0,
-      "consume": true
+      "id": "shop_sells_cooked_beef",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 0.50 }],
+      "result": [{ "item": "minecraft:cooked_beef", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_beef",
+        "max": 64,
+        "materials": [
+          { "item": "minecraft:beef", "count": 1 }
+        ]
+      }
     },
     {
-      "item": "minecraft:beef",
-      "count": 0,
-      "consume": true
-    }
-  ],
-  "trades": [
-    {
-      "item": "minecraft:cooked_beef",
-      "sellPrice": 0.5,
-      "maxStock": 64,
-      "restockAmount": 16,
-      "retail": true,
-      "requiredMaterials": [
-        {
-          "item": "minecraft:beef",
-          "count": 1
-        }
-      ]
+      "id": "shop_sells_cooked_porkchop",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 0.50 }],
+      "result": [{ "item": "minecraft:cooked_porkchop", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_porkchop",
+        "max": 64,
+        "materials": [
+          { "item": "minecraft:porkchop", "count": 1 }
+        ]
+      }
     },
     {
-      "item": "minecraft:cooked_porkchop",
-      "sellPrice": 0.5,
-      "maxStock": 64,
-      "restockAmount": 16,
-      "retail": true,
-      "requiredMaterials": [
-        {
-          "item": "minecraft:porkchop",
-          "count": 1
-        }
-      ]
+      "id": "shop_buys_beef",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:beef", "count": 8 }],
+      "result": [{ "money": 3.20 }],
+      "stock": {
+        "item": "minecraft:beef",
+        "max": 128
+      }
+    },
+    {
+      "id": "shop_buys_porkchop",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:porkchop", "count": 8 }],
+      "result": [{ "money": 3.20 }],
+      "stock": {
+        "item": "minecraft:porkchop",
+        "max": 128
+      }
+    },
+    {
+      "id": "exchange_beef_for_cooked_beef",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:beef", "count": 1 }],
+      "result": [{ "item": "minecraft:cooked_beef", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_beef",
+        "max": 64
+      }
+    },
+    {
+      "id": "exchange_porkchop_for_cooked_porkchop",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:porkchop", "count": 1 }],
+      "result": [{ "item": "minecraft:cooked_porkchop", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_porkchop",
+        "max": 64
+      }
     }
-  ],
-  "buyTrades": [],
-  "hasLunchBreak": false,
-  "messages": {
-    "welcome": "肉铺开门啦，市民们快来购买吧！",
-    "noStock": "肉铺售罄了，明天再来吧~",
-    "restocked": "肉铺补货完成，欢迎大家光临！",
-    "workStart": "肉铺开门啦，市民们快来购买吧！",
-    "workEnd": "肉铺打烊啦，大家明天再来吧！"
-  }
+  ]
 }

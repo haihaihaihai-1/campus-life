@@ -24,7 +24,15 @@ public record CommercialControlBoxOpenResponsePacket(BlockPos boxPos,
                                                      boolean hasWorker,
                                                      UUID workerId,
                                                      String workerName,
-                                                     double cityBalance) implements CustomPacketPayload {
+                                                     double cityBalance,
+                                                     boolean hasBuildingBounds,
+                                                     BlockPos boundsMin,
+                                                     BlockPos boundsMax,
+                                                     boolean integrityAvailable,
+                                                     double integrityPercent,
+                                                     int integrityRepairableBlocks,
+                                                     int integrityManualRepairBlocks,
+                                                     double integrityRepairCost) implements CustomPacketPayload {
     public static final Type<CommercialControlBoxOpenResponsePacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath(SimuKraft.MOD_ID, "commercial_control_box_open_response"));
     public static final StreamCodec<RegistryFriendlyByteBuf, CommercialControlBoxOpenResponsePacket> STREAM_CODEC = StreamCodec.of(CommercialControlBoxOpenResponsePacket::encode, CommercialControlBoxOpenResponsePacket::decode);
 
@@ -41,7 +49,15 @@ public record CommercialControlBoxOpenResponsePacket(BlockPos boxPos,
                 view.hasWorker(),
                 view.workerId(),
                 view.workerName(),
-                view.cityBalance()
+                view.cityBalance(),
+                view.hasBuildingBounds(),
+                view.boundsMin(),
+                view.boundsMax(),
+                view.integrityAvailable(),
+                view.integrityPercent(),
+                view.integrityRepairableBlocks(),
+                view.integrityManualRepairBlocks(),
+                view.integrityRepairCost()
         );
     }
 
@@ -66,6 +82,14 @@ public record CommercialControlBoxOpenResponsePacket(BlockPos boxPos,
         }
         buffer.writeUtf(packet.workerName(), 128);
         buffer.writeDouble(packet.cityBalance());
+        buffer.writeBoolean(packet.hasBuildingBounds());
+        buffer.writeBlockPos(packet.boundsMin());
+        buffer.writeBlockPos(packet.boundsMax());
+        buffer.writeBoolean(packet.integrityAvailable());
+        buffer.writeDouble(packet.integrityPercent());
+        buffer.writeVarInt(packet.integrityRepairableBlocks());
+        buffer.writeVarInt(packet.integrityManualRepairBlocks());
+        buffer.writeDouble(packet.integrityRepairCost());
     }
 
     /** decode: 读取商业控制箱视图响应。 */
@@ -82,7 +106,18 @@ public record CommercialControlBoxOpenResponsePacket(BlockPos boxPos,
         UUID workerId = hasWorker ? buffer.readUUID() : null;
         String workerName = buffer.readUtf(128);
         double cityBalance = buffer.readDouble();
-        return new CommercialControlBoxOpenResponsePacket(boxPos, hasBuilding, buildingName, definitionValid, definitionName, statusKey, statusText, running, hasWorker, workerId, workerName, cityBalance);
+        boolean hasBuildingBounds = buffer.readBoolean();
+        BlockPos boundsMin = buffer.readBlockPos();
+        BlockPos boundsMax = buffer.readBlockPos();
+        boolean integrityAvailable = buffer.readBoolean();
+        double integrityPercent = buffer.readDouble();
+        int integrityRepairableBlocks = buffer.readVarInt();
+        int integrityManualRepairBlocks = buffer.readVarInt();
+        double integrityRepairCost = buffer.readDouble();
+        return new CommercialControlBoxOpenResponsePacket(boxPos, hasBuilding, buildingName, definitionValid, definitionName,
+                statusKey, statusText, running, hasWorker, workerId, workerName, cityBalance, hasBuildingBounds,
+                boundsMin, boundsMax, integrityAvailable, integrityPercent, integrityRepairableBlocks,
+                integrityManualRepairBlocks, integrityRepairCost);
     }
 
     /** handle: 分发商业控制箱视图到客户端 UI。 */

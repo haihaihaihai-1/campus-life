@@ -4,6 +4,6 @@ amount:12.0元
 author:Xiaoliang小亮
 description:生产羊毛的地方
 tags:price_low,material_low,stage_early
-job_type:woolFarmer
+job_type:wool_farmer
 job_name:牧羊人
 held_item:minecraft:shears

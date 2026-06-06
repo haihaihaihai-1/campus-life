@@ -1,47 +1,61 @@
 {
+  "id": "simukraft:wool_farm",
+  "name": "羊毛农场",
   "buildingId": "woolFarm",
   "buildingName": "羊毛农场",
-  "jobType": "woolFarmer",
+  "jobType": "wool_farmer",
   "jobName": "牧羊人",
   "heldItem": "minecraft:shears",
-  "workTime": {
-    "start": 100,
-    "end": 12000
+  "points": {
+    "stand": {
+      "type": "structure_pos",
+      "positions": [
+        [4, 1, 4],
+        [3, 1, 4],
+        [5, 1, 4]
+      ],
+      "select": "nearest"
+    },
+    "machine": { "type": "structure_pos", "pos": [4, 1, 4] }
   },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [[4, 0, 3]] },
+    "output": { "type": "structure_pos", "positions": [[4, 0, 5]] }
+  },
+  "workTime": { "start": 100, "end": 12000 },
   "recipes": [
     {
+      "id": "woolProduce",
+      "name": "羊毛生产",
       "recipeId": "woolProduce",
       "recipeName": "羊毛生产",
       "heldItem": "minecraft:shears",
+      "inputs": [],
+      "outputs": [
+        { "item": "minecraft:white_wool", "baseAmount": 1, "randomRange": 1, "probability": 0.05 }
+      ],
+      "steps": [
+        { "type": "require_output_space", "container": "output" },
+        { "type": "set_held_item", "item": "minecraft:shears" },
+        { "type": "move_to", "point": "stand", "range": 1.2 },
+        { "type": "look_at", "point": "machine" },
+        { "type": "use_item", "ticks": 80, "swing": true },
+        { "type": "set_held_item", "item": "minecraft:white_wool" },
+        { "type": "move_to_container", "container": "output", "range": 1.2 },
+        { "type": "look_at_container", "container": "output" },
+        { "type": "inspect_container", "ticks": 20, "container": "output" },
+        { "type": "craft_recipe", "input": "input", "output": "output" }
+      ],
       "materials": [],
       "products": [
-        {
-          "item": "minecraft:white_wool",
-          "baseAmount": 1,
-          "randomRange": 1,
-          "probability": 0.05
-        }
+        { "item": "minecraft:white_wool", "baseAmount": 1, "randomRange": 1, "probability": 0.05 }
       ]
     }
   ],
   "products": [
-    {
-      "item": "minecraft:white_wool",
-      "baseAmount": 1,
-      "randomRange": 1,
-      "probability": 0.05
-    }
+    { "item": "minecraft:white_wool", "baseAmount": 1, "randomRange": 1, "probability": 0.05 }
   ],
-  "spawnEntity": {
-    "enabled": true,
-    "type": "minecraft:sheep",
-    "count": 5
-  },
+  "spawnEntity": { "enabled": true, "type": "minecraft:sheep", "count": 5 },
   "hasLunchBreak": true,
-  "messages": {
-    "hired": "§a{npcName} {jobName} 已开始工作",
-    "workComplete": "§6{npcName} {jobName}：生产完成",
-    "chestFull": "§c{npcName} {jobName}：箱子已满！",
-    "xpGained": "{npcName} 获得经验值"
-  }
+  "messages": { "hired": "§a{npcName} {jobName} 已开始工作", "workComplete": "§6{npcName} {jobName}：生产完成", "chestFull": "§c{npcName} {jobName}：箱子已满！", "xpGained": "{npcName} 获得经验值" }
 }

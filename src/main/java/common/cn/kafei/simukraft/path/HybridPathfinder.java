@@ -159,6 +159,9 @@ final class HybridPathfinder {
      * individually corner-safe.
      */
     private static void addVerticalTransitions(PathSnapshot snapshot, PathCell current, MovementIntent intent, List<Neighbor> output) {
+        if (current.climbable()) {
+            return;
+        }
         for (int dx = -1; dx <= 1; dx++) {
             for (int dz = -1; dz <= 1; dz++) {
                 if (dx == 0 && dz == 0) {
@@ -168,12 +171,19 @@ final class HybridPathfinder {
                     continue;
                 }
                 PathCell up = snapshot.cell(current.x() + dx, current.y() + 1, current.z() + dz);
-                if (up != null && !up.water() && up.standY() - current.standY() <= 1.25D) {
+                if (up != null
+                        && !up.water()
+                        && !up.climbable()
+                        && up.standY() - current.standY() <= 1.25D
+                        && hasVerticalPassage(snapshot, current, up)) {
                     output.add(new Neighbor(up, MovementMode.JUMP, 2.5D + distance(current, up)));
                 }
                 for (int fall = 1; fall <= 3; fall++) {
                     PathCell down = snapshot.cell(current.x() + dx, current.y() - fall, current.z() + dz);
-                    if (down != null && current.standY() - down.standY() <= 3.5D) {
+                    if (down != null
+                            && !down.climbable()
+                            && current.standY() - down.standY() <= 3.5D
+                            && hasVerticalPassage(snapshot, current, down)) {
                         output.add(new Neighbor(down, down.water() ? MovementMode.SWIM : MovementMode.FALL, 1.2D + fall));
                         break;
                     }
@@ -181,7 +191,7 @@ final class HybridPathfinder {
             }
         }
         PathCell waterBelow = snapshot.cell(current.x(), current.y() - 1, current.z());
-        if (waterBelow != null && waterBelow.water()) {
+        if (waterBelow != null && waterBelow.water() && hasVerticalPassage(snapshot, current, waterBelow)) {
             output.add(new Neighbor(waterBelow, MovementMode.SWIM, 1.8D));
         }
     }
@@ -236,11 +246,15 @@ final class HybridPathfinder {
                     } else if (dy == 1) {
                         // Orthogonal only, matching addVerticalTransitions: a diagonal jump would
                         // sweep the body through the destination-level corner column.
-                        if (!diagonal && next.standY() - current.standY() <= 1.25D) {
+                        if (!diagonal
+                                && next.standY() - current.standY() <= 1.25D
+                                && hasVerticalPassage(snapshot, current, next)) {
                             output.add(new Neighbor(next, MovementMode.JUMP, 2.5D + distance(current, next)));
                         }
                     } else {
-                        if (!diagonal && current.standY() - next.standY() <= 3.5D) {
+                        if (!diagonal
+                                && current.standY() - next.standY() <= 3.5D
+                                && hasVerticalPassage(snapshot, current, next)) {
                             output.add(new Neighbor(next, MovementMode.FALL, 1.2D + distance(current, next)));
                         }
                     }
@@ -271,6 +285,20 @@ final class HybridPathfinder {
     private static boolean diagonalClear(PathSnapshot snapshot, PathCell current, int dx, int dz) {
         return snapshot.cell(current.x() + dx, current.y(), current.z()) != null
                 && snapshot.cell(current.x(), current.y(), current.z() + dz) != null;
+    }
+
+    /**
+     * Returns whether the target column has an actual open shaft for a vertical transition.
+     */
+    private static boolean hasVerticalPassage(PathSnapshot snapshot, PathCell from, PathCell to) {
+        int minY = Math.min(from.y(), to.y()) + 1;
+        int maxY = Math.max(from.y(), to.y());
+        for (int y = minY; y <= maxY; y++) {
+            if (!snapshot.bodyPassage(to.x(), y, to.z())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

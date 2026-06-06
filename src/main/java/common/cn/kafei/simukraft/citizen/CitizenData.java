@@ -186,13 +186,19 @@ public final class CitizenData {
         if (hunger <= 0.0D) {
             hunger = 20.0D;
         }
-        if (dead) {
+        if (dead || workStatus == CitizenWorkStatus.DEAD || isDeadMarker(status) || isDeadMarker(jobId)) {
+            dead = true;
             health = 0.0D;
             deathDay = Math.max(1L, deathDay);
             workStatus = CitizenWorkStatus.DEAD;
             status = workStatus.legacyStatus();
             working = false;
+            homeId = null;
         }
+    }
+
+    private static boolean isDeadMarker(String value) {
+        return CitizenWorkStatus.fromName(value) == CitizenWorkStatus.DEAD;
     }
 
     public UUID uuid() {
@@ -285,6 +291,10 @@ public final class CitizenData {
             this.workStatus = CitizenWorkStatus.DEAD;
             this.status = CitizenWorkStatus.DEAD.legacyStatus();
             this.working = false;
+            return;
+        }
+        if (workStatus == CitizenWorkStatus.DEAD) {
+            markDead(deathDay > 0L ? deathDay : 1L);
             return;
         }
         this.workStatus = workStatus != null ? workStatus : CitizenWorkStatus.IDLE;
@@ -415,6 +425,7 @@ public final class CitizenData {
         this.working = false;
         this.workNeedDetail = "";
         this.statusLabel = "";
+        this.homeId = null;
     }
 
     public long childGrowthDueDay() {

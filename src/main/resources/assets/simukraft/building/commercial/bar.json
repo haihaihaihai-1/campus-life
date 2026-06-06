@@ -1,24 +1,57 @@
 {
-  "buildingId": "bar",
-  "buildingName": "酒馆（开发中，无功能）",
-  "jobType": "beerMaker",
-  "jobName": "调酒师",
-  "shopMode": "PLAYER_SELL",
-  "heldItem": "minecraft:potion",
-  "workTime": {
-    "start": 100,
-    "end": 12000
+  "id": "bar",
+  "name": "酒馆",
+  "job": {
+    "id": "bartender",
+    "name": "调酒师",
+    "heldItem": "minecraft:honey_bottle"
   },
-  "restockTime": 101,
-  "requireMaterialsForSale": false,
-  "trades": [],
-  "buyTrades": [],
-  "hasLunchBreak": true,
-  "messages": {
-    "welcome": "欢迎光临！",
-    "noStock": "库存不足！",
-    "restocked": "补货完成！",
-    "workStart": "开始工作！",
-    "workEnd": "工作结束！"
-  }
+  "offers": [
+    {
+      "id": "shop_sells_honey_bottle",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 2.00 }],
+      "result": [{ "item": "minecraft:honey_bottle", "count": 1 }],
+      "stock": {
+        "item": "minecraft:honey_bottle",
+        "max": 96,
+        "initial": 24,
+        "restockAmount": 12,
+        "restockInterval": 12000
+      }
+    },
+    {
+      "id": "shop_sells_bread",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 0.40 }],
+      "result": [{ "item": "minecraft:bread", "count": 1 }],
+      "stock": {
+        "item": "minecraft:bread",
+        "max": 96,
+        "initial": 24,
+        "restockAmount": 12,
+        "restockInterval": 12000
+      }
+    },
+    {
+      "id": "shop_buys_glass_bottle",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:glass_bottle", "count": 8 }],
+      "result": [{ "money": 1.20 }],
+      "stock": {
+        "item": "minecraft:glass_bottle",
+        "max": 192
+      }
+    },
+    {
+      "id": "exchange_bottles_for_honey",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:glass_bottle", "count": 4 }],
+      "result": [{ "item": "minecraft:honey_bottle", "count": 1 }],
+      "stock": {
+        "item": "minecraft:honey_bottle",
+        "max": 96
+      }
+    }
+  ]
 }

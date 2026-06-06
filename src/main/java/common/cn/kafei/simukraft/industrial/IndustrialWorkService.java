@@ -6,6 +6,7 @@ import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenJobVisualService;
 import common.cn.kafei.simukraft.citizen.CitizenLevelService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
+import common.cn.kafei.simukraft.citizen.CitizenSelfFeedingService;
 import common.cn.kafei.simukraft.citizen.CitizenSkillSnapshot;
 import common.cn.kafei.simukraft.citizen.CitizenTeleportService;
 import common.cn.kafei.simukraft.citizen.CitizenWorkStatus;
@@ -95,6 +96,10 @@ public final class IndustrialWorkService {
         if (CitizenHomeRestService.isRestTime(level)) {
             setStatus(manager, data, "gui.simukraft.industrial.status.resting", "");
             CitizenJobVisualService.clearMainHandOverride(worker.uuid());
+            boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
+            return;
+        }
+        if (CitizenSelfFeedingService.isSelfFeeding(level, worker.uuid())) {
             boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
             return;
         }

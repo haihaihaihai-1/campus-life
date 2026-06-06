@@ -29,6 +29,8 @@ import common.cn.kafei.simukraft.network.city.member.CityCoreMembersResponsePack
 import common.cn.kafei.simukraft.network.citizen.info.CitizenInfoResponsePacket;
 import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxOpenRequestPacket;
 import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxActionPacket;
+import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxDemolishPacket;
 import common.cn.kafei.simukraft.network.commercial.CommercialTradePacket;
 import common.cn.kafei.simukraft.network.commercial.CommercialTradeOpenResponsePacket;
 import common.cn.kafei.simukraft.network.hud.HudSyncPacket;
@@ -56,7 +58,7 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 @SuppressWarnings("null")
 public final class ModNetwork {
-    private static final String NETWORK_VERSION = "18";
+    private static final String NETWORK_VERSION = "19";
 
     private ModNetwork() {
     }
@@ -88,6 +90,8 @@ public final class ModNetwork {
         registrar.playToServer(IndustrialControlBoxActionPacket.TYPE, IndustrialControlBoxActionPacket.STREAM_CODEC, IndustrialControlBoxActionPacket::handle);
         registrar.playToServer(IndustrialControlBoxDemolishPacket.TYPE, IndustrialControlBoxDemolishPacket.STREAM_CODEC, IndustrialControlBoxDemolishPacket::handle);
         registrar.playToServer(CommercialControlBoxOpenRequestPacket.TYPE, CommercialControlBoxOpenRequestPacket.STREAM_CODEC, CommercialControlBoxOpenRequestPacket::handle);
+        registrar.playToServer(CommercialControlBoxActionPacket.TYPE, CommercialControlBoxActionPacket.STREAM_CODEC, CommercialControlBoxActionPacket::handle);
+        registrar.playToServer(CommercialControlBoxDemolishPacket.TYPE, CommercialControlBoxDemolishPacket.STREAM_CODEC, CommercialControlBoxDemolishPacket::handle);
         registrar.playToServer(CommercialTradePacket.TYPE, CommercialTradePacket.STREAM_CODEC, CommercialTradePacket::handle);
         registrar.playToServer(PlannerMaterialScanRequestPacket.TYPE, PlannerMaterialScanRequestPacket.STREAM_CODEC, PlannerMaterialScanRequestPacket::handle);
         registrar.playToServer(CreatePlanningTaskPacket.TYPE, CreatePlanningTaskPacket.STREAM_CODEC, CreatePlanningTaskPacket::handle);

@@ -1,6 +1,8 @@
 package common.cn.kafei.simukraft.path;
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.tags.BlockTags;
@@ -8,7 +10,6 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CarpetBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
@@ -34,6 +35,7 @@ final class PathSnapshotBuilder {
     private static final int VERTICAL_PADDING = 8;
     private static final double NPC_HALF_WIDTH = 0.31D;
     private static final double NPC_HEIGHT = 1.8D;
+    private static final double MAX_LOW_STAND_OFFSET = 0.75D;
 
     private PathSnapshotBuilder() {
     }
@@ -51,6 +53,7 @@ final class PathSnapshotBuilder {
         SnapshotBounds bounds = bounds(level, start, target, radius);
         SampleCache cache = new SampleCache(level);
         Map<Long, PathCell> cells = new HashMap<>();
+        LongOpenHashSet bodyPassages = new LongOpenHashSet();
         BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         boolean complete = true;
         for (int x = bounds.minX(); x <= bounds.maxX(); x++) {
@@ -62,6 +65,9 @@ final class PathSnapshotBuilder {
                 }
                 for (int y = bounds.minY(); y <= bounds.maxY(); y++) {
                     mutable.set(x, y, z);
+                    if (hasBodyPassage(cache, mutable)) {
+                        bodyPassages.add(mutable.asLong());
+                    }
                     PathCell cell = classify(cache, mutable);
                     if (cell != null) {
                         cells.put(cell.key(), cell);
@@ -69,7 +75,8 @@ final class PathSnapshotBuilder {
                 }
             }
         }
-        return new PathSnapshot(level.dimension().location(), start.immutable(), target.immutable(), Map.copyOf(cells), bounds.minY(), bounds.maxY(), level.getGameTime(), complete);
+        return new PathSnapshot(level.dimension().location(), start.immutable(), target.immutable(),
+                Map.copyOf(cells), LongSets.unmodifiable(bodyPassages), bounds.minY(), bounds.maxY(), level.getGameTime(), complete);
     }
 
     /**
@@ -104,7 +111,7 @@ final class PathSnapshotBuilder {
         boolean footWater = foot.getFluidState().is(FluidTags.WATER);
         boolean headWater = head.getFluidState().is(FluidTags.WATER);
         boolean water = footWater || headWater;
-        boolean climbable = isClimbable(foot) || isClimbable(head) || isClimbable(below);
+        boolean climbable = isClimbable(foot) || isClimbable(head);
         if (water) {
             if (!isBodyPassable(cache, pos, foot) || !isBodyPassable(cache, pos.above(), head)) {
                 return null;
@@ -121,11 +128,9 @@ final class PathSnapshotBuilder {
             }
         }
         if (!isBodyPassable(cache, pos, foot) || !isBodyPassable(cache, pos.above(), head)) {
-            if (isLowStandableSurface(foot) && isBodyPassable(cache, pos.above(), head)) {
-                double standY = supportTop(cache, pos, foot);
-                if (!Double.isNaN(standY) && hasNpcClearance(cache, pos, standY, null, null)) {
-                    return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), standY, false, false, false, 1.05D);
-                }
+            double standY = lowStandY(cache, pos, foot);
+            if (!Double.isNaN(standY) && isBodyPassable(cache, pos.above(), head) && hasNpcClearance(cache, pos, standY, null, null)) {
+                return new PathCell(pos.immutable(), pos.getX(), pos.getY(), pos.getZ(), standY, false, false, false, 1.05D);
             }
             return null;
         }
@@ -154,6 +159,17 @@ final class PathSnapshotBuilder {
                 || state.getFluidState().is(FluidTags.WATER)
                 || cache.shape(pos, state).isEmpty()
                 || isClimbable(state);
+    }
+
+    private static boolean hasBodyPassage(SampleCache cache, BlockPos pos) {
+        BlockState foot = cache.state(pos);
+        BlockState head = cache.state(pos.above());
+        if (isDangerous(foot) || isDangerous(head)) {
+            return false;
+        }
+        return isBodyPassable(cache, pos, foot)
+                && isBodyPassable(cache, pos.above(), head)
+                && hasNpcClearance(cache, pos, pos.getY(), null, null);
     }
 
     /**
@@ -250,8 +266,11 @@ final class PathSnapshotBuilder {
         return state.is(BlockTags.CLIMBABLE) || state.is(Blocks.SCAFFOLDING);
     }
 
-    private static boolean isLowStandableSurface(BlockState state) {
-        return state.getBlock() instanceof CarpetBlock;
+    // lowStandY：识别半砖、地毯等低矮碰撞面，避免把半格台阶误判为上一层跳跃。
+    private static double lowStandY(SampleCache cache, BlockPos pos, BlockState state) {
+        double standY = supportTop(cache, pos, state);
+        double offset = standY - pos.getY();
+        return !Double.isNaN(standY) && offset > 0.0D && offset <= MAX_LOW_STAND_OFFSET ? standY : Double.NaN;
     }
 
     private static boolean isDangerous(BlockState state) {

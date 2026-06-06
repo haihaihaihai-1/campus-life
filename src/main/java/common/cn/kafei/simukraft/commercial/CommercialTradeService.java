@@ -84,15 +84,20 @@ public final class CommercialTradeService {
         if (stockDeltas.isEmpty()) {
             return TradeResult.fail("message.simukraft.commercial.npc_trade_unsupported");
         }
-        TradeResult stockValidation = validateStock(level, boxPos, stockDeltas);
-        if (!stockValidation.success()) {
-            return stockValidation;
+        TradeResult supplyValidation = CommercialTradeSupplyService.validate(level, boxPos, offer, 1);
+        if (!supplyValidation.success()) {
+            return supplyValidation;
         }
         double expense = totalMoney(offer.result(), 1);
         if (expense > 0.0D && !EconomyService.withdrawCityFunds(level, building.cityId(), null, expense, "commercial_npc_trade")) {
             return TradeResult.fail("message.simukraft.commercial.not_enough_funds");
         }
-        applyStockDeltas(level, boxPos, stockDeltas);
+        if (!CommercialTradeSupplyService.apply(level, boxPos, offer, 1)) {
+            if (expense > 0.0D) {
+                EconomyService.depositCityFunds(level, building.cityId(), null, expense, "commercial_npc_trade_refund");
+            }
+            return TradeResult.fail("message.simukraft.commercial.insufficient_materials");
+        }
         double income = totalMoney(offer.cost(), 1);
         if (income > 0.0D) {
             EconomyService.depositCityFunds(level, building.cityId(), null, income, "commercial_npc_trade");
@@ -112,9 +117,9 @@ public final class CommercialTradeService {
     }
 
     private static TradeResult validatePlayer(ServerLevel level, ServerPlayer player, UUID cityId, BlockPos boxPos, CommercialOffer offer, int times, boolean quickMove) {
-        TradeResult stockValidation = validateStock(level, boxPos, stockDeltas(offer, times));
-        if (!stockValidation.success()) {
-            return stockValidation;
+        TradeResult supplyValidation = CommercialTradeSupplyService.validate(level, boxPos, offer, times);
+        if (!supplyValidation.success()) {
+            return supplyValidation;
         }
         double moneyCost = totalMoney(offer.cost(), times);
         if (moneyCost > 0.0D && !EconomyService.canAfford(level, cityId, moneyCost)) {
@@ -139,10 +144,15 @@ public final class CommercialTradeService {
         if (moneyCost > 0.0D && !EconomyService.withdrawCityFunds(level, cityId, player, moneyCost, "commercial_trade")) {
             return TradeResult.fail("message.simukraft.commercial.not_enough_funds");
         }
+        if (!CommercialTradeSupplyService.apply(level, boxPos, offer, times)) {
+            if (moneyCost > 0.0D) {
+                EconomyService.depositCityFunds(level, cityId, player, moneyCost, "commercial_trade_refund");
+            }
+            return TradeResult.fail("message.simukraft.commercial.insufficient_materials");
+        }
         for (Map.Entry<net.minecraft.world.item.Item, Integer> entry : itemTotals(offer.cost(), times).entrySet()) {
             removePlayerItems(player, entry.getKey(), entry.getValue());
         }
-        applyStockDeltas(level, boxPos, stockDeltas(offer, times));
         double moneyResult = totalMoney(offer.result(), times);
         if (moneyResult > 0.0D) {
             EconomyService.depositCityFunds(level, cityId, player, moneyResult, "commercial_trade");
@@ -259,41 +269,6 @@ public final class CommercialTradeService {
             }
         }
         return EconomyService.normalizeAmount(total);
-    }
-
-    private static TradeResult validateStock(ServerLevel level, BlockPos boxPos, Map<String, Integer> deltas) {
-        CommercialStockManager manager = CommercialStockManager.get(level);
-        for (Map.Entry<String, Integer> entry : deltas.entrySet()) {
-            CommercialStockData stock = manager.get(boxPos, entry.getKey());
-            if (stock == null) {
-                continue;
-            }
-            long after = stock.currentStock() + (long) entry.getValue();
-            if (after < 0L) {
-                return TradeResult.fail("message.simukraft.commercial.insufficient_stock");
-            }
-            if (after > stock.maxStock()) {
-                return TradeResult.fail("message.simukraft.commercial.stock_full");
-            }
-        }
-        return TradeResult.success("message.simukraft.commercial.ready");
-    }
-
-    private static void applyStockDeltas(ServerLevel level, BlockPos boxPos, Map<String, Integer> deltas) {
-        CommercialStockManager manager = CommercialStockManager.get(level);
-        for (Map.Entry<String, Integer> entry : deltas.entrySet()) {
-            CommercialStockData stock = manager.get(boxPos, entry.getKey());
-            int delta = entry.getValue();
-            if (stock == null || delta == 0) {
-                continue;
-            }
-            if (delta > 0) {
-                stock.add(delta);
-            } else {
-                stock.remove(-delta);
-            }
-            manager.persist(stock);
-        }
     }
 
     private static Map<String, Integer> stockDeltas(CommercialOffer offer, int times) {

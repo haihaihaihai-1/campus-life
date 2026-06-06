@@ -1,5 +1,7 @@
 package client.cn.kafei.simukraft.client.commercial;
 
+import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
+import client.cn.kafei.simukraft.client.building.BuildingIntegrityUi;
 import client.cn.kafei.simukraft.client.hire.NpcHireScreen;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen;
@@ -11,6 +13,8 @@ import com.lowdragmc.lowdraglib2.gui.ui.data.Vertical;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
 import common.cn.kafei.simukraft.commercial.CommercialConstants;
+import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxActionPacket;
+import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxDemolishPacket;
 import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxOpenRequestPacket;
 import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireFirePacket;
@@ -21,19 +25,22 @@ import dev.vfyjxf.taffy.style.TaffyPosition;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.util.Locale;
-
 @SuppressWarnings("null")
 @OnlyIn(Dist.CLIENT)
 public final class CommercialControlBoxScreenOpener {
-    private static final int PANEL_WIDTH = 360;
-    private static final int PANEL_HEIGHT = 210;
-    private static final int TEXT_LINE_HEIGHT = 18;
+    private static final int PANEL_WIDTH = 320;
+    private static final int PANEL_HEIGHT = 208;
+    private static final int ACTION_WIDTH = 132;
+    private static final int ACTION_HEIGHT = 22;
+    private static final int INTEGRITY_HEIGHT = 18;
     private static final float TEXT_ROLL_SPEED = 0.25F;
+    private static BlockPos openedBoxPos;
+
     private CommercialControlBoxScreenOpener() {
     }
 
@@ -48,14 +55,14 @@ public final class CommercialControlBoxScreenOpener {
         if (minecraft == null) {
             return;
         }
-        packet.boxPos().immutable();
+        openedBoxPos = packet.boxPos().immutable();
+        syncDisplayedBounds(packet);
         minecraft.execute(() -> minecraft.setScreen(new CommercialControlBoxScreen(createUi(packet), Component.empty())));
     }
 
     private static ModularUI createUi(CommercialControlBoxOpenResponsePacket packet) {
-        Minecraft minecraft = Minecraft.getInstance();
-        int screenWidth = Math.max(320, minecraft.getWindow().getGuiScaledWidth());
-        int screenHeight = Math.max(240, minecraft.getWindow().getGuiScaledHeight());
+        int screenWidth = Math.max(320, Minecraft.getInstance().getWindow().getGuiScaledWidth());
+        int screenHeight = Math.max(240, Minecraft.getInstance().getWindow().getGuiScaledHeight());
         UIElement root = new UIElement().layout(layout -> {
             layout.widthPercent(100);
             layout.heightPercent(100);
@@ -64,93 +71,95 @@ public final class CommercialControlBoxScreenOpener {
             layout.paddingAll(8);
         });
         root.addChild(SimuKraftUiTheme.createShellPanel(screenWidth, screenHeight));
+        root.addChild(topButton("gui.button.done", 5, 5, 50, CommercialControlBoxScreenOpener::close));
+        root.addChild(topButton("gui.button.demolish", -5, 5, 60, () -> demolish(packet)));
+
         UIElement panel = new UIElement().layout(layout -> {
-            layout.width(Math.min(PANEL_WIDTH, screenWidth - 16));
-            layout.height(Math.min(PANEL_HEIGHT, screenHeight - 16));
-            layout.paddingAll(12);
+            layout.widthPercent(92);
+            layout.maxWidth(PANEL_WIDTH);
+            layout.height(PANEL_HEIGHT);
+            layout.maxHeight(PANEL_HEIGHT);
+            layout.paddingAll(10);
             layout.flexDirection(FlexDirection.COLUMN);
             layout.alignItems(AlignItems.STRETCH);
-            layout.gapAll(8);
+            layout.gapAll(6);
         }).addClass("simukraft_panel");
-        panel.addChild(titleBar());
-        panel.addChild(statusBody(packet));
-        panel.addChild(actionRow(packet));
+
+        panel.addChild(label(Component.translatable("gui.simukraft.commercial.title"), Horizontal.CENTER, 0xFFFFFF, 16));
+        panel.addChild(label(buildingLine(packet), Horizontal.LEFT, 0xFFF5F5A0, 13));
+        panel.addChild(label(definitionLine(packet), Horizontal.LEFT, packet.definitionValid() ? 0xFFF5F5A0 : 0xFFFF7070, 13));
+        panel.addChild(label(workerLine(packet), Horizontal.LEFT, 0xFFF5F5A0, 13));
+        panel.addChild(BuildingIntegrityUi.progressBar(packet.integrityAvailable(), packet.integrityPercent(), INTEGRITY_HEIGHT));
+
+        UIElement managementRow = new UIElement().layout(layout -> {
+            layout.widthPercent(100);
+            layout.flexDirection(FlexDirection.ROW);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(6);
+            layout.marginTop(2);
+        });
+        managementRow.addChild(actionButton(Component.translatable("gui.simukraft.commercial.hire"), () -> hire(packet), packet.hasBuilding() && packet.definitionValid() && !packet.hasWorker()));
+        managementRow.addChild(actionButton(Component.translatable("gui.simukraft.building_integrity.repair_free"), () -> repair(packet), packet.integrityAvailable() && (packet.integrityRepairableBlocks() > 0 || packet.integrityManualRepairBlocks() > 0)));
+        panel.addChild(managementRow);
+
+        UIElement toolRow = new UIElement().layout(layout -> {
+            layout.widthPercent(100);
+            layout.flexDirection(FlexDirection.ROW);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(6);
+        });
+        toolRow.addChild(actionButton(Component.translatable("gui.simukraft.commercial.fire"), () -> fire(packet), packet.hasWorker()));
+        toolRow.addChild(actionButton(boundsText(packet), () -> toggleBounds(packet), packet.hasBuildingBounds()));
+        panel.addChild(toolRow);
+
         root.addChild(panel);
         return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
     }
 
-    private static UIElement titleBar() {
-        UIElement bar = new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.height(24);
-        });
-        bar.addChild(label(Component.translatable("gui.simukraft.commercial.title"), Horizontal.CENTER, 0xFFFFFFFF, 24, TextWrap.HIDE));
-        bar.addChild(panelTopButton("gui.button.done", 58, 22, CommercialControlBoxScreenOpener::close));
-        return bar;
-    }
-
-    private static UIElement statusBody(CommercialControlBoxOpenResponsePacket packet) {
-        UIElement body = new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.flex(1);
-            layout.flexDirection(FlexDirection.COLUMN);
-            layout.gapAll(5);
-        });
-        body.addChild(label(buildingLine(packet), Horizontal.LEFT, 0xFFF5F5A0, TEXT_LINE_HEIGHT, TextWrap.HOVER_ROLL));
-        body.addChild(label(definitionLine(packet), Horizontal.LEFT, packet.definitionValid() ? 0xFFF5F5A0 : 0xFFFF7070, TEXT_LINE_HEIGHT, TextWrap.HOVER_ROLL));
-        body.addChild(label(workerLine(packet), Horizontal.LEFT, 0xFFF5F5A0, TEXT_LINE_HEIGHT, TextWrap.HOVER_ROLL));
-        body.addChild(label(statusLine(packet), Horizontal.LEFT, packet.running() ? 0xFF7CE07C : 0xFFFFB060, TEXT_LINE_HEIGHT, TextWrap.HOVER_ROLL));
-        body.addChild(label(Component.translatable("gui.simukraft.commercial.balance", money(packet.cityBalance())), Horizontal.LEFT, 0xFFE0E0FF, TEXT_LINE_HEIGHT, TextWrap.HOVER_ROLL));
-        return body;
-    }
-
-    private static UIElement actionRow(CommercialControlBoxOpenResponsePacket packet) {
-        boolean canManage = packet.hasBuilding() && packet.definitionValid();
-        UIElement row = new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.height(26);
-            layout.flexDirection(FlexDirection.ROW);
-            layout.justifyContent(AlignContent.CENTER);
-            layout.gapAll(8);
-        });
-        row.addChild(flatButton(Component.translatable("gui.simukraft.commercial.hire"), () -> hire(packet), canManage && !packet.hasWorker(), 86, 24));
-        row.addChild(flatButton(Component.translatable("gui.simukraft.commercial.fire"), () -> fire(packet), packet.hasWorker(), 86, 24));
-        return row;
-    }
-
-    private static Button panelTopButton(String key, int width, int height, Runnable action) {
+    private static Button topButton(String key, int x, int y, int width, Runnable action) {
         Button button = new Button();
         button.setText(Component.translatable(key));
         button.setOnClick(event -> action.run());
         button.layout(layout -> {
             layout.positionType(TaffyPosition.ABSOLUTE);
-            layout.left(0);
-            layout.top(0);
+            if (x >= 0) {
+                layout.left(x);
+            } else {
+                layout.right(-x);
+            }
+            layout.top(y);
             layout.width(width);
-            layout.height(height);
+            layout.height(22);
         });
         return button;
     }
 
-    private static Button flatButton(Component text, Runnable action, boolean active, int width, int height) {
+    private static UIElement actionButton(Component text, Runnable action, boolean active) {
+        UIElement slot = new UIElement().layout(layout -> {
+            layout.width(ACTION_WIDTH);
+            layout.height(ACTION_HEIGHT);
+        });
         Button button = new Button();
         button.setText(text);
         button.textStyle(style -> style.textWrap(TextWrap.HOVER_ROLL).rollSpeed(TEXT_ROLL_SPEED));
         if (active) {
             button.setOnClick(event -> action.run());
         }
-        button.setActive(active);
         button.layout(layout -> {
-            layout.width(width);
-            layout.height(height);
-            layout.flexShrink(0);
+            layout.positionType(TaffyPosition.ABSOLUTE);
+            layout.left(0);
+            layout.top(0);
+            layout.width(ACTION_WIDTH);
+            layout.height(ACTION_HEIGHT);
         });
-        return button;
+        button.setActive(active);
+        slot.addChild(button);
+        return slot;
     }
 
-    private static Label label(Component text, Horizontal horizontal, int color, int height, TextWrap wrap) {
+    private static UIElement label(Component text, Horizontal horizontal, int color, int height) {
         Label label = new Label();
         label.setText(text);
         label.setOverflowVisible(false);
@@ -161,7 +170,7 @@ public final class CommercialControlBoxScreenOpener {
         label.textStyle(style -> style
                 .textColor(color)
                 .textShadow(true)
-                .textWrap(wrap)
+                .textWrap(TextWrap.HOVER_ROLL)
                 .rollSpeed(TEXT_ROLL_SPEED)
                 .textAlignHorizontal(horizontal)
                 .textAlignVertical(Vertical.CENTER));
@@ -180,19 +189,64 @@ public final class CommercialControlBoxScreenOpener {
 
     private static Component workerLine(CommercialControlBoxOpenResponsePacket packet) {
         Component value = packet.hasWorker() ? Component.literal(packet.workerName()) : Component.translatable("gui.simukraft.commercial.none");
-        return Component.translatable("gui.simukraft.commercial.worker_line", value);
-    }
-
-    private static Component statusLine(CommercialControlBoxOpenResponsePacket packet) {
         Component status = Component.translatable(packet.statusKey());
         if (!packet.statusText().isBlank()) {
             status = status.copy().append(Component.literal(" " + packet.statusText()));
         }
-        return Component.translatable("gui.simukraft.commercial.status_line", status);
+        return Component.translatable("gui.simukraft.commercial.worker_line", value)
+                .append(Component.literal(" ("))
+                .append(status)
+                .append(Component.literal(")"));
     }
 
-    private static String money(double value) {
-        return String.format(Locale.ROOT, "%.2f", value);
+    private static Component boundsText(CommercialControlBoxOpenResponsePacket packet) {
+        return Component.translatable("gui.simukraft.commercial.show_building_bounds", onOffText(BuildingBoundsRenderer.isBuildingBoundsVisible(packet.boxPos())));
+    }
+
+    private static Component onOffText(boolean enabled) {
+        return Component.translatable(enabled ? "gui.switch.on" : "gui.switch.off");
+    }
+
+    private static void toggleBounds(CommercialControlBoxOpenResponsePacket packet) {
+        boolean next = !BuildingBoundsRenderer.isBuildingBoundsVisible(packet.boxPos());
+        if (next) {
+            showBounds(packet);
+        } else {
+            BuildingBoundsRenderer.setBuildingBoundsVisible(packet.boxPos(), null, false);
+        }
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft != null) {
+            minecraft.setScreen(new CommercialControlBoxScreen(createUi(packet), Component.empty()));
+        }
+    }
+
+    private static void syncDisplayedBounds(CommercialControlBoxOpenResponsePacket packet) {
+        if (!BuildingBoundsRenderer.isBuildingBoundsVisible(packet.boxPos())) {
+            return;
+        }
+        if (packet.hasBuildingBounds()) {
+            showBounds(packet);
+        } else {
+            BuildingBoundsRenderer.setBuildingBoundsVisible(packet.boxPos(), null, false);
+        }
+    }
+
+    private static void showBounds(CommercialControlBoxOpenResponsePacket packet) {
+        if (!packet.hasBuildingBounds()) {
+            return;
+        }
+        AABB bounds = new AABB(
+                packet.boundsMin().getX(),
+                packet.boundsMin().getY(),
+                packet.boundsMin().getZ(),
+                packet.boundsMax().getX() + 1,
+                packet.boundsMax().getY() + 1,
+                packet.boundsMax().getZ() + 1);
+        BuildingBoundsRenderer.setBuildingBoundsVisible(packet.boxPos(), bounds, true);
+    }
+
+    private static void repair(CommercialControlBoxOpenResponsePacket packet) {
+        PacketDistributor.sendToServer(new CommercialControlBoxActionPacket(packet.boxPos(), CommercialControlBoxActionPacket.Action.REPAIR_BUILDING));
     }
 
     private static void hire(CommercialControlBoxOpenResponsePacket packet) {
@@ -205,7 +259,15 @@ public final class CommercialControlBoxScreenOpener {
         }
     }
 
+    private static void demolish(CommercialControlBoxOpenResponsePacket packet) {
+        BuildingBoundsRenderer.setBuildingBoundsVisible(packet.boxPos(), null, false);
+        openedBoxPos = null;
+        Minecraft.getInstance().setScreen(null);
+        PacketDistributor.sendToServer(new CommercialControlBoxDemolishPacket(packet.boxPos()));
+    }
+
     private static void close() {
+        openedBoxPos = null;
         Minecraft.getInstance().setScreen(null);
     }
 
@@ -219,6 +281,7 @@ public final class CommercialControlBoxScreenOpener {
             super.removed();
             Minecraft minecraft = Minecraft.getInstance();
             if (!(minecraft.screen instanceof CommercialControlBoxScreen)) {
+                openedBoxPos = null;
             }
         }
     }

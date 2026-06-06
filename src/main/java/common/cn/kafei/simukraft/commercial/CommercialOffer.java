@@ -1,5 +1,10 @@
 package common.cn.kafei.simukraft.commercial;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+
 import java.util.List;
 
 public record CommercialOffer(String id,
@@ -59,18 +64,60 @@ public record CommercialOffer(String id,
         return total;
     }
 
-    public record StockRule(String itemId, int max, int initial, int restockAmount, long restockInterval) {
+    public record StockRule(String itemId, int max, int initial, int restockAmount, long restockInterval, List<MaterialRequirement> materials) {
         public StockRule {
             itemId = itemId != null ? itemId.trim() : "";
             max = Math.max(0, max);
             initial = Math.clamp(initial, 0, max);
             restockAmount = Math.max(0, restockAmount);
             restockInterval = Math.max(0L, restockInterval);
+            materials = materials != null
+                    ? materials.stream().filter(MaterialRequirement::valid).toList()
+                    : List.of();
         }
 
         /** restockEnabled: 判断该库存是否允许按服务器运行 tick 自动补货。 */
         public boolean restockEnabled() {
-            return !itemId.isBlank() && max > 0 && restockAmount > 0 && restockInterval > 0L;
+            return sqliteBacked() && restockAmount > 0 && restockInterval > 0L;
+        }
+
+        /** sqliteBacked: 判断该库存是否由 SQLite 库存表维护。 */
+        public boolean sqliteBacked() {
+            return !materialBacked() && !itemId.isBlank() && max > 0;
+        }
+
+        /** materialBacked: 判断该商品是否由附近容器材料实时供给。 */
+        public boolean materialBacked() {
+            return !materials.isEmpty();
+        }
+    }
+
+    public record MaterialRequirement(String itemId, int count) {
+        public MaterialRequirement {
+            itemId = itemId != null ? itemId.trim() : "";
+            count = Math.max(0, count);
+        }
+
+        /** valid: 判断材料需求是否有效。 */
+        public boolean valid() {
+            return !itemId.isBlank() && count > 0 && item() != Items.AIR;
+        }
+
+        /** item: 根据材料 ID 解析物品。 */
+        public Item item() {
+            if (itemId.isBlank()) {
+                return Items.AIR;
+            }
+            try {
+                return BuiltInRegistries.ITEM.getOptional(ResourceLocation.parse(itemId)).orElse(Items.AIR);
+            } catch (Exception exception) {
+                return Items.AIR;
+            }
+        }
+
+        /** countFor: 计算指定交易次数下的材料数量。 */
+        public int countFor(int multiplier) {
+            return Math.max(0, count * Math.max(1, multiplier));
         }
     }
 }

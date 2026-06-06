@@ -67,7 +67,7 @@ public final class CitizenService {
         }
         CitizenManager manager = CitizenManager.get(level);
         manager.getCitizen(citizenId).ifPresent(data -> {
-            if (data.dead()) {
+            if (data.dead() && homeId != null) {
                 return;
             }
             data.setHomeId(homeId);

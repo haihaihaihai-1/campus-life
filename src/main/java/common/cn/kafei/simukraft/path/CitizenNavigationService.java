@@ -16,6 +16,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -46,6 +47,15 @@ public final class CitizenNavigationService {
     private static final double TURN_DOT_THRESHOLD = 0.906D;
     private static final double STALLED_SOFT_SKIP_DISTANCE = 2.25D;
     private static final double ACTION_START_DISTANCE = 0.65D;
+    private static final double CLIMB_HORIZONTAL_ARRIVAL_DISTANCE = 0.72D;
+    private static final double CLIMB_VERTICAL_ARRIVAL_DISTANCE = 0.08D;
+    private static final double CLIMB_VERTICAL_PASS_DISTANCE = 0.35D;
+    private static final double CLIMB_VERTICAL_ASSIST_DISTANCE = 0.75D;
+    private static final double CLIMB_VERTICAL_SPEED = 0.16D;
+    private static final double CLIMB_VERTICAL_SPEED_FACTOR = 0.22D;
+    private static final double CLIMB_HEAD_CLEARANCE_INFLATE = 0.03D;
+    private static final double CLIMB_HEAD_CLEARANCE_HEIGHT = 0.56D;
+    private static final double CLIMB_HEAD_EXIT_PROBE_DISTANCE = 0.42D;
     private static final double CORNER_ARRIVAL_DISTANCE = 0.30D;
     private static final double SEGMENT_LOOKAHEAD_BLOCKS = 1.15D;
     private static final double CORNER_LOOKAHEAD_BLOCKS = 0.55D;
@@ -734,6 +744,7 @@ public final class CitizenNavigationService {
                 speed *= 0.55D;
             }
             citizen.getMoveControl().setWantedPosition(commandTarget.x, commandTarget.y, commandTarget.z, speed);
+            applyClimbMotion(citizen, commandTarget, commandMode);
             if (shouldTriggerJump(citizen, waypointIndex, waypoint)) {
                 citizen.getJumpControl().jump();
                 jumpTriggered = true;
@@ -769,6 +780,9 @@ public final class CitizenNavigationService {
         }
 
         private boolean shouldAdvanceWaypoint(CitizenEntity citizen, Vec3 position, int index, PathWaypoint waypoint) {
+            if (waypoint.mode() == MovementMode.CLIMB) {
+                return isCloseToClimbWaypoint(position, index, waypoint) && canLeaveClimbSideways(citizen, index);
+            }
             double arrivalDistance = arrivalDistance(index, waypoint.mode());
             if (position.distanceToSqr(waypoint.position()) <= arrivalDistance * arrivalDistance) {
                 if (waypoint.mode() == MovementMode.JUMP && (!jumpTriggered || !citizen.onGround())) {
@@ -831,6 +845,95 @@ public final class CitizenNavigationService {
                     && citizen.onGround()
                     && isNearActionStart(citizen.position(), index)
                     && waypoint.position().y > waypoints.get(index - 1).position().y + 0.25D;
+        }
+
+        private void applyClimbMotion(CitizenEntity citizen, Vec3 commandTarget, MovementMode commandMode) {
+            if (commandMode != MovementMode.CLIMB) {
+                return;
+            }
+            double dx = commandTarget.x - citizen.getX();
+            double dz = commandTarget.z - citizen.getZ();
+            double horizontalSqr = dx * dx + dz * dz;
+            if (horizontalSqr > CLIMB_VERTICAL_ASSIST_DISTANCE * CLIMB_VERTICAL_ASSIST_DISTANCE) {
+                return;
+            }
+            double dy = commandTarget.y - citizen.getY();
+            if (Math.abs(dy) <= CLIMB_VERTICAL_ARRIVAL_DISTANCE) {
+                return;
+            }
+            Vec3 motion = citizen.getDeltaMovement();
+            double verticalSpeed = Math.max(-CLIMB_VERTICAL_SPEED, Math.min(CLIMB_VERTICAL_SPEED, dy * CLIMB_VERTICAL_SPEED_FACTOR));
+            citizen.setDeltaMovement(motion.x, verticalSpeed, motion.z);
+            citizen.fallDistance = 0.0F;
+        }
+
+        private boolean isCloseToClimbWaypoint(Vec3 position, int index, PathWaypoint waypoint) {
+            Vec3 waypointPosition = waypoint.position();
+            double dx = position.x - waypointPosition.x;
+            double dz = position.z - waypointPosition.z;
+            double horizontalSqr = dx * dx + dz * dz;
+            if (horizontalSqr > CLIMB_HORIZONTAL_ARRIVAL_DISTANCE * CLIMB_HORIZONTAL_ARRIVAL_DISTANCE) {
+                return false;
+            }
+            if (index <= 0) {
+                return Math.abs(position.y - waypointPosition.y) <= CLIMB_VERTICAL_PASS_DISTANCE;
+            }
+            double previousY = waypoints.get(index - 1).position().y;
+            if (waypointPosition.y > previousY + 0.25D) {
+                return position.y >= waypointPosition.y - CLIMB_VERTICAL_PASS_DISTANCE;
+            }
+            if (waypointPosition.y < previousY - 0.25D) {
+                return position.y <= waypointPosition.y + CLIMB_VERTICAL_PASS_DISTANCE;
+            }
+            return Math.abs(position.y - waypointPosition.y) <= CLIMB_VERTICAL_PASS_DISTANCE;
+        }
+
+        /** canLeaveClimbSideways: 梯子横向离开前必须确认头部碰撞空间已经清空。 */
+        private boolean canLeaveClimbSideways(CitizenEntity citizen, int index) {
+            if (index >= waypoints.size() - 1) {
+                return true;
+            }
+            PathWaypoint current = waypoints.get(index);
+            PathWaypoint next = waypoints.get(index + 1);
+            if (next.mode() == MovementMode.CLIMB || !hasHorizontalOffset(current.position(), next.position())) {
+                return true;
+            }
+            return hasClearHeadForLateralMove(citizen, current.position(), next.position());
+        }
+
+        /** hasClearHeadForLateralMove: 检查 NPC 头部附近是否仍有碰撞方块。 */
+        private boolean hasClearHeadForLateralMove(CitizenEntity citizen, Vec3 from, Vec3 to) {
+            AABB body = citizen.getBoundingBox();
+            AABB head = new AABB(
+                    body.minX,
+                    Math.max(body.minY, body.maxY - CLIMB_HEAD_CLEARANCE_HEIGHT),
+                    body.minZ,
+                    body.maxX,
+                    body.maxY + 0.05D,
+                    body.maxZ
+            ).inflate(CLIMB_HEAD_CLEARANCE_INFLATE, 0.0D, CLIMB_HEAD_CLEARANCE_INFLATE);
+            if (!citizen.level().noCollision(head)) {
+                return false;
+            }
+            double dx = to.x - from.x;
+            double dz = to.z - from.z;
+            double horizontalLength = Math.sqrt(dx * dx + dz * dz);
+            if (horizontalLength < 0.0001D) {
+                return true;
+            }
+            AABB exitHead = head.move(
+                    dx / horizontalLength * CLIMB_HEAD_EXIT_PROBE_DISTANCE,
+                    0.0D,
+                    dz / horizontalLength * CLIMB_HEAD_EXIT_PROBE_DISTANCE
+            );
+            return citizen.level().noCollision(exitHead);
+        }
+
+        /** hasHorizontalOffset: 判断下一段是否会从梯子向四周横向移动。 */
+        private boolean hasHorizontalOffset(Vec3 from, Vec3 to) {
+            double dx = to.x - from.x;
+            double dz = to.z - from.z;
+            return dx * dx + dz * dz > 0.04D;
         }
 
         private boolean isNearActionStart(Vec3 position, int index) {

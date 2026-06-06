@@ -2,6 +2,7 @@ package common.cn.kafei.simukraft.path;
 
 import common.cn.kafei.simukraft.citizen.CitizenData;
 import common.cn.kafei.simukraft.citizen.CitizenService;
+import common.cn.kafei.simukraft.citizen.CitizenSelfFeedingService;
 import common.cn.kafei.simukraft.citizen.CitizenWorkStatus;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
 import net.minecraft.core.BlockPos;
@@ -123,7 +124,7 @@ public final class CitizenWanderService {
     }
 
     private static boolean canAutoWander(ServerLevel level, CitizenEntity citizen) {
-        if (citizen == null || CitizenNavigationService.isNavigating(level, citizen.getUUID())) {
+        if (citizen == null || CitizenNavigationService.isNavigating(level, citizen.getUUID()) || CitizenSelfFeedingService.isSelfFeeding(level, citizen.getUUID())) {
             return false;
         }
         Long cooldown = WANDER_COOLDOWNS.get(cooldownKey(level, citizen.getUUID()));
@@ -137,7 +138,7 @@ public final class CitizenWanderService {
     }
 
     private static boolean belongsToCityAndIdle(ServerLevel level, CitizenEntity citizen, UUID cityId) {
-        if (citizen == null || CitizenNavigationService.isNavigating(level, citizen.getUUID())) {
+        if (citizen == null || CitizenNavigationService.isNavigating(level, citizen.getUUID()) || CitizenSelfFeedingService.isSelfFeeding(level, citizen.getUUID())) {
             return false;
         }
         CitizenData data = CitizenService.findCitizen(level, citizen.getUUID()).orElse(null);

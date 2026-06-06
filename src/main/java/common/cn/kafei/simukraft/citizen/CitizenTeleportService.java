@@ -8,7 +8,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.block.CarpetBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -21,6 +20,9 @@ import java.util.UUID;
 
 @SuppressWarnings("null")
 public final class CitizenTeleportService {
+    private static final double MAX_TELEPORT_VERTICAL_DELTA = 1.0D;
+    private static final double MAX_LOW_STAND_OFFSET = 0.75D;
+
     private CitizenTeleportService() {
     }
 
@@ -33,7 +35,7 @@ public final class CitizenTeleportService {
             return false;
         }
         Vec3 landing = boundedLandingTarget(level, target);
-        if (landing == null) {
+        if (landing == null || !withinCurrentVerticalRange(citizenEntity.position(), landing)) {
             return false;
         }
         citizenEntity.getNavigation().stop();
@@ -57,6 +59,9 @@ public final class CitizenTeleportService {
         }
         // 先合并已加载的同 UUID 实体；找不到时才按居民数据补生成实体。
         CitizenEntity citizenEntity = reconcileLoadedCitizenEntities(level, data.uuid(), landing);
+        if (citizenEntity != null && !withinCurrentVerticalRange(citizenEntity.position(), landing)) {
+            return false;
+        }
         if (citizenEntity == null) {
             citizenEntity = ModEntities.CITIZEN.get().create(level);
             if (citizenEntity == null) {
@@ -166,10 +171,10 @@ public final class CitizenTeleportService {
         BlockState floor = level.getBlockState(pos.below());
         BlockState body = level.getBlockState(pos);
         BlockState head = level.getBlockState(pos.above());
-        if (isLowStandableSurface(body)) {
-            double standY = supportTop(level, pos, body);
+        double lowStandY = lowStandY(level, pos, body);
+        if (!Double.isNaN(lowStandY)) {
+            double standY = lowStandY;
             if (Double.isNaN(standY)
-                    || !floor.isFaceSturdy(level, pos.below(), Direction.UP)
                     || !head.getCollisionShape(level, pos.above()).isEmpty()
                     || !body.getFluidState().isEmpty()
                     || !head.getFluidState().isEmpty()
@@ -186,8 +191,11 @@ public final class CitizenTeleportService {
         return safe ? Vec3.atBottomCenterOf(pos) : null;
     }
 
-    private static boolean isLowStandableSurface(BlockState state) {
-        return state.getBlock() instanceof CarpetBlock;
+    // lowStandY：识别半砖、地毯等低矮碰撞面作为实际脚底高度。
+    private static double lowStandY(ServerLevel level, BlockPos pos, BlockState state) {
+        double standY = supportTop(level, pos, state);
+        double offset = standY - pos.getY();
+        return !Double.isNaN(standY) && offset > 0.0D && offset <= MAX_LOW_STAND_OFFSET ? standY : Double.NaN;
     }
 
     private static double supportTop(ServerLevel level, BlockPos supportPos, BlockState supportState) {
@@ -219,6 +227,13 @@ public final class CitizenTeleportService {
         return Math.abs(landing.x - target.x) <= 1.0D
                 && Math.abs(landing.y - target.y) <= 1.0D
                 && Math.abs(landing.z - target.z) <= 1.0D;
+    }
+
+    /**
+     * withinCurrentVerticalRange：传送只能落在 NPC 当前实际高度 ±1 内，避免兜底传送把 NPC 送上屋顶。
+     */
+    private static boolean withinCurrentVerticalRange(Vec3 current, Vec3 landing) {
+        return current != null && landing != null && Math.abs(landing.y - current.y) <= MAX_TELEPORT_VERTICAL_DELTA;
     }
 
     private static void spawnTeleportParticles(ServerLevel level, Vec3 position, RandomSource random) {

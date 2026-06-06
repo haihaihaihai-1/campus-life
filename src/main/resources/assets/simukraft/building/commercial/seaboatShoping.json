@@ -1,50 +1,77 @@
 {
-  "buildingId": "seaboatShoping",
-  "buildingName": "海船之商（水产店）",
-  "jobType": "fishSeller",
-  "jobName": "水产店老板",
-  "shopMode": "MIXED",
-  "heldItem": "minecraft:cooked_cod",
-  "workTime": {
-    "start": 100,
-    "end": 12000
+  "id": "seaboatShoping",
+  "name": "海舶之商",
+  "job": {
+    "id": "fish_seller",
+    "name": "水产店老板",
+    "heldItem": "minecraft:cooked_cod"
   },
-  "restockTime": 101,
-  "requireMaterialsForSale": true,
-  "materials": [
+  "offers": [
     {
-      "item": "minecraft:cod",
-      "count": 0,
-      "consume": true
+      "id": "shop_sells_cooked_cod",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 0.50 }],
+      "result": [{ "item": "minecraft:cooked_cod", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_cod",
+        "max": 64,
+        "materials": [
+          { "item": "minecraft:cod", "count": 1 }
+        ]
+      }
     },
     {
-      "item": "minecraft:salmon",
-      "count": 0,
-      "consume": true
-    }
-  ],
-  "trades": [
-    {
-      "item": "minecraft:cooked_cod",
-      "sellPrice": 0.5,
-      "maxStock": 64,
-      "restockAmount": 16,
-      "retail": true
+      "id": "shop_sells_cooked_salmon",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 1.00 }],
+      "result": [{ "item": "minecraft:cooked_salmon", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_salmon",
+        "max": 64,
+        "materials": [
+          { "item": "minecraft:salmon", "count": 1 }
+        ]
+      }
     },
     {
-      "item": "minecraft:cooked_salmon",
-      "sellPrice": 50.0,
-      "maxStock": 64,
-      "restockAmount": 16,
-      "retail": true
+      "id": "shop_buys_cod",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:cod", "count": 8 }],
+      "result": [{ "money": 3.20 }],
+      "stock": {
+        "item": "minecraft:cod",
+        "max": 128
+      }
+    },
+    {
+      "id": "shop_buys_salmon",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:salmon", "count": 8 }],
+      "result": [{ "money": 5.60 }],
+      "stock": {
+        "item": "minecraft:salmon",
+        "max": 128
+      }
+    },
+    {
+      "id": "exchange_cod_for_cooked_cod",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:cod", "count": 1 }],
+      "result": [{ "item": "minecraft:cooked_cod", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_cod",
+        "max": 64
+      }
+    },
+    {
+      "id": "exchange_salmon_for_cooked_salmon",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:salmon", "count": 1 }],
+      "result": [{ "item": "minecraft:cooked_salmon", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cooked_salmon",
+        "max": 64
+      }
     }
-  ],
-  "buyTrades": [],
-  "messages": {
-    "welcome": "海船之商开业了，快来买鱼吧！",
-    "noStock": "今天的烤鱼卖完了，明天再来吧！",
-    "restocked": "海船之商开业了，快来买鱼吧！",
-    "workStart": "海船之商开业了，快来买鱼吧！",
-    "workEnd": "海船之商关门了，明天再来吧！"
-  }
+  ]
 }

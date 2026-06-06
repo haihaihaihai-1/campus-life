@@ -5,6 +5,7 @@ import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenJobVisualService;
 import common.cn.kafei.simukraft.citizen.CitizenLevelService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
+import common.cn.kafei.simukraft.citizen.CitizenSelfFeedingService;
 import common.cn.kafei.simukraft.job.CityJobType;
 import common.cn.kafei.simukraft.util.SaveScopedCacheKey;
 import net.minecraft.core.BlockPos;
@@ -94,6 +95,16 @@ public final class CommercialWorkService {
         if (CitizenHomeRestService.isRestTime(level)) {
             CitizenJobVisualService.clearMainHandOverride(worker.uuid());
             setStatus(manager, data, "gui.simukraft.commercial.status.resting", "");
+            runtime.nextTick = gameTime + IDLE_RETRY_TICKS;
+            return;
+        }
+        if (!definition.workTime().openAt(level.getDayTime())) {
+            CitizenJobVisualService.clearMainHandOverride(worker.uuid());
+            setStatus(manager, data, "gui.simukraft.commercial.status.closed", "");
+            runtime.nextTick = gameTime + IDLE_RETRY_TICKS;
+            return;
+        }
+        if (CitizenSelfFeedingService.isSelfFeeding(level, worker.uuid())) {
             runtime.nextTick = gameTime + IDLE_RETRY_TICKS;
             return;
         }

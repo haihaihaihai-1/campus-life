@@ -6,12 +6,14 @@ import java.util.List;
 public record CommercialDefinition(String id,
                                    String name,
                                    JobDefinition job,
+                                   WorkTime workTime,
                                    List<CommercialOffer> offers,
                                    Path sourcePath) {
     public CommercialDefinition {
         id = id != null && !id.isBlank() ? id.trim() : "commercial";
         name = name != null && !name.isBlank() ? name.trim() : id;
         job = job != null ? job : new JobDefinition("commercial_worker", "商业员工", "");
+        workTime = workTime != null ? workTime : WorkTime.always();
         offers = offers != null ? List.copyOf(offers) : List.of();
     }
 
@@ -43,6 +45,27 @@ public record CommercialDefinition(String id,
             id = id != null && !id.isBlank() ? id.trim() : "commercial_worker";
             name = name != null && !name.isBlank() ? name.trim() : id;
             heldItem = heldItem != null ? heldItem.trim() : "";
+        }
+    }
+
+    public record WorkTime(int start, int end) {
+        /** always: 创建全天营业时间。 */
+        public static WorkTime always() {
+            return new WorkTime(0, 0);
+        }
+
+        /** openAt: 判断指定 MC 日内时间是否处于营业时间。 */
+        public boolean openAt(long dayTime) {
+            if (start == end) {
+                return true;
+            }
+            int current = (int) Math.floorMod(dayTime, 24000L);
+            int safeStart = Math.floorMod(start, 24000);
+            int safeEnd = Math.floorMod(end, 24000);
+            if (safeStart < safeEnd) {
+                return current >= safeStart && current < safeEnd;
+            }
+            return current >= safeStart || current < safeEnd;
         }
     }
 }

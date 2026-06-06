@@ -1,168 +1,289 @@
 {
-  "buildingId": "lumberjacksHome",
-  "buildingName": "伐木工小屋",
-  "jobType": "lumberjack",
-  "jobName": "伐木工",
-  "shopMode": "PLAYER_SELL",
-  "heldItem": "minecraft:iron_axe",
-  "workTime": {
-    "start": 100,
-    "end": 12000
+  "id": "lumberjacksHome",
+  "name": "伐木工小屋",
+  "job": {
+    "id": "lumberjack",
+    "name": "伐木工",
+    "heldItem": "minecraft:iron_axe"
   },
-  "restockTime": 101,
-  "requireMaterialsForSale": false,
-  "trades": [
+  "offers": [
     {
-      "item": "minecraft:oak_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_oak_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:oak_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:oak_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:spruce_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_spruce_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:spruce_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:spruce_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:birch_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_birch_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:birch_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:birch_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:jungle_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_jungle_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:jungle_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:jungle_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:acacia_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_acacia_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:acacia_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:acacia_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:cherry_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_cherry_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:cherry_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cherry_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:dark_oak_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_dark_oak_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:dark_oak_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:dark_oak_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:mangrove_log",
-      "sellPrice": 8.96,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_mangrove_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 8.96 }],
+      "result": [{ "item": "minecraft:mangrove_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:mangrove_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_oak_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_oak_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_oak_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_oak_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_spruce_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_spruce_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_spruce_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_spruce_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_birch_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_birch_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_birch_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_birch_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_jungle_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_jungle_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_jungle_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_jungle_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_acacia_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_acacia_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_acacia_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_acacia_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_cherry_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_cherry_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_cherry_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_cherry_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_dark_oak_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_dark_oak_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_dark_oak_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_dark_oak_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
     },
     {
-      "item": "minecraft:stripped_mangrove_log",
-      "sellPrice": 9.35,
-      "maxStock": 256,
-      "restockAmount": 128,
-      "retail": false
+      "id": "shop_sells_stripped_mangrove_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 9.35 }],
+      "result": [{ "item": "minecraft:stripped_mangrove_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:stripped_mangrove_log",
+        "max": 256,
+        "initial": 128,
+        "restockAmount": 128,
+        "restockInterval": 12000
+      }
+    },
+    {
+      "id": "shop_buys_oak_sapling",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:oak_sapling", "count": 16 }],
+      "result": [{ "money": 8.48 }],
+      "stock": {
+        "item": "minecraft:oak_sapling",
+        "max": 256
+      }
+    },
+    {
+      "id": "shop_buys_spruce_sapling",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:spruce_sapling", "count": 16 }],
+      "result": [{ "money": 8.48 }],
+      "stock": {
+        "item": "minecraft:spruce_sapling",
+        "max": 256
+      }
+    },
+    {
+      "id": "shop_buys_birch_sapling",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:birch_sapling", "count": 16 }],
+      "result": [{ "money": 8.48 }],
+      "stock": {
+        "item": "minecraft:birch_sapling",
+        "max": 256
+      }
+    },
+    {
+      "id": "shop_buys_jungle_sapling",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:jungle_sapling", "count": 4 }],
+      "result": [{ "money": 211.76 }],
+      "stock": {
+        "item": "minecraft:jungle_sapling",
+        "max": 128
+      }
+    },
+    {
+      "id": "shop_buys_cherry_sapling",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:cherry_sapling", "count": 16 }],
+      "result": [{ "money": 8.48 }],
+      "stock": {
+        "item": "minecraft:cherry_sapling",
+        "max": 256
+      }
+    },
+    {
+      "id": "shop_buys_dark_oak_sapling",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:dark_oak_sapling", "count": 16 }],
+      "result": [{ "money": 8.48 }],
+      "stock": {
+        "item": "minecraft:dark_oak_sapling",
+        "max": 256
+      }
+    },
+    {
+      "id": "exchange_oak_saplings_for_log",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:oak_sapling", "count": 4 }],
+      "result": [{ "item": "minecraft:oak_log", "count": 1 }],
+      "stock": {
+        "item": "minecraft:oak_log",
+        "max": 256
+      }
     }
-  ],
-  "buyTrades": [
-    {
-      "item": "minecraft:oak_sapling",
-      "buyPrice": 0.53,
-      "maxBuyAmount": 64
-    },
-    {
-      "item": "minecraft:spruce_sapling",
-      "buyPrice": 0.53,
-      "maxBuyAmount": 64
-    },
-    {
-      "item": "minecraft:birch_sapling",
-      "buyPrice": 0.53,
-      "maxBuyAmount": 64
-    },
-    {
-      "item": "minecraft:jungle_sapling",
-      "buyPrice": 52.94,
-      "maxBuyAmount": 64
-    },
-    {
-      "item": "minecraft:cherry_sapling",
-      "buyPrice": 0.53,
-      "maxBuyAmount": 64
-    },
-    {
-      "item": "minecraft:dark_oak_sapling",
-      "buyPrice": 0.53,
-      "maxBuyAmount": 64
-    }
-  ],
-  "hasLunchBreak": true,
-  "messages": {
-    "welcome": "伐木工开始售卖木头了！",
-    "noStock": "伐木工没有砍到树，下次再来吧。",
-    "restocked": "伐木工满载而归，开始售卖木头了~",
-    "workStart": "伐木工上班了，快来买木头吧！",
-    "workEnd": "伐木工下班了，停止售卖木头！"
-  }
+  ]
 }

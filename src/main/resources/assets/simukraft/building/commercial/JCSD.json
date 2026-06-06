@@ -1,178 +1,221 @@
 {
-  "buildingId": "JCSD",
-  "buildingName": "建材商店",
-  "jobType": "building_material_merchant",
-  "jobName": "建材商人",
-  "shopMode": "PLAYER_SELL",
-  "heldItem": "minecraft:stone_bricks",
-  "workTime": {
-    "start": 0,
-    "end": 12000
+  "id": "JCSD",
+  "name": "建材商店",
+  "job": {
+    "id": "building_material_merchant",
+    "name": "建材商人",
+    "heldItem": "minecraft:stone_bricks"
   },
-  "restockTime": 3,
-  "trades": [
+  "offers": [
     {
-      "item": "minecraft:oak_planks",
-      "sellPrice": 2.24,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "buy_oak_planks",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 143.36 }],
+      "result": [{ "item": "minecraft:oak_planks", "count": 64 }],
+      "stock": { "item": "minecraft:oak_planks", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:oak_log",
-      "sellPrice": 8.96,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "sell_oak_planks",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:oak_planks", "count": 64 }],
+      "result": [{ "money": 114.56 }],
+      "stock": { "item": "minecraft:oak_planks", "max": 512 }
     },
     {
-      "item": "minecraft:cobblestone",
-      "sellPrice": 1.02,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "buy_oak_log",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 573.44 }],
+      "result": [{ "item": "minecraft:oak_log", "count": 64 }],
+      "stock": { "item": "minecraft:oak_log", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:stone",
-      "sellPrice": 1.63,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "sell_oak_log",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:oak_log", "count": 64 }],
+      "result": [{ "money": 458.24 }],
+      "stock": { "item": "minecraft:oak_log", "max": 512 }
     },
     {
-      "item": "minecraft:glass",
-      "sellPrice": 2.54,
-      "maxStock": 512,      
-      "restockAmount": 256
+      "id": "buy_cobblestone",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 65.28 }],
+      "result": [{ "item": "minecraft:cobblestone", "count": 64 }],
+      "stock": { "item": "minecraft:cobblestone", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:white_wool",
-      "sellPrice": 1.76,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "sell_cobblestone",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:cobblestone", "count": 64 }],
+      "result": [{ "money": 51.84 }],
+      "stock": { "item": "minecraft:cobblestone", "max": 512 }
     },
     {
-      "item": "minecraft:bricks",
-      "sellPrice": 3.63,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "buy_stone",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 104.32 }],
+      "result": [{ "item": "minecraft:stone", "count": 64 }],
+      "stock": { "item": "minecraft:stone", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:stone_bricks",
-      "sellPrice": 4.71,
-      "maxStock": 512, 
-      "restockAmount": 256
+      "id": "sell_stone",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:stone", "count": 64 }],
+      "result": [{ "money": 83.20 }],
+      "stock": { "item": "minecraft:stone", "max": 512 }
     },
     {
-      "item": "minecraft:oak_fence",
-      "sellPrice": 2.16,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "buy_glass",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 162.56 }],
+      "result": [{ "item": "minecraft:glass", "count": 64 }],
+      "stock": { "item": "minecraft:glass", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:sandstone",
-      "sellPrice": 2.5,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "sell_glass",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:glass", "count": 64 }],
+      "result": [{ "money": 129.92 }],
+      "stock": { "item": "minecraft:glass", "max": 512 }
     },
     {
-      "item": "minecraft:quartz_block",
-      "sellPrice": 9.8,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "buy_white_wool",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 112.64 }],
+      "result": [{ "item": "minecraft:white_wool", "count": 64 }],
+      "stock": { "item": "minecraft:white_wool", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:white_concrete",
-      "sellPrice": 11.5,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "sell_white_wool",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:white_wool", "count": 64 }],
+      "result": [{ "money": 89.60 }],
+      "stock": { "item": "minecraft:white_wool", "max": 512 }
     },
     {
-      "item": "minecraft:terracotta",
-      "sellPrice": 10.0,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "buy_bricks",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 232.32 }],
+      "result": [{ "item": "minecraft:bricks", "count": 64 }],
+      "stock": { "item": "minecraft:bricks", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
     },
     {
-      "item": "minecraft:sand",
-      "sellPrice": 1.2,
-      "maxStock": 512,
-      "restockAmount": 256
+      "id": "sell_bricks",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:bricks", "count": 64 }],
+      "result": [{ "money": 185.60 }],
+      "stock": { "item": "minecraft:bricks", "max": 512 }
+    },
+    {
+      "id": "buy_stone_bricks",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 301.44 }],
+      "result": [{ "item": "minecraft:stone_bricks", "count": 64 }],
+      "stock": { "item": "minecraft:stone_bricks", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_stone_bricks",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:stone_bricks", "count": 64 }],
+      "result": [{ "money": 240.64 }],
+      "stock": { "item": "minecraft:stone_bricks", "max": 512 }
+    },
+    {
+      "id": "buy_oak_fence",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 138.24 }],
+      "result": [{ "item": "minecraft:oak_fence", "count": 64 }],
+      "stock": { "item": "minecraft:oak_fence", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_oak_fence",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:oak_fence", "count": 64 }],
+      "result": [{ "money": 110.08 }],
+      "stock": { "item": "minecraft:oak_fence", "max": 512 }
+    },
+    {
+      "id": "buy_sandstone",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 160.00 }],
+      "result": [{ "item": "minecraft:sandstone", "count": 64 }],
+      "stock": { "item": "minecraft:sandstone", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_sandstone",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:sandstone", "count": 64 }],
+      "result": [{ "money": 128.00 }],
+      "stock": { "item": "minecraft:sandstone", "max": 512 }
+    },
+    {
+      "id": "buy_quartz_block",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 627.20 }],
+      "result": [{ "item": "minecraft:quartz_block", "count": 64 }],
+      "stock": { "item": "minecraft:quartz_block", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_quartz_block",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:quartz_block", "count": 64 }],
+      "result": [{ "money": 501.76 }],
+      "stock": { "item": "minecraft:quartz_block", "max": 512 }
+    },
+    {
+      "id": "buy_white_concrete",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 736.00 }],
+      "result": [{ "item": "minecraft:white_concrete", "count": 64 }],
+      "stock": { "item": "minecraft:white_concrete", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_white_concrete",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:white_concrete", "count": 64 }],
+      "result": [{ "money": 588.80 }],
+      "stock": { "item": "minecraft:white_concrete", "max": 512 }
+    },
+    {
+      "id": "buy_terracotta",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 640.00 }],
+      "result": [{ "item": "minecraft:terracotta", "count": 64 }],
+      "stock": { "item": "minecraft:terracotta", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_terracotta",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:terracotta", "count": 64 }],
+      "result": [{ "money": 512.00 }],
+      "stock": { "item": "minecraft:terracotta", "max": 512 }
+    },
+    {
+      "id": "buy_sand",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 76.80 }],
+      "result": [{ "item": "minecraft:sand", "count": 64 }],
+      "stock": { "item": "minecraft:sand", "max": 512, "initial": 256, "restockAmount": 256, "restockInterval": 12000 }
+    },
+    {
+      "id": "sell_sand",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:sand", "count": 64 }],
+      "result": [{ "money": 61.44 }],
+      "stock": { "item": "minecraft:sand", "max": 512 }
+    },
+    {
+      "id": "exchange_cobblestone_to_stone_bricks",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:cobblestone", "count": 64 }],
+      "result": [{ "item": "minecraft:stone_bricks", "count": 32 }],
+      "stock": { "item": "minecraft:stone_bricks", "max": 512 }
+    },
+    {
+      "id": "exchange_sand_to_glass",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:sand", "count": 64 }],
+      "result": [{ "item": "minecraft:glass", "count": 32 }],
+      "stock": { "item": "minecraft:glass", "max": 512 }
     }
-  ],
-  "buyTrades": [
-    {
-      "item": "minecraft:oak_planks",
-      "buyPrice": 1.79,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:oak_log",
-      "buyPrice": 7.16,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:cobblestone",
-      "buyPrice": 0.81,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:stone",
-      "buyPrice": 1.30,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:glass",
-      "buyPrice": 2.03,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:white_wool",
-      "buyPrice": 1.40,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:bricks",
-      "buyPrice": 2.90,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:stone_bricks",
-      "buyPrice": 3.76,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:oak_fence",
-      "buyPrice": 1.72,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:sandstone",
-      "buyPrice": 2.0,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:quartz_block",
-      "buyPrice": 7.84,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:white_concrete",
-      "buyPrice": 9.2,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:terracotta",
-      "buyPrice": 8.0,
-      "maxBuyAmount": 256
-    },
-    {
-      "item": "minecraft:sand",
-      "buyPrice": 0.96,
-      "maxBuyAmount": 256
-    }
-  ],
-  "messages": {
-    "welcome": "欢迎光临建材商店！我们收购各种建筑材料！",
-    "noStock": "我们的库存已经满了，暂时不收这种材料。",
-    "restocked": "我们的库存有空间了，继续收购建材！",
-    "workStart": "建材商店开门了，开始收购建材！",
-    "workEnd": "建材商店打烊了，明天再来卖材料吧！"
-  }
+  ]
 }

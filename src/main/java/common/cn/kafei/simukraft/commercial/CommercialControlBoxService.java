@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.commercial;
 
+import common.cn.kafei.simukraft.building.BuildingIntegrityService;
 import common.cn.kafei.simukraft.building.PlacedBuildingRecord;
 import common.cn.kafei.simukraft.building.PlacedBuildingService;
 import common.cn.kafei.simukraft.citizen.CitizenData;
@@ -28,6 +29,7 @@ public final class CommercialControlBoxService {
         synchronizeBoxMetadata(level, data, building, definition);
         CitizenData worker = findAssignedWorker(level, boxPos);
         synchronizeWorkerMetadata(level, worker, definition);
+        BuildingIntegrityService.IntegrityPreview integrity = BuildingIntegrityService.preview(level, building);
         return new CommercialControlBoxView(
                 boxPos.immutable(),
                 building != null,
@@ -40,7 +42,15 @@ public final class CommercialControlBoxService {
                 worker != null,
                 worker != null ? worker.uuid() : null,
                 worker != null ? worker.name() : "",
-                building != null && building.cityId() != null ? EconomyService.getCityBalance(level, building.cityId()) : 0.0D
+                building != null && building.cityId() != null ? EconomyService.getCityBalance(level, building.cityId()) : 0.0D,
+                building != null,
+                building != null ? building.minPos().immutable() : BlockPos.ZERO,
+                building != null ? building.maxPos().immutable() : BlockPos.ZERO,
+                integrity.available(),
+                integrity.percent(),
+                integrity.repairableBlocks(),
+                integrity.manualRepairBlocks(),
+                integrity.repairCost()
         );
     }
 
@@ -222,16 +232,18 @@ public final class CommercialControlBoxService {
     }
 
     private static CommercialTradeView.OfferEntry offerEntry(ServerLevel level, BlockPos boxPos, CommercialOffer offer) {
-        CommercialStockData stock = offer.stock() != null ? CommercialStockManager.get(level).get(boxPos, offer.stock().itemId()) : null;
+        CommercialOffer.StockRule rule = offer.stock();
+        CommercialStockData stock = rule != null && rule.sqliteBacked() ? CommercialStockManager.get(level).get(boxPos, rule.itemId()) : null;
+        int materialStock = rule != null && rule.materialBacked() ? CommercialTradeSupplyService.availableForOffer(level, boxPos, offer) : 0;
         return new CommercialTradeView.OfferEntry(
                 offer.id(),
                 resourceEntries(offer.cost()),
                 resourceEntries(offer.result()),
-                offer.stock() != null ? offer.stock().itemId() : "",
-                stock != null ? stock.currentStock() : 0,
-                stock != null ? stock.maxStock() : 0,
-                offer.stock() != null ? offer.stock().restockInterval() : 0L,
-                offer.stock() != null ? offer.stock().restockAmount() : 0
+                rule != null ? rule.itemId() : "",
+                stock != null ? stock.currentStock() : materialStock,
+                stock != null ? stock.maxStock() : rule != null && rule.materialBacked() ? Math.max(rule.max(), materialStock) : 0,
+                rule != null && rule.sqliteBacked() ? rule.restockInterval() : 0L,
+                rule != null && rule.sqliteBacked() ? rule.restockAmount() : 0
         );
     }
 

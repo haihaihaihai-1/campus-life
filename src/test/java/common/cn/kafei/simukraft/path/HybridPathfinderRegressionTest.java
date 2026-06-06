@@ -1,8 +1,11 @@
 package common.cn.kafei.simukraft.path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +94,21 @@ class HybridPathfinderRegressionTest {
     }
 
     /**
+     * Half slab: a 0.5 block rise on the same feet layer should remain ordinary walking, not a jump
+     * action that makes the follower over-centre and spin on the slab.
+     */
+    @Test
+    void halfSlabHeightStaysSameLayerWalk() {
+        Scene scene = new Scene();
+        scene.floor(0, 64, 0);
+        scene.cell(1, 64, 0, 64.5D, false, false, false, 1.0D);
+        scene.floor(2, 64, 0);
+        PathCase result = scene.path(0, 64, 0, 2, 64, 0);
+        assertSuccess(result);
+        assertNoActionMode(result);
+    }
+
+    /**
      * Diagonal drop: a one-block drop sits diagonally across an open corner. The descent must be
      * routed as an orthogonal walk-then-fall, never a single diagonal fall.
      */
@@ -98,9 +116,30 @@ class HybridPathfinderRegressionTest {
     void diagonalDropIsRoutedOrthogonally() {
         Scene scene = new Scene();
         scene.floor(0, 64, 0).floor(1, 64, 0).floor(0, 64, 1).floor(1, 63, 1);
+        scene.passage(1, 64, 1);
         PathCase result = scene.path(0, 64, 0, 1, 63, 1);
         assertSuccess(result);
         assertNoDiagonalVerticalTransitions(result);
+    }
+
+    /**
+     * Multi-floor drop: a lower floor is reachable only when the target column has a real open
+     * shaft through every intermediate layer.
+     */
+    @Test
+    void multiFloorDropRequiresOpenShaft() {
+        Scene openShaft = new Scene();
+        openShaft.floor(0, 65, 0).floor(1, 62, 0)
+                .passage(1, 63, 0).passage(1, 64, 0).passage(1, 65, 0);
+        PathCase openResult = openShaft.path(0, 65, 0, 1, 62, 0);
+        assertSuccess(openResult);
+        assertTrue(openResult.result().waypoints().stream().anyMatch(waypoint -> waypoint.mode() == MovementMode.FALL),
+                "open shaft did not produce a controlled fall");
+
+        Scene blockedFloor = new Scene();
+        blockedFloor.floor(0, 65, 0).floor(1, 65, 0).floor(1, 62, 0);
+        PathCase blockedResult = blockedFloor.path(0, 65, 0, 1, 62, 0);
+        assertFalse(blockedResult.result().success(), "path drilled through a floor without an opening");
     }
 
     /**
@@ -128,6 +167,23 @@ class HybridPathfinderRegressionTest {
         scene.water(0, 64, 0).climb(1, 64, 0).climb(1, 65, 0).floor(2, 65, 0);
         PathCase result = scene.path(0, 64, 0, 2, 65, 0);
         assertSuccess(result);
+        assertEquals(MovementMode.WALK, lastWaypoint(result).mode(), "ladder exit did not end on a walkable floor");
+    }
+
+    /**
+     * Ladder descent: a citizen on an upper floor must keep the lower ladder waypoint instead of
+     * treating it as already reached from one block above.
+     */
+    @Test
+    void ladderCanDescendToLowerFloor() {
+        Scene scene = new Scene();
+        scene.floor(0, 65, 0).climb(1, 65, 0).climb(1, 64, 0).floor(2, 64, 0);
+        PathCase result = scene.path(0, 65, 0, 2, 64, 0);
+        assertSuccess(result);
+        assertTrue(result.result().waypoints().stream()
+                        .anyMatch(waypoint -> waypoint.mode() == MovementMode.CLIMB && waypoint.blockPos().getY() == 64),
+                "downward ladder waypoint was skipped");
+        assertEquals(MovementMode.WALK, lastWaypoint(result).mode(), "downward ladder exit did not end on a walkable floor");
     }
 
     private static void assertSuccess(PathCase pathCase) {
@@ -204,6 +260,12 @@ class HybridPathfinderRegressionTest {
         return mode == MovementMode.JUMP || mode == MovementMode.SWIM || mode == MovementMode.CLIMB || mode == MovementMode.FALL;
     }
 
+    private static void assertNoActionMode(PathCase pathCase) {
+        for (PathWaypoint waypoint : pathCase.result().waypoints()) {
+            assertFalse(isActionMode(waypoint.mode()), () -> "unexpected action waypoint " + waypoint.mode() + " at " + waypoint.blockPos());
+        }
+    }
+
     private static boolean containsBlock(PathResult result, int x, int y, int z) {
         return result.waypoints().stream()
                 .anyMatch(waypoint -> waypoint.blockPos().getX() == x
@@ -211,11 +273,17 @@ class HybridPathfinderRegressionTest {
                         && waypoint.blockPos().getZ() == z);
     }
 
+    private static PathWaypoint lastWaypoint(PathCase pathCase) {
+        List<PathWaypoint> waypoints = pathCase.result().waypoints();
+        return waypoints.get(waypoints.size() - 1);
+    }
+
     /**
      * In-memory builder for an immutable {@link PathSnapshot} scene.
      */
     private static final class Scene {
         private final Map<Long, PathCell> cells = new HashMap<>();
+        private final LongOpenHashSet bodyPassages = new LongOpenHashSet();
         private int minY = Integer.MAX_VALUE;
         private int maxY = Integer.MIN_VALUE;
 
@@ -233,6 +301,12 @@ class HybridPathfinderRegressionTest {
 
         private Scene cell(int x, int y, int z, double standY, boolean water, boolean climbable, boolean woodenDoor, double cost) {
             cells.put(PathCell.key(x, y, z), new PathCell(new BlockPos(x, y, z), x, y, z, standY, water, climbable, woodenDoor, cost));
+            passage(x, y, z);
+            return this;
+        }
+
+        private Scene passage(int x, int y, int z) {
+            bodyPassages.add(BlockPos.asLong(x, y, z));
             minY = Math.min(minY, y);
             maxY = Math.max(maxY, y);
             return this;
@@ -241,7 +315,8 @@ class HybridPathfinderRegressionTest {
         private PathCase path(int startX, int startY, int startZ, int targetX, int targetY, int targetZ) {
             BlockPos start = new BlockPos(startX, startY, startZ);
             BlockPos targetBlock = new BlockPos(targetX, targetY, targetZ);
-            PathSnapshot snapshot = new PathSnapshot(DIMENSION, start, targetBlock, Map.copyOf(cells), minY, maxY, 0L, true);
+            PathSnapshot snapshot = new PathSnapshot(DIMENSION, start, targetBlock, Map.copyOf(cells),
+                    LongSets.unmodifiable(bodyPassages), minY, maxY, 0L, true);
             Vec3 target = new Vec3(targetX + 0.5D, targetY, targetZ + 0.5D);
             PathRequest request = new PathRequest(UUID.randomUUID(), DIMENSION, start, target, MovementIntent.WALK, 0L);
             return new PathCase(HybridPathfinder.find(request, snapshot), snapshot);

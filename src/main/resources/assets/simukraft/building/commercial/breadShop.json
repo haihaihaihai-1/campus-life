@@ -1,45 +1,57 @@
 {
-  "buildingId": "breadShop",
-  "buildingName": "面包店",
-  "jobType": "breadShopOwner",
-  "jobName": "面包店老板",
-  "shopMode": "NPC_SELL",
-  "heldItem": "minecraft:bread",
-  "workTime": {
-    "start": 100,
-    "end": 12000
+  "id": "breadShop",
+  "name": "面包店",
+  "job": {
+    "id": "bread_shop_owner",
+    "name": "面包店老板",
+    "heldItem": "minecraft:bread"
   },
-  "restockTime": 101,
-  "requireMaterialsForSale": true,
-  "materials": [
+  "offers": [
     {
-      "item": "minecraft:wheat",
-      "count": 0,
-      "consume": true
-    }
-  ],
-  "trades": [
+      "id": "shop_sells_bread",
+      "visibleTo": "mixed",
+      "cost": [{ "money": 0.25 }],
+      "result": [{ "item": "minecraft:bread", "count": 1 }],
+      "stock": {
+        "item": "minecraft:bread",
+        "max": 64,
+        "materials": [
+          { "item": "minecraft:wheat", "count": 3 }
+        ]
+      }
+    },
     {
-      "item": "minecraft:bread",
-      "sellPrice": 0.25,
-      "maxStock": 64,
-      "restockAmount": 32,
-      "retail": true,
-      "requiredMaterials": [
-        {
-          "item": "minecraft:wheat",
-          "count": 3
-        }
-      ]
+      "id": "shop_sells_cake",
+      "visibleTo": "player",
+      "cost": [{ "money": 3.00 }],
+      "result": [{ "item": "minecraft:cake", "count": 1 }],
+      "stock": {
+        "item": "minecraft:cake",
+        "max": 16,
+        "initial": 8,
+        "restockAmount": 4,
+        "restockInterval": 12000
+      }
+    },
+    {
+      "id": "shop_buys_wheat",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:wheat", "count": 16 }],
+      "result": [{ "money": 3.20 }],
+      "stock": {
+        "item": "minecraft:wheat",
+        "max": 256
+      }
+    },
+    {
+      "id": "exchange_wheat_for_bread",
+      "visibleTo": "player",
+      "cost": [{ "item": "minecraft:wheat", "count": 3 }],
+      "result": [{ "item": "minecraft:bread", "count": 1 }],
+      "stock": {
+        "item": "minecraft:bread",
+        "max": 64
+      }
     }
-  ],
-  "buyTrades": [],
-  "hasLunchBreak": false,
-  "messages": {
-    "welcome": "面包店开门啦，市民们快来买吧！",
-    "noStock": "今天的面包卖完了，明天再来吧！",
-    "restocked": "新鲜面包出炉啦，欢迎选购~",
-    "workStart": "面包店开门啦，市民们快来买吧！",
-    "workEnd": "面包店关门啦，大家明天再来吧！"
-  }
+  ]
 }
