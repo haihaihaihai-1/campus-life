@@ -327,6 +327,7 @@
     "message.simukraft.build_box.too_far":  "You are too far away from the build box.",
     "message.simukraft.build_box.structure_not_found":  "The building structure was not found or the blueprint could not be parsed.",
     "message.simukraft.build_box.not_enough_funds":  "The city cannot afford this construction. Cost: %s.",
+    "message.simukraft.build_box.no_permission":  "You do not have permission to manage this build box's city.",
     "message.simukraft.build_box.construction_started":  "Started construction: %s.",
     "message.simukraft.construction.completed":  "§a%s has completed building %s",
     "simukraft.subtitle.construction.complete":  "Construction complete",

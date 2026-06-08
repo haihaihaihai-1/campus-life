@@ -8,6 +8,7 @@ import common.cn.kafei.simukraft.city.CityService;
 import common.cn.kafei.simukraft.city.group.CityGroupMessageService;
 import common.cn.kafei.simukraft.city.group.CityUserGroup;
 import common.cn.kafei.simukraft.city.group.CityUserGroupService;
+import common.cn.kafei.simukraft.network.city.chunk.CityChunkSyncService;
 import common.cn.kafei.simukraft.network.city.core.CityCoreAccessValidator;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenRequestPacket;
 import common.cn.kafei.simukraft.network.hud.HudSyncService;
@@ -76,6 +77,7 @@ public record CityCoreMemberActionPacket(BlockPos pos, Action action, UUID targe
         if (result.success()) {
             CityGroupMessageService.sendResolved(result.recipients(), Component.translatable("toast.simukraft.title"), result.message(), "success", net.minecraft.world.item.ItemStack.EMPTY);
             HudSyncService.syncResolvedGroup(result.recipients(), true);
+            CityChunkSyncService.syncResolvedGroup(result.recipients());
         } else {
             InfoToastService.warning(player, result.message());
         }

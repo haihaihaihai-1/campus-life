@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -33,6 +34,14 @@ public final class CityChunkSyncService {
                 PacketDistributor.sendToPlayer(player, buildPacket(level, player.getUUID()));
             }
         }
+    }
+
+    // syncResolvedGroup: 向已解析的在线用户组同步城市区块缓存。
+    public static void syncResolvedGroup(Collection<ServerPlayer> players) {
+        if (players == null || players.isEmpty()) {
+            return;
+        }
+        players.forEach(CityChunkSyncService::syncToPlayer);
     }
 
     private static CityChunkSyncPacket buildPacket(ServerLevel level, UUID playerId) {

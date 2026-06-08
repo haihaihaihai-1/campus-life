@@ -84,13 +84,17 @@ public record BuildBoxStartConstructionPacket(BlockPos buildBoxPos,
             InfoToastService.warning(player, Component.translatable("message.simukraft.hire_npc.not_found"));
             return;
         }
+        UUID cityId = citizen.cityId();
+        if (!CityService.canManageCity(level, cityId, player.getUUID())) {
+            InfoToastService.warning(player, Component.translatable("message.simukraft.build_box.no_permission"));
+            return;
+        }
         Optional<BuildingStructure> structureOptional = BuildingStructureService.loadStructure(packet.category(), packet.buildingFileName());
         if (structureOptional.isEmpty()) {
             InfoToastService.error(player, Component.translatable("message.simukraft.build_box.structure_not_found"));
             return;
         }
         BuildingStructure structure = structureOptional.get();
-        UUID cityId = citizen.cityId();
         List<BuildingBlockData> placedBlocks = BuildingStructureService.resolvePlacedBlocks(structure, packet.origin(), packet.rotationDegrees());
         if (!BuildingTerritoryValidator.blockBoundsInCity(level, cityId, placedBlocks)) {
             InfoToastService.warning(player, Component.translatable("message.simukraft.construction.outside_city"));

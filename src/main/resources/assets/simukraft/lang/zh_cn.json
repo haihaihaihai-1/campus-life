@@ -336,6 +336,7 @@
     "message.simukraft.build_box.too_far":  "距离建筑盒太远。",
     "message.simukraft.build_box.structure_not_found":  "未找到建筑结构或蓝图解析失败。",
     "message.simukraft.build_box.not_enough_funds":  "城市资金不足，建造需要 %s。",
+    "message.simukraft.build_box.no_permission":  "你没有管理该建造箱所属城市的权限。",
     "message.simukraft.build_box.construction_started":  "已开始建造：%s。",
     "message.simukraft.construction.completed":  "§a%s 已完成建设 %s",
     "simukraft.subtitle.construction.complete":  "建造完成",

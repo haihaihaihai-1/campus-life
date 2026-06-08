@@ -88,7 +88,7 @@ public final class ClientHUDOverlay {
 
         if (!safeCityName.isEmpty()) {
             String fundsDisplay = String.format(Locale.US, "%.2f", funds);
-            statusLine.append(Component.translatable("hud.simukraft.mayor_prefix").getString()).append(' ');
+            statusLine.append(permissionPrefix(permissionLevel)).append(' ');
             statusLine.append(Component.translatable("hud.simukraft.city", safeCityName).getString()).append(" | ");
             statusLine.append(Component.translatable("hud.simukraft.funds", fundsDisplay).getString()).append(" | ");
             statusLine.append(weekDay).append(" | ");
@@ -102,6 +102,13 @@ public final class ClientHUDOverlay {
         cachedDisplayText = statusLine.toString();
         cachedTextWidth = font.width(cachedDisplayText);
         return cachedDisplayText;
+    }
+
+    // permissionPrefix: 按真实城市权限生成 HUD 前缀。
+    private static String permissionPrefix(CityPermissionLevel permissionLevel) {
+        CityPermissionLevel safeLevel = permissionLevel != null ? permissionLevel : CityPermissionLevel.CITIZEN;
+        String key = "hud.simukraft.permission." + safeLevel.name().toLowerCase(Locale.ROOT);
+        return "[" + Component.translatable(key).getString() + "]";
     }
 
     private static String safeText(String value) {
