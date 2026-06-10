@@ -178,17 +178,18 @@ public final class CitizenScreenOpener {
     }
 
     private static String hungerText(double hunger) {
+        int hungerPoints = Math.clamp((int) Math.round(hunger), 0, 20);
         String key;
-        if (hunger <= 4.0D) {
+        if (hungerPoints <= 4) {
             key = "gui.npc.hunger.level.starving";
-        } else if (hunger <= 8.0D) {
+        } else if (hungerPoints <= 8) {
             key = "gui.npc.hunger.level.very_hungry";
-        } else if (hunger <= 14.0D) {
+        } else if (hungerPoints <= 14) {
             key = "gui.npc.hunger.level.bit_hungry";
         } else {
             key = "gui.npc.hunger.level.full";
         }
-        return String.format(Locale.ROOT, "%.1f/20.0 %s", hunger, Component.translatable(key).getString());
+        return String.format(Locale.ROOT, "%d/20 %s", hungerPoints, Component.translatable(key).getString());
     }
 
     private static void close() {

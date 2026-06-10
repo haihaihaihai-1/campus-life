@@ -320,10 +320,15 @@ public class CitizenEntity extends PathfinderMob {
     }
 
     private void setHungerInternal(double hunger, boolean initialized) {
-        double normalized = Math.clamp(hunger, 0.0D, 20.0D);
+        double normalized = normalizeHunger(hunger);
         this.hunger = normalized;
-        this.entityData.set(DATA_HUNGER, Math.clamp((int) Math.round(normalized), 0, 20));
+        this.entityData.set(DATA_HUNGER, (int) normalized);
         this.hungerInitialized = initialized;
+    }
+
+    // normalizeHunger：把实体饥饿值约束为原版风格的 0-20 整数点。
+    private static double normalizeHunger(double hunger) {
+        return Math.clamp((double) Math.round(hunger), 0.0D, 20.0D);
     }
 
     public int getAge() {

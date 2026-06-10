@@ -19,8 +19,8 @@ public final class CitizenWorkStatusDisplayRegistry {
     public static final int PRIORITY_LIFE_STATE = 1100;
     public static final int PRIORITY_SELF_FEEDING = 1000;
     public static final int PRIORITY_PROBLEM = 900;
-    public static final int PRIORITY_RESTING = 800;
-    public static final int PRIORITY_ACTIVE_WORK = 700;
+    public static final int PRIORITY_RESTING = 1000;
+    public static final int PRIORITY_ACTIVE_WORK = 800;
     public static final int PRIORITY_FINISHED = 500;
     public static final int PRIORITY_CUSTOM_LABEL = 400;
     public static final int PRIORITY_BASE_WORK_STATUS = 100;

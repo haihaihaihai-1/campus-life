@@ -247,7 +247,8 @@ public final class IndustrialControlBoxService {
         return level != null && pos != null && level.isLoaded(pos) && level.getBlockState(pos).is(ModBlocks.INDUSTRIAL_CONTROL_BOX.get());
     }
 
-    private static void synchronizeBoxMetadata(ServerLevel level, IndustrialBoxData data, PlacedBuildingRecord building, IndustrialDefinition definition) {
+    // synchronizeBoxMetadata：按已放置建筑和工业定义修正盒子缓存，工作 tick 和界面共用同一套规则。
+    static void synchronizeBoxMetadata(ServerLevel level, IndustrialBoxData data, PlacedBuildingRecord building, IndustrialDefinition definition) {
         if (data == null) {
             return;
         }

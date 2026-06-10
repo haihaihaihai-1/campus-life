@@ -185,10 +185,13 @@ public final class CitizenData {
         }
         if (hunger <= 0.0D) {
             hunger = 20.0D;
+        } else {
+            hunger = normalizeHunger(hunger);
         }
         if (dead || workStatus == CitizenWorkStatus.DEAD || isDeadMarker(status) || isDeadMarker(jobId)) {
             dead = true;
             health = 0.0D;
+            hunger = 0.0D;
             deathDay = Math.max(1L, deathDay);
             workStatus = CitizenWorkStatus.DEAD;
             status = workStatus.legacyStatus();
@@ -199,6 +202,11 @@ public final class CitizenData {
 
     private static boolean isDeadMarker(String value) {
         return CitizenWorkStatus.fromName(value) == CitizenWorkStatus.DEAD;
+    }
+
+    // normalizeHunger：把居民饥饿值约束为原版风格的 0-20 整数点。
+    private static double normalizeHunger(double hunger) {
+        return Math.clamp((double) Math.round(hunger), 0.0D, 20.0D);
     }
 
     public UUID uuid() {
@@ -441,7 +449,7 @@ public final class CitizenData {
             this.hunger = 0.0D;
             return;
         }
-        this.hunger = Math.clamp(hunger, 0.0D, 20.0D);
+        this.hunger = normalizeHunger(hunger);
     }
 
     public double happiness() {

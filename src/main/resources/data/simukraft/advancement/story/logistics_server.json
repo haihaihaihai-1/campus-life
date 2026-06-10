@@ -1,0 +1,31 @@
+{
+  "parent": "simukraft:story/build_box",
+  "display": {
+    "icon": {
+      "id": "simukraft:logistics_server_box"
+    },
+    "title": {
+      "translate": "advancement.simukraft.logistics_server.title"
+    },
+    "description": {
+      "translate": "advancement.simukraft.logistics_server.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "craft_logistics_server": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "simukraft:logistics_server_box"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "craft_logistics_server"
+    ]
+  ]
+}

@@ -50,7 +50,12 @@ public final class IndustrialWorkService {
             BoxRuntime boxRuntime = runtime.boxes.computeIfAbsent(data.boxPos(), ignored -> new BoxRuntime());
             if (!data.running()) {
                 boxRuntime.reset();
-                continue;
+                if (gameTime < boxRuntime.nextTick || !tryAutoStartStoppedBox(level, manager, data)) {
+                    if (gameTime >= boxRuntime.nextTick) {
+                        boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
+                    }
+                    continue;
+                }
             }
             if (gameTime < boxRuntime.nextTick) {
                 continue;
@@ -70,6 +75,42 @@ public final class IndustrialWorkService {
         RUNTIMES.keySet().removeIf(key -> key.startsWith(serverKey + "|"));
     }
 
+    // tryAutoStartStoppedBox：重进后自动恢复可工作的工业盒，但保留手动暂停/解雇/中断的停机语义。
+    private static boolean tryAutoStartStoppedBox(ServerLevel level, IndustrialBoxManager manager, IndustrialBoxData data) {
+        if (isExplicitlyStoppedStatus(data.statusKey()) || !IndustrialControlBoxService.isIndustrialControlBox(level, data.boxPos())) {
+            return false;
+        }
+        PlacedBuildingRecord building = IndustrialControlBoxService.resolveBuilding(level, data.boxPos());
+        IndustrialDefinitionLoader.LoadResult loadResult = IndustrialDefinitionLoader.loadForBuilding(building);
+        IndustrialDefinition definition = loadResult.definition();
+        if (building == null || !loadResult.valid() || definition == null) {
+            return false;
+        }
+        IndustrialControlBoxService.synchronizeBoxMetadata(level, data, building, definition);
+        if (IndustrialControlBoxService.findAssignedWorker(level, data.boxPos()) == null) {
+            return false;
+        }
+        IndustrialDefinition.RecipeDefinition recipe = definition.recipeById(data.selectedRecipeId());
+        if (recipe == null || recipe.steps().isEmpty()) {
+            return false;
+        }
+        data.setRunning(true);
+        data.setMachineState("");
+        data.setStatusKey("gui.simukraft.industrial.status.running");
+        data.setStatusText("");
+        manager.persist(data);
+        return true;
+    }
+
+    private static boolean isExplicitlyStoppedStatus(String statusKey) {
+        return switch (statusKey != null ? statusKey : "") {
+            case "gui.simukraft.industrial.status.paused",
+                 "gui.simukraft.industrial.status.worker_fired",
+                 "gui.simukraft.industrial.status.interrupted" -> true;
+            default -> false;
+        };
+    }
+
     private static void tickBox(ServerLevel level, IndustrialBoxManager manager, IndustrialBoxData data, BoxRuntime boxRuntime, long gameTime) {
         if (!IndustrialControlBoxService.isIndustrialControlBox(level, data.boxPos())) {
             manager.remove(data.boxPos());
@@ -81,15 +122,22 @@ public final class IndustrialWorkService {
         IndustrialDefinition definition = loadResult.definition();
         CitizenData worker = IndustrialControlBoxService.findAssignedWorker(level, data.boxPos());
         if (building == null) {
-            pause(manager, data, boxRuntime, "gui.simukraft.industrial.status.no_building", "");
+            setStatus(manager, data, "gui.simukraft.industrial.status.no_building", "");
+            boxRuntime.reset();
+            boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
             return;
         }
         if (!loadResult.valid() || definition == null) {
-            pause(manager, data, boxRuntime, "gui.simukraft.industrial.status.invalid_definition", String.join(",", loadResult.errors()));
+            setStatus(manager, data, "gui.simukraft.industrial.status.invalid_definition", String.join(",", loadResult.errors()));
+            boxRuntime.reset();
+            boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
             return;
         }
+        IndustrialControlBoxService.synchronizeBoxMetadata(level, data, building, definition);
         if (worker == null) {
-            pause(manager, data, boxRuntime, "gui.simukraft.industrial.status.no_worker", "");
+            setStatus(manager, data, "gui.simukraft.industrial.status.no_worker", "");
+            boxRuntime.reset();
+            boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
             return;
         }
         IndustrialEntitySpawnService.ensureSpawned(level, manager, data, building, definition);
@@ -110,7 +158,9 @@ public final class IndustrialWorkService {
         }
         IndustrialDefinition.RecipeDefinition recipe = definition.recipeById(data.selectedRecipeId());
         if (recipe == null || recipe.steps().isEmpty()) {
-            pause(manager, data, boxRuntime, "gui.simukraft.industrial.status.no_recipe", "");
+            setStatus(manager, data, "gui.simukraft.industrial.status.no_recipe", "");
+            boxRuntime.reset();
+            boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
             return;
         }
         if (data.currentStep() >= recipe.steps().size()) {
@@ -599,15 +649,6 @@ public final class IndustrialWorkService {
         data.setMachineState("");
         boxRuntime.reset();
         manager.persist(data);
-    }
-
-    private static void pause(IndustrialBoxManager manager, IndustrialBoxData data, BoxRuntime boxRuntime, String statusKey, String statusText) {
-        data.setRunning(false);
-        data.setMachineState("");
-        data.setStatusKey(statusKey);
-        data.setStatusText(statusText);
-        manager.persist(data);
-        boxRuntime.reset();
     }
 
     private static void setStatus(IndustrialBoxManager manager, IndustrialBoxData data, String statusKey, String statusText) {

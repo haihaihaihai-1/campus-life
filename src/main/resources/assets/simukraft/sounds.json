@@ -41,6 +41,12 @@
       "simukraft:player/wake_up"
     ]
   },
+  "music.first_dream": {
+    "subtitle": "simukraft.subtitle.music.first_dream",
+    "sounds": [
+      "simukraft:music/first_dream"
+    ]
+  },
   "money.collect": {
     "subtitle": "simukraft.subtitle.money.collect",
     "sounds": [

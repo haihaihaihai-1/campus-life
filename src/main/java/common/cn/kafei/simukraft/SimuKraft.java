@@ -51,6 +51,7 @@ import common.cn.kafei.simukraft.registry.ModItems;
 import common.cn.kafei.simukraft.registry.ModMenuTypes;
 import common.cn.kafei.simukraft.registry.ModRecipeSerializers;
 import common.cn.kafei.simukraft.registry.ModSoundEvents;
+import common.cn.kafei.simukraft.event.PlayerWelcomeService;
 import common.cn.kafei.simukraft.storage.SimuSqliteStorage;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
@@ -122,6 +123,7 @@ public final class SimuKraft {
 
     private void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) {
+            PlayerWelcomeService.handleLogin(player);
             CityChunkSyncService.syncToPlayer(player);
         }
     }
@@ -177,6 +179,7 @@ public final class SimuKraft {
         if (event.getServer().overworld().getGameTime() % 1200L == 0L) {
             saveGlobalSqlite(event.getServer());
         }
+        PlayerWelcomeService.tick(event.getServer());
     }
 
     private void onServerStopping(ServerStoppingEvent event) {
@@ -209,6 +212,7 @@ public final class SimuKraft {
         CommercialDefinitionLoader.clearCache();
         WorkMaterialPolicy.clearCache();
         NpcBlockProtectionPolicy.clearCache();
+        PlayerWelcomeService.clearServerCaches(event.getServer());
         SimuSqliteStorage.clearServerCache(event.getServer());
     }
 

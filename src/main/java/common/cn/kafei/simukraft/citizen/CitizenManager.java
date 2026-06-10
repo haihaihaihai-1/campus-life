@@ -25,6 +25,12 @@ public final class CitizenManager extends SavedData {
     private static final String DATA_NAME = SimuKraft.MOD_ID + "_citizens";
     private static final int AI_BUDGET_PER_TICK = 20;
     private static final int SAVE_DIRTY_INTERVAL_TICKS = 100;
+    // CITIZEN_STATUS_UPDATE_INTERVAL_TICKS：居民状态轮询间隔，用 UUID 错峰执行。
+    private static final long CITIZEN_STATUS_UPDATE_INTERVAL_TICKS = 200L;
+    // HUNGER_DECAY_INTERVAL_TICKS：整数饥饿值自然下降间隔，约 6 分钟扣 1 点。
+    private static final long HUNGER_DECAY_INTERVAL_TICKS = 7200L;
+    // HUNGER_DECAY_PER_UPDATE：每次自然下降扣 1 点，保持原版 0-20 整数风格。
+    private static final double HUNGER_DECAY_PER_UPDATE = 1.0D;
     private static final Factory<CitizenManager> FACTORY = new Factory<>(CitizenManager::new, CitizenManager::load, null);
 
     // 居民主数据在服务端内存中维护，SQLite 负责持久化，实体只做世界内表现。
@@ -302,18 +308,25 @@ public final class CitizenManager extends SavedData {
             return;
         }
         // 通过 UUID 错开居民状态更新时间，避免所有居民同一 tick 一起写库。
-        if (level.getGameTime() % 200L == Math.floorMod(data.uuid().getLeastSignificantBits(), 200L)) {
+        long gameTime = level.getGameTime();
+        long uuidBits = data.uuid().getLeastSignificantBits();
+        if (gameTime % CITIZEN_STATUS_UPDATE_INTERVAL_TICKS == Math.floorMod(uuidBits, CITIZEN_STATUS_UPDATE_INTERVAL_TICKS)) {
             RandomSource random = level.random;
             CitizenEntity entity = CitizenTeleportService.findCitizenEntity(level, data.uuid());
             double hunger;
             boolean dataChanged = false;
+            boolean shouldDecayHunger = gameTime % HUNGER_DECAY_INTERVAL_TICKS == Math.floorMod(uuidBits, HUNGER_DECAY_INTERVAL_TICKS);
             if (entity != null) {
-                entity.setHunger(entity.getHungerValue() - 0.05D);
+                if (shouldDecayHunger) {
+                    entity.setHunger(entity.getHungerValue() - HUNGER_DECAY_PER_UPDATE);
+                }
                 hunger = entity.getHungerValue();
             } else {
-                data.setHunger(data.hunger() - 0.05D);
+                if (shouldDecayHunger) {
+                    data.setHunger(data.hunger() - HUNGER_DECAY_PER_UPDATE);
+                    dataChanged = true;
+                }
                 hunger = data.hunger();
-                dataChanged = true;
             }
             boolean hasAssignedWork = data.workplaceId() != null && data.jobType() != null && data.jobType() != common.cn.kafei.simukraft.job.CityJobType.UNEMPLOYED;
             boolean isWorkingCitizen = data.workStatusType() == CitizenWorkStatus.WORKING;
