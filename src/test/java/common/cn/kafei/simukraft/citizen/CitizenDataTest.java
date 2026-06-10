@@ -39,16 +39,13 @@ class CitizenDataTest {
     }
 
     @Test
-    void hungerUsesVanillaIntegerPoints() {
+    void hungerIsNotPersistedByCitizenData() {
         CompoundTag tag = baseCitizenTag(UUID.randomUUID());
         tag.putDouble("Hunger", 13.6D);
 
         CitizenData loaded = CitizenData.fromTag(tag);
-        CitizenData direct = new CitizenData(UUID.randomUUID());
-        direct.setHunger(18.4D);
 
-        assertEquals(14.0D, loaded.hunger());
-        assertEquals(18.0D, direct.hunger());
+        assertFalse(loaded.toTag().contains("Hunger"));
     }
 
     @Test
