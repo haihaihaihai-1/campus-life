@@ -52,6 +52,15 @@ jobType / JobType / job_type
 jobName / JobName / job_name
 ```
 
+## 与 NPC 饥饿和投喂的边界
+
+NPC 饥饿、玩家地面投喂和工业生产是分开的系统：
+
+- 饱食度保存在 `CitizenEntity` 的 `Hunger` NBT，不写入工业 JSON、`CitizenData` 或 SQLite 市民表。
+- 玩家把食物丢到 NPC 附近时，`CitizenDroppedFoodService` 会按食物属性给 NPC 增加饱食度。
+- 工作中的 NPC 会保护无主掉落物，不会把工业流程掉出来的食物产物当成投喂吃掉；玩家丢出的食物仍可被吃。
+- 工业产物应通过输出容器、`insert_item`、`craft_recipe`、`real_machine_recipe` 或 `collect_drops` 进入生产链，不要把“地上有食物”当作工业库存。
+
 ## 坐标规则
 
 工业 JSON 里的坐标是结构坐标，不是世界坐标。

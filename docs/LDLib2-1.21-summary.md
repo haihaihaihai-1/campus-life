@@ -445,6 +445,13 @@ public class MyObject implements IPersistedSerializable {
 - `CityManager`
 - 城市权限用户组
 
+当前项目补充（2026-06-10）：
+
+- LDLib 文本框已经通过 `MixinLdlibTextField` 和 `LdlibTextFieldImeCompat` 软兼容 IMBlocker，用于修复中文输入法焦点冲突。
+- 兼容层通过反射创建 IMBlocker 可识别的文本框代理，并监听焦点、失焦、字符探测和光标变更；未安装 IMBlocker 时只静默禁用兼容，不影响普通输入框。
+- 新增 LDLib 文本输入组件时不要在界面代码里直接引用 IMBlocker，也不要把 IME 兼容逻辑写到 common 包；保持兼容层集中在 `client.compat` 与 Mixin 中。
+- NPC 饱食度已独立到 `CitizenEntity` 的 `Hunger` NBT，不再属于 `CitizenData` / SQLite 字段；LDLib 界面若需要展示饱食度，应通过服务端响应读取已加载实体值或使用默认兜底，不要重新给 `CitizenData` 添加 `hunger`。
+
 如果后续切换到 LDLib2，可以考虑以下方向。
 
 ### 15.1 城市核心 UI
@@ -464,7 +471,7 @@ public class MyObject implements IPersistedSerializable {
 
 ### 15.2 市民数据同步
 
-`CitizenData` 当前是 `SavedData + CompoundTag` 手写方式。
+`CitizenData` 当前是 `SavedData + CompoundTag` 手写方式，但饱食度已经从这里迁出，独立由 `CitizenEntity` NBT 保存。
 
 未来可迁移为：
 
@@ -482,12 +489,17 @@ public class MyObject implements IPersistedSerializable {
 
 不建议频繁同步字段：
 
-- hunger
 - happiness
 - health
 - skills 全量 Map
 
 这些可以按需同步到 UI，而不是每 tick 同步。
+
+饱食度的建议：
+
+- 信息界面打开时从已加载 `CitizenEntity#getHungerValue()` 读取。
+- 实体未加载时使用 `CitizenEntity.DEFAULT_HUNGER` 兜底显示，不做离线扣减。
+- 不要通过 LDLib2 数据绑定或 SQLite schema 把 `hunger` 重新变成市民长期字段。
 
 ### 15.3 城市用户组
 
@@ -535,6 +547,8 @@ LDLib2 API 可能使用新包结构，需要以实际依赖中的类为准。
 城市核心方块、网络包、数据管理器必须在 common 侧保持服务端安全。
 
 客户端 Screen / UI 应放在 client 包。
+
+IMBlocker、Xaero 等客户端兼容也必须留在 `client.compat`、`client.mixin` 或对应客户端包里，并用软依赖方式处理缺失模组。
 
 4. 权限判断必须在服务端
 
