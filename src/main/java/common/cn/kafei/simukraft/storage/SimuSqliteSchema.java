@@ -31,12 +31,33 @@ public final class SimuSqliteSchema {
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS industrial_boxes(box_pos_long INTEGER PRIMARY KEY, building_id TEXT NOT NULL DEFAULT '', definition_id TEXT NOT NULL DEFAULT '', selected_recipe_id TEXT NOT NULL DEFAULT '', running INTEGER NOT NULL DEFAULT 0, spawn_entity_done INTEGER NOT NULL DEFAULT 0, current_step INTEGER NOT NULL DEFAULT 0, status_key TEXT NOT NULL DEFAULT '', status_text TEXT NOT NULL DEFAULT '', machine_state TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT 0)");
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS commercial_boxes(box_pos_long INTEGER PRIMARY KEY, building_id TEXT NOT NULL DEFAULT '', definition_id TEXT NOT NULL DEFAULT '', running INTEGER NOT NULL DEFAULT 1, status_key TEXT NOT NULL DEFAULT '', status_text TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT 0)");
             statement.executeUpdate("CREATE TABLE IF NOT EXISTS commercial_stock(box_pos_long INTEGER NOT NULL, item_id TEXT NOT NULL, current_stock INTEGER NOT NULL DEFAULT 0, max_stock INTEGER NOT NULL DEFAULT 0, last_restock_game_time INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(box_pos_long, item_id))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS logistics_warehouses(warehouse_id TEXT PRIMARY KEY, box_pos_long INTEGER NOT NULL, city_id TEXT, dimension_id TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT 0, UNIQUE(dimension_id, box_pos_long))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS logistics_clients(client_id TEXT PRIMARY KEY, box_pos_long INTEGER NOT NULL, city_id TEXT, dimension_id TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '', automatic INTEGER NOT NULL DEFAULT 0, source_type TEXT NOT NULL DEFAULT '', source_id TEXT NOT NULL DEFAULT '', updated_at INTEGER NOT NULL DEFAULT 0)");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS logistics_ports(owner_id TEXT NOT NULL, owner_type TEXT NOT NULL, port_id TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', kind TEXT NOT NULL DEFAULT '', pos_long INTEGER NOT NULL, PRIMARY KEY(owner_id, owner_type, port_id))");
+            statement.executeUpdate("CREATE TABLE IF NOT EXISTS logistics_channels(channel_id TEXT PRIMARY KEY, warehouse_id TEXT NOT NULL, client_id TEXT NOT NULL, direction TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1, filters TEXT NOT NULL DEFAULT '[]', updated_at INTEGER NOT NULL DEFAULT 0)");
             addColumnIfMissing(connection, "citizens", "workplace_pos_long", "INTEGER");
             addColumnIfMissing(connection, "building_tasks", "amount", "TEXT NOT NULL DEFAULT ''");
             addColumnIfMissing(connection, "planning_tasks", "material_chest_long", "INTEGER");
             addColumnIfMissing(connection, "planning_tasks", "replacement_map", "TEXT NOT NULL DEFAULT ''");
             addColumnIfMissing(connection, "industrial_boxes", "spawn_entity_done", "INTEGER NOT NULL DEFAULT 0");
             addColumnIfMissing(connection, "industrial_boxes", "machine_state", "TEXT NOT NULL DEFAULT ''");
+            // 物流表是后续版本新增的，旧存档已有表时需要补齐列，否则端口保存会失败并导致重进丢绑定。
+            addColumnIfMissing(connection, "logistics_warehouses", "city_id", "TEXT");
+            addColumnIfMissing(connection, "logistics_warehouses", "dimension_id", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_warehouses", "updated_at", "INTEGER NOT NULL DEFAULT 0");
+            addColumnIfMissing(connection, "logistics_clients", "city_id", "TEXT");
+            addColumnIfMissing(connection, "logistics_clients", "dimension_id", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_clients", "name", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_clients", "automatic", "INTEGER NOT NULL DEFAULT 0");
+            addColumnIfMissing(connection, "logistics_clients", "source_type", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_clients", "source_id", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_clients", "updated_at", "INTEGER NOT NULL DEFAULT 0");
+            addColumnIfMissing(connection, "logistics_ports", "name", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_ports", "kind", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_channels", "name", "TEXT NOT NULL DEFAULT ''");
+            addColumnIfMissing(connection, "logistics_channels", "enabled", "INTEGER NOT NULL DEFAULT 1");
+            addColumnIfMissing(connection, "logistics_channels", "filters", "TEXT NOT NULL DEFAULT '[]'");
+            addColumnIfMissing(connection, "logistics_channels", "updated_at", "INTEGER NOT NULL DEFAULT 0");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_city_members_city ON city_members(city_id)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_finance_city ON finance_transactions(city_id, sort_index)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_city_chunks_city ON city_chunks(city_id)");
@@ -48,6 +69,11 @@ public final class SimuSqliteSchema {
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_industrial_boxes_running ON industrial_boxes(running)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_commercial_boxes_running ON commercial_boxes(running)");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_commercial_stock_box ON commercial_stock(box_pos_long)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_logistics_warehouses_city ON logistics_warehouses(city_id)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_logistics_clients_city ON logistics_clients(city_id)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_logistics_ports_owner ON logistics_ports(owner_id, owner_type)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_logistics_channels_warehouse ON logistics_channels(warehouse_id)");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_logistics_channels_client ON logistics_channels(client_id)");
         } catch (SQLException exception) {
             throw new IllegalStateException("Failed to initialize Sim-U-Kraft SQLite database", exception);
         }

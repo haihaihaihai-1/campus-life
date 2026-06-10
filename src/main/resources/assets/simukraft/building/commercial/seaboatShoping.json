@@ -1,10 +1,18 @@
-{
+﻿{
   "id": "seaboatShoping",
-  "name": "海舶之商",
+  "name": "娴疯埗涔嬪晢",
   "job": {
     "id": "fish_seller",
-    "name": "水产店老板",
+    "name": "姘翠骇搴楄€佹澘",
     "heldItem": "minecraft:cooked_cod"
+  },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [
+[13, 3, 2], [14, 3, 2], [2, 6, 4]
+] },
+    "output": { "type": "structure_pos", "positions": [
+[13, 3, 2], [14, 3, 2], [2, 6, 4]
+] }
   },
   "offers": [
     {

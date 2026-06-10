@@ -16,6 +16,9 @@ import common.cn.kafei.simukraft.network.farmland.FarmlandBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.hud.HudSyncPacket;
 import common.cn.kafei.simukraft.network.industrial.IndustrialControlBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.industrial.IndustrialControlBoxViewUpdatePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsClientBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsServerBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsWarehouseGridResponsePacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListResponsePacket;
 import common.cn.kafei.simukraft.network.npc.state.EmploymentStateResponsePacket;
 import common.cn.kafei.simukraft.network.path.NpcPathDebugSyncPacket;
@@ -91,6 +94,18 @@ public interface ClientboundNetworkHandler {
 
     /** handleCommercialTradeOpenResponse: 处理 NPC 商业交易界面响应。 */
     default void handleCommercialTradeOpenResponse(CommercialTradeOpenResponsePacket packet) {
+    }
+
+    /** handleLogisticsServerBoxOpenResponse: 处理物流服务器盒界面响应。 */
+    default void handleLogisticsServerBoxOpenResponse(LogisticsServerBoxOpenResponsePacket packet) {
+    }
+
+    /** handleLogisticsClientBoxOpenResponse: 处理物流客户端盒界面响应。 */
+    default void handleLogisticsClientBoxOpenResponse(LogisticsClientBoxOpenResponsePacket packet) {
+    }
+
+    /** handleLogisticsWarehouseGridResponse: 处理物流仓库 Menu 的物品快照。 */
+    default void handleLogisticsWarehouseGridResponse(LogisticsWarehouseGridResponsePacket packet) {
     }
 
     /** handleNpcHireListResponse: 处理 NPC 雇佣列表响应。 */

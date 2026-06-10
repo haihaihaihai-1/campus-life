@@ -1,10 +1,18 @@
-{
+﻿{
   "id": "meatStand",
-  "name": "肉摊",
+  "name": "鑲夋憡",
   "job": {
     "id": "meat_stand_owner",
-    "name": "肉摊屠夫",
+    "name": "鑲夋憡灞犲か",
     "heldItem": "minecraft:cooked_chicken"
+  },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [
+[2, 1, 0], [3, 1, 0], [4, 1, 0], [2, 2, 0]
+] },
+    "output": { "type": "structure_pos", "positions": [
+[2, 1, 0], [3, 1, 0], [4, 1, 0], [2, 2, 0]
+] }
   },
   "offers": [
     {

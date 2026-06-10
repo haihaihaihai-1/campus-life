@@ -24,7 +24,7 @@ public final class SimuKraftServerConfigScreen {
     private static final int FOOTER_HEIGHT = 42;
     private static final int WRAPPED_FOOTER_HEIGHT = 70;
     private static final int TAB_HEADER_HEIGHT = 24;
-    private static final int TAB_COUNT = 5;
+    private static final int TAB_COUNT = 6;
 
     private SimuKraftServerConfigScreen() {
     }
@@ -93,6 +93,7 @@ public final class SimuKraftServerConfigScreen {
         tabs.addTab(tab("gui.simukraft.config.tab.npc", tabWidth), npcPage(draft));
         tabs.addTab(tab("gui.simukraft.config.tab.planner", tabWidth), plannerPage(draft));
         tabs.addTab(tab("gui.simukraft.config.tab.builder", tabWidth), builderPage(draft));
+        tabs.addTab(tab("gui.simukraft.config.tab.logistics", tabWidth), logisticsPage(draft));
         Tab materials = tab("gui.simukraft.config.tab.materials", tabWidth);
         tabs.addTab(materials, materialsPage(parent, draft));
         tabs.selectTab("gui.simukraft.config.tab.materials".equals(selectedTabKey) ? materials : general);
@@ -222,6 +223,36 @@ public final class SimuKraftServerConfigScreen {
                 SimuKraftConfigWidgets.intField(draft.buildingIntegrityCheckIntervalTicks, 20, 24000, value -> draft.buildingIntegrityCheckIntervalTicks = value)));
         page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.building_integrity.repairMoneyPerBlock"),
                 SimuKraftConfigWidgets.doubleField(draft.buildingIntegrityRepairMoneyPerBlock, 0.0D, 1000.0D, value -> draft.buildingIntegrityRepairMoneyPerBlock = value)));
+        return SimuKraftConfigWidgets.scroller(page);
+    }
+
+    private static UIElement logisticsPage(SimuKraftServerConfigDraft draft) {
+        UIElement page = pageColumn();
+        page.addChild(SimuKraftConfigWidgets.section(Component.translatable("gui.simukraft.config.section.logistics_performance")));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.transferIntervalTicks"),
+                SimuKraftConfigWidgets.intField(draft.logisticsTransferIntervalTicks, 20, 24000, value -> draft.logisticsTransferIntervalTicks = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.maxChannelsPerTick"),
+                SimuKraftConfigWidgets.intField(draft.logisticsMaxChannelsPerTick, 1, 512, value -> draft.logisticsMaxChannelsPerTick = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.maxTransfersPerTick"),
+                SimuKraftConfigWidgets.intField(draft.logisticsMaxTransfersPerTick, 1, 1024, value -> draft.logisticsMaxTransfersPerTick = value)));
+
+        page.addChild(SimuKraftConfigWidgets.section(Component.translatable("gui.simukraft.config.section.logistics_cost")));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.chargeEnabled"),
+                SimuKraftConfigWidgets.switchControl(draft.logisticsChargeEnabled, value -> draft.logisticsChargeEnabled = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.freeDistanceBlocks"),
+                SimuKraftConfigWidgets.intField(draft.logisticsFreeDistanceBlocks, 0, 10000, value -> draft.logisticsFreeDistanceBlocks = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.baseCost"),
+                SimuKraftConfigWidgets.doubleField(draft.logisticsBaseCost, 0.0D, 1000.0D, value -> draft.logisticsBaseCost = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.distanceStepBlocks"),
+                SimuKraftConfigWidgets.intField(draft.logisticsDistanceStepBlocks, 1, 10000, value -> draft.logisticsDistanceStepBlocks = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.stepCost"),
+                SimuKraftConfigWidgets.doubleField(draft.logisticsStepCost, 0.0D, 1000.0D, value -> draft.logisticsStepCost = value)));
+
+        page.addChild(SimuKraftConfigWidgets.section(Component.translatable("gui.simukraft.config.section.logistics_limits")));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.maxWarehouseContainers"),
+                SimuKraftConfigWidgets.intField(draft.logisticsMaxWarehouseContainers, 1, 512, value -> draft.logisticsMaxWarehouseContainers = value)));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.logistics.maxClientPorts"),
+                SimuKraftConfigWidgets.intField(draft.logisticsMaxClientPorts, 1, 256, value -> draft.logisticsMaxClientPorts = value)));
         return SimuKraftConfigWidgets.scroller(page);
     }
 

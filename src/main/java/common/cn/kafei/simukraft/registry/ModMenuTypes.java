@@ -3,6 +3,7 @@ package common.cn.kafei.simukraft.registry;
 import com.lowdragmc.lowdraglib2.gui.holder.ModularUIContainerMenu;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.commercial.CommercialTradeMenuProvider;
+import common.cn.kafei.simukraft.logistics.menu.LogisticsWarehouseGridMenu;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
@@ -17,6 +18,10 @@ public final class ModMenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<ModularUIContainerMenu>> COMMERCIAL_TRADE = MENUS.register(
             "commercial_trade",
             () -> IMenuTypeExtension.create(CommercialTradeMenuProvider::createClientMenu));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<LogisticsWarehouseGridMenu>> LOGISTICS_WAREHOUSE_GRID = MENUS.register(
+            "logistics_warehouse_grid",
+            () -> IMenuTypeExtension.create(LogisticsWarehouseGridMenu::createClientMenu));
 
     private ModMenuTypes() {
     }

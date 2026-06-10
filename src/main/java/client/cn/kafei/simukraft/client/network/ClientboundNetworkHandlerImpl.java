@@ -15,6 +15,8 @@ import client.cn.kafei.simukraft.client.farmland.FarmlandBoxScreenOpener;
 import client.cn.kafei.simukraft.client.farmland.FarmlandHoverPreview;
 import client.cn.kafei.simukraft.client.hire.NpcHireScreen;
 import client.cn.kafei.simukraft.client.industrial.IndustrialControlBoxScreenOpener;
+import client.cn.kafei.simukraft.client.logistics.LogisticsClientBoxScreenOpener;
+import client.cn.kafei.simukraft.client.logistics.LogisticsServerBoxScreenOpener;
 import client.cn.kafei.simukraft.client.path.NpcPathDebugRenderer;
 import client.cn.kafei.simukraft.client.toast.ClientInfoToast;
 import common.cn.kafei.simukraft.network.building.BuildingCacheReloadPacket;
@@ -34,6 +36,9 @@ import common.cn.kafei.simukraft.network.farmland.FarmlandBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.hud.HudSyncPacket;
 import common.cn.kafei.simukraft.network.industrial.IndustrialControlBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.industrial.IndustrialControlBoxViewUpdatePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsClientBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsServerBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsWarehouseGridResponsePacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListResponsePacket;
 import common.cn.kafei.simukraft.network.npc.state.EmploymentStateResponsePacket;
 import common.cn.kafei.simukraft.network.path.NpcPathDebugSyncPacket;
@@ -150,6 +155,25 @@ public final class ClientboundNetworkHandlerImpl implements ClientboundNetworkHa
     @Override
     public void handleCommercialTradeOpenResponse(CommercialTradeOpenResponsePacket packet) {
         CommercialTradeUiRoot.refreshActive(packet);
+    }
+
+    @Override
+    public void handleLogisticsServerBoxOpenResponse(LogisticsServerBoxOpenResponsePacket packet) {
+        LogisticsServerBoxScreenOpener.open(packet);
+    }
+
+    @Override
+    public void handleLogisticsClientBoxOpenResponse(LogisticsClientBoxOpenResponsePacket packet) {
+        LogisticsClientBoxScreenOpener.open(packet);
+    }
+
+    @Override
+    public void handleLogisticsWarehouseGridResponse(LogisticsWarehouseGridResponsePacket packet) {
+        // 推给旧版原生仓库页；服务端快照保留完整 ItemStack 组件，避免 NBT 物品串货。
+        LogisticsServerBoxScreenOpener.pushWarehouseItems(
+                packet.pos(),
+                new java.util.ArrayList<>(packet.items()),
+                new java.util.ArrayList<>(packet.actualCounts()));
     }
 
     @Override

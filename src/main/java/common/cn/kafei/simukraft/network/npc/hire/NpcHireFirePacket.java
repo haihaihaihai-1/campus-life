@@ -8,6 +8,9 @@ import common.cn.kafei.simukraft.commercial.CommercialControlBoxService;
 import common.cn.kafei.simukraft.city.group.CityGroupMessageService;
 import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.job.CitizenEmploymentService;
+import common.cn.kafei.simukraft.logistics.LogisticsConstants;
+import common.cn.kafei.simukraft.logistics.LogisticsControlBoxService;
+import common.cn.kafei.simukraft.network.logistics.LogisticsServerBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.toast.InfoToastService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -63,6 +66,9 @@ public record NpcHireFirePacket(BlockPos sourcePos, String sourceType, String ro
             if (CommercialConstants.HIRE_SOURCE_TYPE.equals(access.sourceType())) {
                 CommercialControlBoxService.fireWorker(level, access.sourcePos());
                 PacketDistributor.sendToPlayer(player, CommercialControlBoxOpenResponsePacket.from(CommercialControlBoxService.buildView(level, access.sourcePos())));
+            }
+            if (LogisticsConstants.SERVER_SOURCE_TYPE.equals(access.sourceType())) {
+                PacketDistributor.sendToPlayer(player, LogisticsServerBoxOpenResponsePacket.from(LogisticsControlBoxService.buildServerView(level, access.sourcePos())));
             }
             CityGroupMessageService.successToCity(level, access.cityId(), Component.translatable("message.simukraft.fire_npc.success", citizen.name()));
         }

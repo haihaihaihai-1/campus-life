@@ -11,6 +11,8 @@ import common.cn.kafei.simukraft.farmland.FarmlandBoxService;
 import common.cn.kafei.simukraft.industrial.IndustrialConstants;
 import common.cn.kafei.simukraft.industrial.IndustrialControlBoxService;
 import common.cn.kafei.simukraft.job.CitizenEmploymentService;
+import common.cn.kafei.simukraft.logistics.LogisticsConstants;
+import common.cn.kafei.simukraft.logistics.LogisticsControlBoxService;
 import common.cn.kafei.simukraft.network.toast.InfoToastService;
 import common.cn.kafei.simukraft.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
@@ -109,6 +111,11 @@ final class NpcHireAccessValidator {
             PlacedBuildingRecord building = CommercialControlBoxService.resolveBuilding(level, sourcePos);
             return building != null ? building.cityId() : null;
         }
+        if (LogisticsConstants.SERVER_SOURCE_TYPE.equals(sourceType)
+                && LogisticsConstants.STORAGE_ROLE.equals(role)
+                && level.getBlockState(sourcePos).is(ModBlocks.LOGISTICS_SERVER_BOX.get())) {
+            return LogisticsControlBoxService.cityIdFor(level, sourcePos);
+        }
         return null;
     }
 
@@ -143,6 +150,9 @@ final class NpcHireAccessValidator {
         }
         if (CommercialConstants.HIRE_SOURCE_TYPE.equals(sourceType)) {
             return "message.simukraft.commercial_control_box.too_far";
+        }
+        if (LogisticsConstants.SERVER_SOURCE_TYPE.equals(sourceType)) {
+            return "message.simukraft.logistics.too_far";
         }
         return "message.simukraft.build_box.too_far";
     }

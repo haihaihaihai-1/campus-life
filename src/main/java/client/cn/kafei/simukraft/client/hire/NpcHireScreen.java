@@ -5,6 +5,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 import client.cn.kafei.simukraft.client.buildbox.BuildBoxScreenOpener;
 import client.cn.kafei.simukraft.client.commercial.CommercialControlBoxScreenOpener;
 import client.cn.kafei.simukraft.client.industrial.IndustrialControlBoxScreenOpener;
+import client.cn.kafei.simukraft.client.logistics.LogisticsServerBoxScreenOpener;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import client.cn.kafei.simukraft.client.citizen.CitizenAvatarFactory;
 import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
@@ -19,6 +20,7 @@ import common.cn.kafei.simukraft.citizen.CitizenSkillSnapshot;
 import common.cn.kafei.simukraft.commercial.CommercialConstants;
 import common.cn.kafei.simukraft.job.CityJobType;
 import common.cn.kafei.simukraft.industrial.IndustrialConstants;
+import common.cn.kafei.simukraft.logistics.LogisticsConstants;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireAssignPacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListRequestPacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListResponsePacket;
@@ -411,6 +413,10 @@ public final class NpcHireScreen {
             CommercialControlBoxScreenOpener.request(sourcePos);
             return;
         }
+        if (LogisticsConstants.SERVER_SOURCE_TYPE.equalsIgnoreCase(sourceType)) {
+            LogisticsServerBoxScreenOpener.request(sourcePos);
+            return;
+        }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft != null) {
             minecraft.setScreen(null);
@@ -426,6 +432,9 @@ public final class NpcHireScreen {
         }
         if (CommercialConstants.HIRE_ROLE.equalsIgnoreCase(role)) {
             return "gui.simukraft.commercial.hire_title";
+        }
+        if (LogisticsConstants.STORAGE_ROLE.equalsIgnoreCase(role)) {
+            return "gui.simukraft.logistics.hire_title";
         }
         return "gui.hire_builder.title";
     }

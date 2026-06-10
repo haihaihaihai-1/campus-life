@@ -87,6 +87,21 @@ public final class GenericContainerAccess {
         }
     }
 
+    public static ItemStack extractFromSlot(ServerLevel level, BlockPos pos, int slot, SlotAccess access, @Nullable Direction side, int maxCount, Predicate<ItemStack> matcher) {
+        if (level == null || pos == null || access == null || matcher == null || maxCount <= 0 || !level.isLoaded(pos)) {
+            return ItemStack.EMPTY;
+        }
+        try {
+            return switch (access) {
+                case ITEM_HANDLER -> extractFromItemHandler(level, pos, side, slot, maxCount, matcher);
+                case CONTAINER -> extractFromContainer(level, pos, slot, maxCount, matcher);
+            };
+        } catch (RuntimeException exception) {
+            SimuKraft.LOGGER.warn("Simukraft: Failed to extract item stack from container at {}", pos, exception);
+            return ItemStack.EMPTY;
+        }
+    }
+
     /**
      * 向容器插入物品，优先 IItemHandler，回退原版 Container。返回未能放入的剩余物（调用方负责掉落兜底）。
      */
@@ -417,6 +432,19 @@ public final class GenericContainerAccess {
         return handler.getStackInSlot(slot).copy();
     }
 
+    private static ItemStack extractFromItemHandler(ServerLevel level, BlockPos pos, @Nullable Direction side, int slot, int maxCount, Predicate<ItemStack> matcher) {
+        IItemHandler handler = level.getCapability(Capabilities.ItemHandler.BLOCK, pos, side);
+        if (handler == null || slot < 0 || slot >= handler.getSlots()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack current = handler.getStackInSlot(slot);
+        if (current.isEmpty() || !matcher.test(current)) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack extracted = handler.extractItem(slot, Math.min(maxCount, current.getCount()), false);
+        return !extracted.isEmpty() && matcher.test(extracted) ? extracted : ItemStack.EMPTY;
+    }
+
     private static boolean consumeFromContainer(ServerLevel level, BlockPos pos, int slot, Predicate<ItemStack> matcher) {
         Container container = resolveContainer(level, pos);
         if (container == null || slot < 0 || slot >= container.getContainerSize()) {
@@ -444,6 +472,27 @@ public final class GenericContainerAccess {
             return ItemStack.EMPTY;
         }
         return container.getItem(slot).copy();
+    }
+
+    private static ItemStack extractFromContainer(ServerLevel level, BlockPos pos, int slot, int maxCount, Predicate<ItemStack> matcher) {
+        Container container = resolveContainer(level, pos);
+        if (container == null || slot < 0 || slot >= container.getContainerSize()) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack current = container.getItem(slot);
+        if (current.isEmpty() || !matcher.test(current)) {
+            return ItemStack.EMPTY;
+        }
+        ItemStack removed = container.removeItem(slot, Math.min(maxCount, current.getCount()));
+        if (removed.isEmpty() || !matcher.test(removed)) {
+            return ItemStack.EMPTY;
+        }
+        container.setChanged();
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity != null) {
+            blockEntity.setChanged();
+        }
+        return removed;
     }
 
     private static int comparePositions(BlockPos first, BlockPos second) {

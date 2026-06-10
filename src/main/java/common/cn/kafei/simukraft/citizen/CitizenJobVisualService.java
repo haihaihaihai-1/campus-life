@@ -20,6 +20,7 @@ public final class CitizenJobVisualService {
 
     static {
         define(CityJobType.BUILDER, new CitizenJobVisualRule(new ItemStack(Items.COBBLESTONE), ItemStack.EMPTY, CitizenJobVisualAction.SWING_RIGHT_HAND_WHEN_BUILDING));
+        define(CityJobType.STORAGE_WORKER, new CitizenJobVisualRule(new ItemStack(Items.CHEST), ItemStack.EMPTY, CitizenJobVisualAction.NONE));
     }
 
     private CitizenJobVisualService() {

@@ -1,10 +1,18 @@
-{
+﻿{
   "id": "SimuFriedChicken",
-  "name": "肯打鸡",
+  "name": "Simu Fried Chicken",
   "job": {
     "id": "fried_chicken_owner",
-    "name": "肯打鸡服务员",
+    "name": "鑲墦楦℃湇鍔″憳",
     "heldItem": "minecraft:cooked_chicken"
+  },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [
+[4, 1, 5]
+] },
+    "output": { "type": "structure_pos", "positions": [
+[4, 1, 5]
+] }
   },
   "offers": [
     {

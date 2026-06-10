@@ -8,6 +8,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.opengl.GL11;
 import org.slf4j.Logger;
 
 /**
@@ -104,6 +105,8 @@ public class SimuMapRegion {
     private void uploadNow() {
         try {
             RenderSystem.bindTexture(textureId);
+            GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+            GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
             synchronized (this) {
                 if (renderedImage != null) {
                     renderedImage.upload(0, 0, 0, false);

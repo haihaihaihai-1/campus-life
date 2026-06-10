@@ -28,6 +28,9 @@ import common.cn.kafei.simukraft.farmland.FarmlandBoxManager;
 import common.cn.kafei.simukraft.farmland.FarmlandFarmingService;
 import common.cn.kafei.simukraft.industrial.IndustrialBoxManager;
 import common.cn.kafei.simukraft.industrial.IndustrialWorkService;
+import common.cn.kafei.simukraft.logistics.LogisticsAutoClientService;
+import common.cn.kafei.simukraft.logistics.LogisticsManager;
+import common.cn.kafei.simukraft.logistics.LogisticsWorkService;
 import common.cn.kafei.simukraft.planner.PlannerWorkService;
 import common.cn.kafei.simukraft.event.CityPlacementRestrictionHandler;
 import common.cn.kafei.simukraft.network.ModNetwork;
@@ -161,6 +164,7 @@ public final class SimuKraft {
             PlannerWorkService.tick(level);
             IndustrialWorkService.tick(level);
             CommercialWorkService.tick(level);
+            LogisticsWorkService.tick(level);
             PopulationGrowthService.tick(level);
             ResidentialRentService.tick(level);
             FarmlandFarmingService.tick(level);
@@ -188,6 +192,8 @@ public final class SimuKraft {
         PlannerWorkService.clearServerCaches(event.getServer());
         IndustrialWorkService.clearServerCaches(event.getServer());
         CommercialWorkService.clearServerCaches(event.getServer());
+        LogisticsWorkService.clearServerCaches(event.getServer());
+        LogisticsAutoClientService.clearServerCaches(event.getServer());
         FarmlandFarmingService.clearServerCaches(event.getServer());
         PlacedBuildingService.clearServerCaches(event.getServer());
         ResidentialBedPoiService.clearServerCaches(event.getServer());
@@ -213,6 +219,7 @@ public final class SimuKraft {
         IndustrialBoxManager.get(level).saveToSqlite(level);
         CommercialBoxManager.get(level).saveToSqlite(level);
         CommercialStockManager.get(level).saveToSqlite(level);
+        LogisticsManager.get(level).saveToSqlite(level);
     }
 
     private void saveGlobalSqlite(MinecraftServer server) {

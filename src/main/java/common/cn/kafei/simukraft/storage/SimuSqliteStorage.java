@@ -23,6 +23,7 @@ public final class SimuSqliteStorage {
     private final PlanningTaskSqliteRepository planningTasks;
     private final IndustrialBoxSqliteRepository industrialBoxes;
     private final CommercialSqliteRepository commercial;
+    private final LogisticsSqliteRepository logistics;
 
     private SimuSqliteStorage(SimuSqliteDatabase database) {
         this.cities = new CitySqliteRepository(database);
@@ -34,6 +35,7 @@ public final class SimuSqliteStorage {
         this.planningTasks = new PlanningTaskSqliteRepository(database);
         this.industrialBoxes = new IndustrialBoxSqliteRepository(database);
         this.commercial = new CommercialSqliteRepository(database);
+        this.logistics = new LogisticsSqliteRepository(database);
     }
 
     public static SimuSqliteStorage open(MinecraftServer server) {
@@ -323,6 +325,64 @@ public final class SimuSqliteStorage {
         if (storage != null && citizenId != null) {
             storage.planningTasks.deleteByCitizen(citizenId);
         }
+    }
+
+    public static CompoundTag loadLogistics(ServerLevel level) {
+        SimuSqliteStorage storage = openSafely(level);
+        return storage != null ? storage.logistics.loadDimension(dimensionId(level)) : null;
+    }
+
+    public static void saveLogistics(ServerLevel level, CompoundTag tag) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && tag != null) {
+            storage.logistics.saveDimension(tag, dimensionId(level));
+        }
+    }
+
+    public static void saveLogisticsWarehouse(ServerLevel level, CompoundTag warehouseTag) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && warehouseTag != null) {
+            storage.logistics.upsertWarehouse(warehouseTag);
+        }
+    }
+
+    public static void saveLogisticsClient(ServerLevel level, CompoundTag clientTag) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && clientTag != null) {
+            storage.logistics.upsertClient(clientTag);
+        }
+    }
+
+    public static void saveLogisticsChannel(ServerLevel level, CompoundTag channelTag) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && channelTag != null) {
+            storage.logistics.upsertChannel(channelTag);
+        }
+    }
+
+    public static void deleteLogisticsWarehouse(ServerLevel level, UUID warehouseId) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && warehouseId != null) {
+            storage.logistics.deleteWarehouse(warehouseId);
+        }
+    }
+
+    public static void deleteLogisticsClient(ServerLevel level, UUID clientId) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && clientId != null) {
+            storage.logistics.deleteClient(clientId);
+        }
+    }
+
+    public static void deleteLogisticsChannel(ServerLevel level, UUID channelId) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && channelId != null) {
+            storage.logistics.deleteChannel(channelId);
+        }
+    }
+
+    private static String dimensionId(ServerLevel level) {
+        return level.dimension().location().toString();
     }
 
 }

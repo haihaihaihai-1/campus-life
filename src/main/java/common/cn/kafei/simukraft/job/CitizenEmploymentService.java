@@ -13,6 +13,7 @@ import common.cn.kafei.simukraft.industrial.IndustrialControlBoxService;
 import common.cn.kafei.simukraft.industrial.IndustrialDefinition;
 import common.cn.kafei.simukraft.industrial.IndustrialDefinitionLoader;
 import common.cn.kafei.simukraft.industrial.IndustrialWorkService;
+import common.cn.kafei.simukraft.logistics.LogisticsConstants;
 import common.cn.kafei.simukraft.planner.PlannerWorkService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -176,6 +177,9 @@ public final class CitizenEmploymentService {
         if (workplaceId(CommercialConstants.HIRE_SOURCE_TYPE, CommercialConstants.HIRE_ROLE, workplacePos).equals(workplaceId)) {
             return CityJobType.COMMERCIAL_WORKER;
         }
+        if (workplaceId(LogisticsConstants.SERVER_SOURCE_TYPE, LogisticsConstants.STORAGE_ROLE, workplacePos).equals(workplaceId)) {
+            return CityJobType.STORAGE_WORKER;
+        }
         return null;
     }
 
@@ -203,6 +207,9 @@ public final class CitizenEmploymentService {
         if (jobType == CityJobType.COMMERCIAL_WORKER || "commercial".equals(normalizedRole) || CommercialConstants.HIRE_SOURCE_TYPE.equals(normalizedSource)) {
             CommercialWorkService.clearServerCaches(level.getServer());
             CommercialControlBoxService.interrupt(level, citizen.uuid(), safeReason);
+        }
+        if (jobType == CityJobType.STORAGE_WORKER || LogisticsConstants.SERVER_SOURCE_TYPE.equals(normalizedSource)) {
+            common.cn.kafei.simukraft.citizen.CitizenJobVisualService.clearMainHandOverride(citizen.uuid());
         }
     }
 

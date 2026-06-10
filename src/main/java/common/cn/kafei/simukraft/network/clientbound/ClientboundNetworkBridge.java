@@ -16,6 +16,9 @@ import common.cn.kafei.simukraft.network.farmland.FarmlandBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.hud.HudSyncPacket;
 import common.cn.kafei.simukraft.network.industrial.IndustrialControlBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.industrial.IndustrialControlBoxViewUpdatePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsClientBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsServerBoxOpenResponsePacket;
+import common.cn.kafei.simukraft.network.logistics.LogisticsWarehouseGridResponsePacket;
 import common.cn.kafei.simukraft.network.npc.hire.NpcHireListResponsePacket;
 import common.cn.kafei.simukraft.network.npc.state.EmploymentStateResponsePacket;
 import common.cn.kafei.simukraft.network.path.NpcPathDebugSyncPacket;
@@ -122,6 +125,21 @@ public final class ClientboundNetworkBridge {
     /** handleCommercialTradeOpenResponse: 分发 NPC 商业交易界面响应。 */
     public static void handleCommercialTradeOpenResponse(CommercialTradeOpenResponsePacket packet) {
         HANDLER.get().handleCommercialTradeOpenResponse(packet);
+    }
+
+    /** handleLogisticsServerBoxOpenResponse: 分发物流服务器盒打开响应。 */
+    public static void handleLogisticsServerBoxOpenResponse(LogisticsServerBoxOpenResponsePacket packet) {
+        HANDLER.get().handleLogisticsServerBoxOpenResponse(packet);
+    }
+
+    /** handleLogisticsClientBoxOpenResponse: 分发物流客户端盒打开响应。 */
+    public static void handleLogisticsClientBoxOpenResponse(LogisticsClientBoxOpenResponsePacket packet) {
+        HANDLER.get().handleLogisticsClientBoxOpenResponse(packet);
+    }
+
+    /** handleLogisticsWarehouseGridResponse: 分发物流仓库 Menu 的物品快照。 */
+    public static void handleLogisticsWarehouseGridResponse(LogisticsWarehouseGridResponsePacket packet) {
+        HANDLER.get().handleLogisticsWarehouseGridResponse(packet);
     }
 
     /** handleNpcHireListResponse: 分发 NPC 雇佣列表响应。 */

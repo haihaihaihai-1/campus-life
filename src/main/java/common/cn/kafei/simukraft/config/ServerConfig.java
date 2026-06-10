@@ -46,6 +46,16 @@ public final class ServerConfig {
     public static final ModConfigSpec.BooleanValue PLANNER_XP_GAIN;
     public static final ModConfigSpec.IntValue PLANNER_XP_PER_BLOCK;
     public static final ModConfigSpec.BooleanValue PLANNER_PAUSE_AT_NIGHT;
+    public static final ModConfigSpec.IntValue LOGISTICS_TRANSFER_INTERVAL_TICKS;
+    public static final ModConfigSpec.IntValue LOGISTICS_MAX_CHANNELS_PER_TICK;
+    public static final ModConfigSpec.IntValue LOGISTICS_MAX_TRANSFERS_PER_TICK;
+    public static final ModConfigSpec.BooleanValue LOGISTICS_CHARGE_ENABLED;
+    public static final ModConfigSpec.IntValue LOGISTICS_FREE_DISTANCE_BLOCKS;
+    public static final ModConfigSpec.DoubleValue LOGISTICS_BASE_COST;
+    public static final ModConfigSpec.IntValue LOGISTICS_DISTANCE_STEP_BLOCKS;
+    public static final ModConfigSpec.DoubleValue LOGISTICS_STEP_COST;
+    public static final ModConfigSpec.IntValue LOGISTICS_MAX_WAREHOUSE_CONTAINERS;
+    public static final ModConfigSpec.IntValue LOGISTICS_MAX_CLIENT_PORTS;
 
     static {
         ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -270,6 +280,48 @@ public final class ServerConfig {
                 .translation("config.simukraft.planner.pauseAtNight")
                 .define("pauseAtNight", true);
         builder.pop();
+        builder.push("logistics");
+        LOGISTICS_TRANSFER_INTERVAL_TICKS = builder
+                .comment("Ticks between logistics transfer scans.")
+                .translation("config.simukraft.logistics.transferIntervalTicks")
+                .defineInRange("transferIntervalTicks", 100, 20, 24000);
+        LOGISTICS_MAX_CHANNELS_PER_TICK = builder
+                .comment("Maximum logistics routes processed in one server tick.")
+                .translation("config.simukraft.logistics.maxChannelsPerTick")
+                .defineInRange("maxChannelsPerTick", 32, 1, 512);
+        LOGISTICS_MAX_TRANSFERS_PER_TICK = builder
+                .comment("Maximum item stack transfer operations performed in one server tick.")
+                .translation("config.simukraft.logistics.maxTransfersPerTick")
+                .defineInRange("maxTransfersPerTick", 64, 1, 1024);
+        LOGISTICS_CHARGE_ENABLED = builder
+                .comment("Whether successful logistics transfers charge city funds.")
+                .translation("config.simukraft.logistics.chargeEnabled")
+                .define("chargeEnabled", true);
+        LOGISTICS_FREE_DISTANCE_BLOCKS = builder
+                .comment("Transfer distance covered by the base logistics fee.")
+                .translation("config.simukraft.logistics.freeDistanceBlocks")
+                .defineInRange("freeDistanceBlocks", 256, 0, 10000);
+        LOGISTICS_BASE_COST = builder
+                .comment("Base city-fund fee charged for one logistics transfer.")
+                .translation("config.simukraft.logistics.baseCost")
+                .defineInRange("baseCost", 0.02D, 0.0D, 1000.0D);
+        LOGISTICS_DISTANCE_STEP_BLOCKS = builder
+                .comment("Additional distance step used by logistics transfer fees.")
+                .translation("config.simukraft.logistics.distanceStepBlocks")
+                .defineInRange("distanceStepBlocks", 64, 1, 10000);
+        LOGISTICS_STEP_COST = builder
+                .comment("Additional city-fund fee per distance step after the free distance.")
+                .translation("config.simukraft.logistics.stepCost")
+                .defineInRange("stepCost", 0.01D, 0.0D, 1000.0D);
+        LOGISTICS_MAX_WAREHOUSE_CONTAINERS = builder
+                .comment("Maximum bound containers for one logistics server box.")
+                .translation("config.simukraft.logistics.maxWarehouseContainers")
+                .defineInRange("maxWarehouseContainers", 64, 1, 512);
+        LOGISTICS_MAX_CLIENT_PORTS = builder
+                .comment("Maximum bound ports for one manual logistics client box.")
+                .translation("config.simukraft.logistics.maxClientPorts")
+                .defineInRange("maxClientPorts", 32, 1, 256);
+        builder.pop();
         SPEC = builder.build();
     }
 
@@ -434,6 +486,46 @@ public final class ServerConfig {
 
     public static boolean plannerPauseAtNight() {
         return PLANNER_PAUSE_AT_NIGHT.get();
+    }
+
+    public static int logisticsTransferIntervalTicks() {
+        return LOGISTICS_TRANSFER_INTERVAL_TICKS.get();
+    }
+
+    public static int logisticsMaxChannelsPerTick() {
+        return LOGISTICS_MAX_CHANNELS_PER_TICK.get();
+    }
+
+    public static int logisticsMaxTransfersPerTick() {
+        return LOGISTICS_MAX_TRANSFERS_PER_TICK.get();
+    }
+
+    public static boolean logisticsChargeEnabled() {
+        return LOGISTICS_CHARGE_ENABLED.get();
+    }
+
+    public static int logisticsFreeDistanceBlocks() {
+        return LOGISTICS_FREE_DISTANCE_BLOCKS.get();
+    }
+
+    public static double logisticsBaseCost() {
+        return LOGISTICS_BASE_COST.get();
+    }
+
+    public static int logisticsDistanceStepBlocks() {
+        return LOGISTICS_DISTANCE_STEP_BLOCKS.get();
+    }
+
+    public static double logisticsStepCost() {
+        return LOGISTICS_STEP_COST.get();
+    }
+
+    public static int logisticsMaxWarehouseContainers() {
+        return LOGISTICS_MAX_WAREHOUSE_CONTAINERS.get();
+    }
+
+    public static int logisticsMaxClientPorts() {
+        return LOGISTICS_MAX_CLIENT_PORTS.get();
     }
 
     private static boolean isStringEntry(Object value) {

@@ -40,6 +40,9 @@ public final class CitizenDroppedFoodService {
             return;
         }
         clearExpiredVisual(level, entity, data);
+        if (isProtectingWorkProduct(data)) {
+            return;
+        }
         if (entity.getHungerValue() >= FULL_HUNGER || !shouldScan(entity, level.getGameTime())) {
             return;
         }
@@ -68,6 +71,11 @@ public final class CitizenDroppedFoodService {
     /** shouldScan: 按 UUID 分散扫描 tick，避免大量 NPC 同时查找掉落物。 */
     private static boolean shouldScan(CitizenEntity entity, long gameTime) {
         return Math.floorMod(entity.getUUID().getLeastSignificantBits(), SCAN_INTERVAL_TICKS) == gameTime % SCAN_INTERVAL_TICKS;
+    }
+
+    /** isProtectingWorkProduct: 工作中不吃地面食物，避免消耗刚产出的食物类产物。 */
+    private static boolean isProtectingWorkProduct(CitizenData data) {
+        return data.workStatusType() == CitizenWorkStatus.WORKING;
     }
 
     /** nearestFoodDrop: 查找 NPC 身边最近的可食用掉落物。 */

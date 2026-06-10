@@ -6,6 +6,7 @@ import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
 import client.cn.kafei.simukraft.client.config.SimuKraftConfigScreen;
 import client.cn.kafei.simukraft.client.fluid.ClientFluidExtensions;
 import client.cn.kafei.simukraft.client.input.SimuKraftKeyMappings;
+import client.cn.kafei.simukraft.client.logistics.LogisticsWarehouseGridScreen;
 import client.cn.kafei.simukraft.client.network.ClientboundNetworkHandlerImpl;
 import client.cn.kafei.simukraft.client.path.NpcPathDebugRenderer;
 import client.cn.kafei.simukraft.client.renderer.CitizenRenderer;
@@ -72,5 +73,6 @@ public final class ClientModBusSetup {
     @SubscribeEvent
     public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenuTypes.COMMERCIAL_TRADE.get(), ModularUIContainerScreen::new);
+        event.register(ModMenuTypes.LOGISTICS_WAREHOUSE_GRID.get(), LogisticsWarehouseGridScreen::new);
     }
 }

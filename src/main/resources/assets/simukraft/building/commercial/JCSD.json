@@ -1,10 +1,18 @@
-{
+﻿{
   "id": "JCSD",
-  "name": "建材商店",
+  "name": "寤烘潗鍟嗗簵",
   "job": {
     "id": "building_material_merchant",
-    "name": "建材商人",
+    "name": "寤烘潗鍟嗕汉",
     "heldItem": "minecraft:stone_bricks"
+  },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [
+[4, 1, 2], [5, 1, 2], [4, 1, 9], [5, 1, 9]
+] },
+    "output": { "type": "structure_pos", "positions": [
+[4, 1, 2], [5, 1, 2], [4, 1, 9], [5, 1, 9]
+] }
   },
   "offers": [
     {

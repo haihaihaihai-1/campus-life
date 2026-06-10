@@ -2,11 +2,15 @@ package common.cn.kafei.simukraft.commercial;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+
+import net.minecraft.core.BlockPos;
 
 public record CommercialDefinition(String id,
                                    String name,
                                    JobDefinition job,
                                    WorkTime workTime,
+                                   Map<String, ContainerDefinition> containers,
                                    List<CommercialOffer> offers,
                                    Path sourcePath) {
     public CommercialDefinition {
@@ -14,6 +18,7 @@ public record CommercialDefinition(String id,
         name = name != null && !name.isBlank() ? name.trim() : id;
         job = job != null ? job : new JobDefinition("commercial_worker", "商业员工", "");
         workTime = workTime != null ? workTime : WorkTime.always();
+        containers = containers != null ? Map.copyOf(containers) : Map.of();
         offers = offers != null ? List.copyOf(offers) : List.of();
     }
 
@@ -45,6 +50,16 @@ public record CommercialDefinition(String id,
             id = id != null && !id.isBlank() ? id.trim() : "commercial_worker";
             name = name != null && !name.isBlank() ? name.trim() : id;
             heldItem = heldItem != null ? heldItem.trim() : "";
+        }
+    }
+
+    public record ContainerDefinition(String id, String type, List<BlockPos> positions) {
+        public ContainerDefinition {
+            id = id != null && !id.isBlank() ? id.trim() : "container";
+            type = type != null && !type.isBlank() ? type.trim() : "structure_pos";
+            positions = positions != null
+                    ? positions.stream().filter(pos -> pos != null).map(BlockPos::immutable).distinct().toList()
+                    : List.of();
         }
     }
 

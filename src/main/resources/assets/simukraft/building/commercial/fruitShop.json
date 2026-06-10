@@ -1,10 +1,18 @@
-{
+﻿{
   "id": "fruitShop",
-  "name": "水果店",
+  "name": "Fruit Shop",
   "job": {
     "id": "fruit_seller",
-    "name": "水果店店员",
+    "name": "Fruit Seller",
     "heldItem": "minecraft:melon_slice"
+  },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [
+[2, 1, 8], [2, 1, 9]
+] },
+    "output": { "type": "structure_pos", "positions": [
+[2, 1, 8], [2, 1, 9]
+] }
   },
   "offers": [
     {

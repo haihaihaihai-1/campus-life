@@ -85,7 +85,8 @@ public final class TwoPointSelectionManager {
 
     public enum SelectionMode {
         PLANNING,
-        FARMLAND
+        FARMLAND,
+        LOGISTICS
     }
 
     public record SelectionState(boolean active,

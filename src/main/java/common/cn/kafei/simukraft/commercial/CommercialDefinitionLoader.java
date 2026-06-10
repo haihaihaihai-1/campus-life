@@ -7,12 +7,14 @@ import com.google.gson.JsonParser;
 import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.building.BuildingCatalog;
 import common.cn.kafei.simukraft.building.PlacedBuildingRecord;
+import net.minecraft.core.BlockPos;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class CommercialDefinitionLoader {
     private static final int MAX_OFFERS = 256;
     private static final int MAX_RESOURCES = 4;
+    private static final int MAX_POSITIONS = 64;
     private static final Map<String, CacheEntry> CACHE = new ConcurrentHashMap<>();
 
     private CommercialDefinitionLoader() {
@@ -104,6 +107,7 @@ public final class CommercialDefinitionLoader {
         String name = stringAny(root, id, "name", "buildingName", "building_name");
         CommercialDefinition.JobDefinition job = parseJob(root);
         CommercialDefinition.WorkTime workTime = parseWorkTime(root.getAsJsonObject("workTime"));
+        Map<String, CommercialDefinition.ContainerDefinition> containers = parseContainers(root.getAsJsonObject("containers"), errors);
         List<CommercialOffer> offers = parseOffers(root.getAsJsonArray("offers"), errors);
         if (offers.isEmpty()) {
             offers = CommercialLegacyDefinitionParser.parse(root, errors, MAX_OFFERS, MAX_RESOURCES);
@@ -111,7 +115,7 @@ public final class CommercialDefinitionLoader {
         if (offers.isEmpty()) {
             errors.add("missing_offers");
         }
-        CommercialDefinition definition = new CommercialDefinition(id, name, job, workTime, offers, sourcePath);
+        CommercialDefinition definition = new CommercialDefinition(id, name, job, workTime, containers, offers, sourcePath);
         return new LoadResult(definition, List.copyOf(errors), sourcePath);
     }
 
@@ -139,6 +143,27 @@ public final class CommercialDefinitionLoader {
                 Math.floorMod(integer(object, "start", 0), 24000),
                 Math.floorMod(integer(object, "end", 0), 24000)
         );
+    }
+
+    /** parseContainers: 解析商业建筑显式物流容器声明。 */
+    private static Map<String, CommercialDefinition.ContainerDefinition> parseContainers(@Nullable JsonObject object, List<String> errors) {
+        Map<String, CommercialDefinition.ContainerDefinition> containers = new LinkedHashMap<>();
+        if (object == null) {
+            return containers;
+        }
+        for (Map.Entry<String, JsonElement> entry : object.entrySet()) {
+            String id = entry.getKey();
+            JsonObject containerObject = asObject(entry.getValue());
+            if (containerObject == null) {
+                errors.add("invalid_container:" + id);
+                continue;
+            }
+            List<BlockPos> positions = parsePositions(containerObject, errors, "container:" + id);
+            if (!positions.isEmpty()) {
+                containers.put(id, new CommercialDefinition.ContainerDefinition(id, string(containerObject, "type", "structure_pos"), positions));
+            }
+        }
+        return Map.copyOf(containers);
     }
 
     private static List<CommercialOffer> parseOffers(@Nullable JsonArray array, List<String> errors) {
@@ -235,6 +260,51 @@ public final class CommercialDefinitionLoader {
             }
         }
         return List.copyOf(materials);
+    }
+
+    /** parsePositions: 读取结构内相对坐标数组，错误只进入定义错误列表。 */
+    private static List<BlockPos> parsePositions(JsonObject object, List<String> errors, String context) {
+        List<BlockPos> positions = new ArrayList<>();
+        if (object == null) {
+            errors.add("missing_positions:" + context);
+            return List.of();
+        }
+        if (object.has("pos")) {
+            BlockPos pos = parsePositionArray(object.get("pos"));
+            if (pos != null) {
+                positions.add(pos);
+            }
+        }
+        if (object.has("positions") && object.get("positions").isJsonArray()) {
+            JsonArray array = object.getAsJsonArray("positions");
+            int limit = Math.min(array.size(), MAX_POSITIONS);
+            for (int i = 0; i < limit; i++) {
+                BlockPos pos = parsePositionArray(array.get(i));
+                if (pos != null) {
+                    positions.add(pos);
+                }
+            }
+        }
+        if (positions.isEmpty()) {
+            errors.add("missing_positions:" + context);
+        }
+        return List.copyOf(positions);
+    }
+
+    @Nullable
+    private static BlockPos parsePositionArray(@Nullable JsonElement element) {
+        if (element == null || !element.isJsonArray()) {
+            return null;
+        }
+        JsonArray array = element.getAsJsonArray();
+        if (array.size() < 3) {
+            return null;
+        }
+        try {
+            return new BlockPos(array.get(0).getAsInt(), array.get(1).getAsInt(), array.get(2).getAsInt());
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     @Nullable

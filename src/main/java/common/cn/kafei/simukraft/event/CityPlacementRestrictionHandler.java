@@ -174,7 +174,10 @@ public final class CityPlacementRestrictionHandler {
         if (block == ModBlocks.NSUK_FARMLAND_BOX.get()) {
             return Optional.of(CityPoiType.FARMLAND);
         }
-        if (block == ModBlocks.LOGISTICS_SERVER_BOX.get() || block == ModBlocks.LOGISTICS_CLIENT_BOX.get()) {
+        if (block == ModBlocks.LOGISTICS_SERVER_BOX.get()) {
+            return Optional.of(CityPoiType.STORAGE);
+        }
+        if (block == ModBlocks.LOGISTICS_CLIENT_BOX.get()) {
             return Optional.of(CityPoiType.LOGISTICS);
         }
         return Optional.empty();
@@ -192,6 +195,7 @@ public final class CityPlacementRestrictionHandler {
         return block == ModBlocks.BUILD_BOX.get()
                 || block == ModBlocks.NSUK_FARMLAND_BOX.get()
                 || block == ModBlocks.LOGISTICS_SERVER_BOX.get()
+                || block == ModBlocks.LOGISTICS_CLIENT_BOX.get()
                 || block == ModBlocks.RESIDENTIAL_CONTROL_BOX.get()
                 || block == ModBlocks.COMMERCIAL_CONTROL_BOX.get()
                 || block == ModBlocks.INDUSTRIAL_CONTROL_BOX.get()

@@ -10,6 +10,9 @@ import common.cn.kafei.simukraft.network.commercial.CommercialControlBoxOpenResp
 import common.cn.kafei.simukraft.industrial.IndustrialConstants;
 import common.cn.kafei.simukraft.industrial.IndustrialControlBoxService;
 import common.cn.kafei.simukraft.job.CitizenEmploymentService;
+import common.cn.kafei.simukraft.logistics.LogisticsConstants;
+import common.cn.kafei.simukraft.logistics.LogisticsControlBoxService;
+import common.cn.kafei.simukraft.network.logistics.LogisticsServerBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.toast.InfoToastService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -68,6 +71,9 @@ public record NpcHireAssignPacket(BlockPos sourcePos, String sourceType, String 
             if (CommercialConstants.HIRE_SOURCE_TYPE.equals(access.sourceType())) {
                 CommercialControlBoxService.synchronizeAssignedWorkerMetadata(level, access.sourcePos());
                 PacketDistributor.sendToPlayer(player, CommercialControlBoxOpenResponsePacket.from(CommercialControlBoxService.buildView(level, access.sourcePos())));
+            }
+            if (LogisticsConstants.SERVER_SOURCE_TYPE.equals(access.sourceType())) {
+                PacketDistributor.sendToPlayer(player, LogisticsServerBoxOpenResponsePacket.from(LogisticsControlBoxService.buildServerView(level, access.sourcePos())));
             }
             SimuKraft.LOGGER.info("Simukraft: Hired citizen {} ({}) as {} for {} at {}", citizen.name(), citizen.uuid(), access.role(), access.sourceType(), access.sourcePos());
             CityGroupMessageService.successToCity(level, access.cityId(), Component.translatable("message.simukraft.hire_npc.success", citizen.name()));

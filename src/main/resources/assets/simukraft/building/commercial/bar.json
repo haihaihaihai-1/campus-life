@@ -1,10 +1,18 @@
-{
+﻿{
   "id": "bar",
-  "name": "酒馆",
+  "name": "Bar",
   "job": {
     "id": "bartender",
-    "name": "调酒师",
+    "name": "Bartender",
     "heldItem": "minecraft:honey_bottle"
+  },
+  "containers": {
+    "input": { "type": "structure_pos", "positions": [
+[11, 0, 1]
+] },
+    "output": { "type": "structure_pos", "positions": [
+[11, 0, 1]
+] }
   },
   "offers": [
     {
