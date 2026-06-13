@@ -183,6 +183,7 @@ public final class LogisticsControlBoxService {
                 true,
                 filters,
                 level.getGameTime(),
+                0,
                 0);
         LogisticsManager.get(level).updateChannel(channel);
         return ActionResult.SUCCESS;
@@ -198,13 +199,13 @@ public final class LogisticsControlBoxService {
         return ActionResult.SUCCESS;
     }
 
-    /** setChannelKeepQuantity: 设置路线接收端保有量，0 表示无限制。 */
-    public static ActionResult setChannelKeepQuantity(ServerLevel level, UUID channelId, int quantity) {
+    /** setChannelKeepQuantities: 设置路线发送端/接收端保有量，0 表示该端不限制。 */
+    public static ActionResult setChannelKeepQuantities(ServerLevel level, UUID channelId, int sourceQuantity, int targetQuantity) {
         LogisticsChannelData channel = LogisticsManager.get(level).channel(channelId);
         if (channel == null) {
             return ActionResult.NOT_FOUND;
         }
-        LogisticsManager.get(level).updateChannel(channel.withKeepQuantity(quantity, level.getGameTime()));
+        LogisticsManager.get(level).updateChannel(channel.withKeepQuantities(sourceQuantity, targetQuantity, level.getGameTime()));
         return ActionResult.SUCCESS;
     }
 
@@ -407,7 +408,7 @@ public final class LogisticsControlBoxService {
 
     private static ChannelEntry channelEntry(LogisticsChannelData channel) {
         return new ChannelEntry(channel.channelId(), channel.clientId(), channel.direction(), channel.name(), channel.enabled(),
-                channel.filters().stream().map(LogisticsItemFilter::itemId).toList(), channel.keepQuantity());
+                channel.filters().stream().map(LogisticsItemFilter::itemId).toList(), channel.keepSourceQuantity(), channel.keepTargetQuantity());
     }
 
     public enum ActionResult {
@@ -453,7 +454,7 @@ public final class LogisticsControlBoxService {
     public record ClientInventoryEntry(UUID clientId, List<LogisticsInventoryEntry> inventory) {
     }
 
-    public record ChannelEntry(UUID channelId, UUID clientId, LogisticsDirection direction, String name, boolean enabled, List<String> filters, int keepQuantity) {
+    public record ChannelEntry(UUID channelId, UUID clientId, LogisticsDirection direction, String name, boolean enabled, List<String> filters, int keepSourceQuantity, int keepTargetQuantity) {
         public String directionName() {
             return direction != null ? direction.name().toLowerCase(Locale.ROOT) : "";
         }

@@ -6,6 +6,7 @@ import client.cn.kafei.simukraft.client.buildbox.BuildingBoundsRenderer;
 import client.cn.kafei.simukraft.client.buildbox.BuildingCacheService;
 import client.cn.kafei.simukraft.client.buildbox.PlannerMaterialSelectionScreenOpener;
 import client.cn.kafei.simukraft.client.citizen.CitizenScreenOpener;
+import client.cn.kafei.simukraft.client.citizen.CityCitizenManageScreen;
 import client.cn.kafei.simukraft.client.city.ClientCityChunkCache;
 import client.cn.kafei.simukraft.client.city.CityCoreScreenOpener;
 import client.cn.kafei.simukraft.client.commercial.CommercialControlBoxScreenOpener;
@@ -25,6 +26,7 @@ import common.cn.kafei.simukraft.network.building.controlbox.ResidentialControlB
 import common.cn.kafei.simukraft.network.building.controlbox.ResidentialControlBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.building.controlbox.ResidentialControlBoxViewUpdatePacket;
 import common.cn.kafei.simukraft.network.citizen.info.CitizenInfoResponsePacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageResponsePacket;
 import common.cn.kafei.simukraft.network.city.chunk.CityChunkSyncPacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenResponsePacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapResponsePacket;
@@ -116,6 +118,11 @@ public final class ClientboundNetworkHandlerImpl implements ClientboundNetworkHa
     @Override
     public void handleCityCoreMembersResponse(CityCoreMembersResponsePacket packet) {
         CityCoreScreenOpener.openMembers(packet);
+    }
+
+    @Override
+    public void handleCityCitizenManageResponse(CityCitizenManageResponsePacket packet) {
+        CityCitizenManageScreen.open(packet);
     }
 
     @Override

@@ -173,7 +173,8 @@ public record LogisticsServerBoxOpenResponsePacket(BlockPos boxPos,
         for (String filter : channel.filters()) {
             buffer.writeUtf(filter, 128);
         }
-        buffer.writeVarInt(channel.keepQuantity());
+        buffer.writeVarInt(channel.keepSourceQuantity());
+        buffer.writeVarInt(channel.keepTargetQuantity());
     }
 
     static LogisticsControlBoxService.ChannelEntry readChannel(RegistryFriendlyByteBuf buffer) {
@@ -187,7 +188,8 @@ public record LogisticsServerBoxOpenResponsePacket(BlockPos boxPos,
         for (int i = 0; i < count; i++) {
             filters.add(buffer.readUtf(128));
         }
-        int keepQuantity = buffer.readVarInt();
-        return new LogisticsControlBoxService.ChannelEntry(channelId, clientId, direction, name, enabled, List.copyOf(filters), keepQuantity);
+        int keepSourceQuantity = buffer.readVarInt();
+        int keepTargetQuantity = buffer.readVarInt();
+        return new LogisticsControlBoxService.ChannelEntry(channelId, clientId, direction, name, enabled, List.copyOf(filters), keepSourceQuantity, keepTargetQuantity);
     }
 }

@@ -24,6 +24,9 @@ import common.cn.kafei.simukraft.network.city.core.CityCoreOpenRequestPacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenResponsePacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapRequestPacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapResponsePacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageActionPacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageRequestPacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageResponsePacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMemberActionPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersRequestPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersResponsePacket;
@@ -83,6 +86,8 @@ public final class ModNetwork {
         registrar.playToServer(CityCoreManageCityPacket.TYPE, CityCoreManageCityPacket.STREAM_CODEC, CityCoreManageCityPacket::handle);
         registrar.playToServer(CityCoreMembersRequestPacket.TYPE, CityCoreMembersRequestPacket.STREAM_CODEC, CityCoreMembersRequestPacket::handle);
         registrar.playToServer(CityCoreMemberActionPacket.TYPE, CityCoreMemberActionPacket.STREAM_CODEC, CityCoreMemberActionPacket::handle);
+        registrar.playToServer(CityCitizenManageRequestPacket.TYPE, CityCitizenManageRequestPacket.STREAM_CODEC, CityCitizenManageRequestPacket::handle);
+        registrar.playToServer(CityCitizenManageActionPacket.TYPE, CityCitizenManageActionPacket.STREAM_CODEC, CityCitizenManageActionPacket::handle);
         registrar.playToServer(CityCoreMapRequestPacket.TYPE, CityCoreMapRequestPacket.STREAM_CODEC, CityCoreMapRequestPacket::handle);
         registrar.playToServer(CityChunkPurchasePacket.TYPE, CityChunkPurchasePacket.STREAM_CODEC, CityChunkPurchasePacket::handle);
         registrar.playToServer(CityChunkBatchPurchasePacket.TYPE, CityChunkBatchPurchasePacket.STREAM_CODEC, CityChunkBatchPurchasePacket::handle);
@@ -120,6 +125,7 @@ public final class ModNetwork {
         registrar.playToServer(ManifestTogglePacket.TYPE, ManifestTogglePacket.STREAM_CODEC, ManifestTogglePacket::handle);
         registrar.playToClient(CityCoreOpenResponsePacket.TYPE, CityCoreOpenResponsePacket.STREAM_CODEC, CityCoreOpenResponsePacket::handle);
         registrar.playToClient(CityCoreMembersResponsePacket.TYPE, CityCoreMembersResponsePacket.STREAM_CODEC, CityCoreMembersResponsePacket::handle);
+        registrar.playToClient(CityCitizenManageResponsePacket.TYPE, CityCitizenManageResponsePacket.STREAM_CODEC, CityCitizenManageResponsePacket::handle);
         registrar.playToClient(CityCoreMapResponsePacket.TYPE, CityCoreMapResponsePacket.STREAM_CODEC, CityCoreMapResponsePacket::handle);
         registrar.playToClient(CityChunkSyncPacket.TYPE, CityChunkSyncPacket.STREAM_CODEC, CityChunkSyncPacket::handle);
         registrar.playToClient(CitizenInfoResponsePacket.TYPE, CitizenInfoResponsePacket.STREAM_CODEC, CitizenInfoResponsePacket::handle);

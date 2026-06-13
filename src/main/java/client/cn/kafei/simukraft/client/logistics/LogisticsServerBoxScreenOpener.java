@@ -73,15 +73,56 @@ public final class LogisticsServerBoxScreenOpener {
         private static final int TAB_HEIGHT = 24;
         private static final int TAB_X = 5;
 
+        private static final int ROUTE_ROW_H = 48;
+        /** savedRouteScrollRow: 静态保存路由列表滚动行，服务端刷新重建界面后仍保持位置。 */
+        private static int savedRouteScrollRow = 0;
+
         private final LogisticsServerBoxOpenResponsePacket packet;
         private ActiveTab currentTab;
-        private final java.util.List<net.minecraft.client.gui.components.EditBox> keepQtyBoxes = new java.util.ArrayList<>();
-        private final java.util.Map<UUID, Integer> localKeepQty = new java.util.HashMap<>();
+        private int routeScrollRow;
 
         private LogisticsServerBoxScreen(LogisticsServerBoxOpenResponsePacket packet, ActiveTab currentTab) {
             super(Component.translatable("gui.simukraft.logistics.server.title"));
             this.packet = packet;
             this.currentTab = currentTab;
+            this.routeScrollRow = savedRouteScrollRow;
+        }
+
+        /** routeViewportTop: 路由列表首行顶部 Y。 */
+        private int routeViewportTop() {
+            return 60;
+        }
+
+        /** routeViewportBottom: 路由列表可视区底部 Y。 */
+        private int routeViewportBottom() {
+            return this.height - 8;
+        }
+
+        /** routeVisibleRows: 可视区能完整容纳的频道行数。 */
+        private int routeVisibleRows() {
+            return Math.max(1, (routeViewportBottom() - routeViewportTop()) / ROUTE_ROW_H);
+        }
+
+        /** maxRouteScroll: 最大滚动行（顶端行索引上限）。 */
+        private int maxRouteScroll() {
+            return Math.max(0, packet.channels().size() - routeVisibleRows());
+        }
+
+        /** clampRouteScroll: 约束滚动行并同步到静态保存值。 */
+        private void clampRouteScroll() {
+            routeScrollRow = Math.max(0, Math.min(maxRouteScroll(), routeScrollRow));
+            savedRouteScrollRow = routeScrollRow;
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+            if (currentTab == ActiveTab.ROUTES && verticalAmount != 0 && maxRouteScroll() > 0) {
+                routeScrollRow -= (int) Math.signum(verticalAmount);
+                clampRouteScroll();
+                rebuildUI();
+                return true;
+            }
+            return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
 
         /** init: 重建左侧 Tab 和当前内容页按钮。 */
@@ -183,15 +224,19 @@ public final class LogisticsServerBoxScreenOpener {
             openMap.active = hasWarehouse();
         }
 
-        /** buildRouteButtons: 创建路径管理按钮。 */
+        /** buildRouteButtons: 创建路径管理按钮（支持滚动 + 发送/接收双端保有量）。 */
         private void buildRouteButtons(int x, int y) {
-            keepQtyBoxes.clear();
             Button addRoute = addRenderableWidget(LogisticsNativeStyle.button(Component.literal("+ ").append(Component.translatable("gui.simukraft.logistics.channel.create")),
                     x + 120, y - 2, 112, 18, () -> LogisticsChannelCreateScreenOpener.open(packet, null)));
             addRoute.active = hasWarehouse() && !packet.clients().isEmpty();
-            int rowY = y + 30;
-            for (LogisticsControlBoxService.ChannelEntry channel : packet.channels()) {
+            clampRouteScroll();
+            List<LogisticsControlBoxService.ChannelEntry> channels = packet.channels();
+            int top = routeViewportTop();
+            int last = Math.min(channels.size(), routeScrollRow + routeVisibleRows());
+            for (int i = routeScrollRow; i < last; i++) {
+                LogisticsControlBoxService.ChannelEntry channel = channels.get(i);
                 UUID channelId = channel.channelId();
+                int rowY = top + (i - routeScrollRow) * ROUTE_ROW_H;
                 addRenderableWidget(LogisticsNativeStyle.button(Component.translatable(channel.enabled()
                                 ? "gui.simukraft.logistics.channel.disable"
                                 : "gui.simukraft.logistics.channel.enable"),
@@ -200,46 +245,37 @@ public final class LogisticsServerBoxScreenOpener {
                 addRenderableWidget(LogisticsNativeStyle.button(Component.literal("x"),
                         x + 280, rowY, 24, 16,
                         () -> send(LogisticsBoxActionPacket.Action.DELETE_CHANNEL, null, channelId, BlockPos.ZERO, "", LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of())));
-                int displayQty = localKeepQty.getOrDefault(channelId, channel.keepQuantity());
-                net.minecraft.client.gui.components.EditBox qtyBox = new net.minecraft.client.gui.components.EditBox(
-                        this.font, x + 62, rowY + 26, 44, 12, Component.empty());
-                qtyBox.setValue(String.valueOf(displayQty));
-                qtyBox.setMaxLength(7);
-                qtyBox.setFilter(s -> s.matches("\\d*"));
-                addRenderableWidget(qtyBox);
-                keepQtyBoxes.add(qtyBox);
-                final int idx = keepQtyBoxes.size() - 1;
-                if (displayQty > 0) {
-                    addRenderableWidget(LogisticsNativeStyle.button(
-                            Component.translatable("gui.simukraft.logistics.channel.keep_supply"),
-                            x + 108, rowY + 26, 60, 12,
-                            () -> {
-                                localKeepQty.put(channelId, 0);
-                                send(LogisticsBoxActionPacket.Action.SET_CHANNEL_KEEP_QUANTITY, null, channelId, BlockPos.ZERO, "0", LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of());
-                                rebuildUI();
-                            }));
-                } else {
-                    addRenderableWidget(LogisticsNativeStyle.button(
-                            Component.translatable("gui.simukraft.logistics.channel.unlimited_supply"),
-                            x + 108, rowY + 26, 60, 12,
-                            () -> {
-                                String val = keepQtyBoxes.get(idx).getValue();
-                                int qty;
-                                try {
-                                    qty = val.isBlank() ? 0 : Math.max(0, Integer.parseInt(val));
-                                } catch (NumberFormatException ignored) {
-                                    return;
-                                }
-                                if (qty == 0) qty = 64;
-                                localKeepQty.put(channelId, qty);
-                                send(LogisticsBoxActionPacket.Action.SET_CHANNEL_KEEP_QUANTITY, null, channelId, BlockPos.ZERO, String.valueOf(qty), LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of());
-                                rebuildUI();
-                            }));
-                }
-                rowY += 48;
-                if (rowY > this.height - 20) {
-                    break;
-                }
+                final net.minecraft.client.gui.components.EditBox srcBox = keepBox(x + 64, rowY + 26, channel.keepSourceQuantity());
+                final net.minecraft.client.gui.components.EditBox tgtBox = keepBox(x + 170, rowY + 26, channel.keepTargetQuantity());
+                addRenderableWidget(srcBox);
+                addRenderableWidget(tgtBox);
+                addRenderableWidget(LogisticsNativeStyle.button(
+                        Component.translatable("gui.simukraft.logistics.channel.keep_apply"),
+                        x + 216, rowY + 26, 60, 12,
+                        () -> send(LogisticsBoxActionPacket.Action.SET_CHANNEL_KEEP_QUANTITY, null, channelId, BlockPos.ZERO,
+                                keepValue(srcBox) + "|" + keepValue(tgtBox), LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of())));
+            }
+        }
+
+        /** keepBox: 创建只接受数字的保有量输入框。 */
+        private net.minecraft.client.gui.components.EditBox keepBox(int x, int y, int value) {
+            net.minecraft.client.gui.components.EditBox box = new net.minecraft.client.gui.components.EditBox(this.font, x, y, 38, 12, Component.empty());
+            box.setValue(String.valueOf(Math.max(0, value)));
+            box.setMaxLength(7);
+            box.setFilter(s -> s.matches("\\d*"));
+            return box;
+        }
+
+        /** keepValue: 读取保有量输入框的非负整数值，空白按 0。 */
+        private int keepValue(net.minecraft.client.gui.components.EditBox box) {
+            String val = box.getValue();
+            if (val == null || val.isBlank()) {
+                return 0;
+            }
+            try {
+                return Math.max(0, Integer.parseInt(val));
+            } catch (NumberFormatException ignored) {
+                return 0;
             }
         }
 
@@ -281,27 +317,35 @@ public final class LogisticsServerBoxScreenOpener {
             graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.map.hint"), x, y, LogisticsNativeStyle.TEXT_DIM);
         }
 
-        /** renderRoutes: 绘制路径列表。 */
+        /** renderRoutes: 绘制路径列表（与 buildRouteButtons 共用滚动窗口）。 */
         private void renderRoutes(GuiGraphics graphics, int x, int y) {
-            graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.server.tab.routes")
-                    .append(Component.literal(" (" + packet.channels().size() + ")")), x, y, LogisticsNativeStyle.TEXT_WARN);
-            if (packet.channels().isEmpty()) {
+            List<LogisticsControlBoxService.ChannelEntry> channels = packet.channels();
+            Component header = Component.translatable("gui.simukraft.logistics.server.tab.routes")
+                    .append(Component.literal(" (" + channels.size() + ")"));
+            graphics.drawString(this.font, header, x, y, LogisticsNativeStyle.TEXT_WARN);
+            if (channels.isEmpty()) {
                 graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.empty"), x, y + 30, LogisticsNativeStyle.TEXT_MUTED);
                 return;
             }
-            int rowY = y + 30;
-            for (LogisticsControlBoxService.ChannelEntry channel : packet.channels()) {
+            int top = routeViewportTop();
+            int visible = routeVisibleRows();
+            int last = Math.min(channels.size(), routeScrollRow + visible);
+            if (maxRouteScroll() > 0) {
+                graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.scroll_hint",
+                                (routeScrollRow + 1) + "-" + last, channels.size()),
+                        x + 150, y, LogisticsNativeStyle.TEXT_DIM);
+            }
+            for (int i = routeScrollRow; i < last; i++) {
+                LogisticsControlBoxService.ChannelEntry channel = channels.get(i);
+                int rowY = top + (i - routeScrollRow) * ROUTE_ROW_H;
                 String direction = channel.direction() == LogisticsDirection.CLIENT_TO_WAREHOUSE ? "<-" : "->";
                 LogisticsNativeStyle.drawStatusBadge(graphics, this.font, channel.enabled(), x, rowY - 1);
                 LogisticsNativeStyle.drawFitString(graphics, this.font, direction + " " + LogisticsItemDisplayName.channelName(channel.name(), channel.filters()),
                         x + 31, rowY, 198, LogisticsNativeStyle.TEXT);
                 LogisticsNativeStyle.drawFitString(graphics, this.font, clientName(channel.clientId()) + " | " + LogisticsItemDisplayName.filterText(channel.filters()),
                         x + 10, rowY + 11, 225, LogisticsNativeStyle.TEXT_DIM);
-                graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.keep_qty"), x + 10, rowY + 28, LogisticsNativeStyle.TEXT_DIM);
-                rowY += 48;
-                if (rowY > this.height - 20) {
-                    break;
-                }
+                graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.keep_source"), x + 10, rowY + 28, LogisticsNativeStyle.TEXT_DIM);
+                graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.keep_target"), x + 116, rowY + 28, LogisticsNativeStyle.TEXT_DIM);
             }
         }
 

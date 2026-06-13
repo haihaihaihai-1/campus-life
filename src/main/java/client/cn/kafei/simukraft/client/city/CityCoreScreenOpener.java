@@ -15,6 +15,7 @@ import common.cn.kafei.simukraft.network.city.core.CityCoreManageCityPacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenResponsePacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapRequestPacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapResponsePacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageRequestPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMemberActionPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersRequestPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersResponsePacket;
@@ -180,7 +181,7 @@ public final class CityCoreScreenOpener {
             menu.addChild(menuButton("screen.simukraft.city_core.map_title", () -> requestMap(packet)));
             menu.addChild(menuButton("screen.simukraft.city_core.menu.edit", () -> window.openTab("edit", "screen.simukraft.city_core.menu.edit", editPanel(packet))));
             menu.addChild(menuButton("screen.simukraft.city_core.menu.upgrade", () -> window.openTab("upgrade", "screen.simukraft.city_core.menu.upgrade", upgradePanel(packet))));
-            menu.addChild(menuButton("screen.simukraft.city_core.menu.citizens", () -> requestMembers(packet)));
+            menu.addChild(menuButton("screen.simukraft.city_core.menu.citizens", () -> PacketDistributor.sendToServer(new CityCitizenManageRequestPacket(packet.pos()))));
             menu.addChild(menuButton("screen.simukraft.city_core.menu.officials", () -> requestMembers(packet)));
             menu.addChild(menuButton("screen.simukraft.city_core.menu.finance", () -> window.openTab("finance", "screen.simukraft.city_core.menu.finance", financePanel(packet))));
         } else {

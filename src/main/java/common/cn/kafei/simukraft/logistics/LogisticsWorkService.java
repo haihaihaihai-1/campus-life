@@ -70,13 +70,28 @@ public final class LogisticsWorkService {
             if (!validRoute(warehouse, client) || LogisticsControlBoxService.findAssignedStorageWorker(level, warehouse.boxPos()) == null) {
                 return false;
             }
+            List<BlockPos> sourcePositions;
+            List<BlockPos> targetPositions;
             if (channel.direction() == LogisticsDirection.CLIENT_TO_WAREHOUSE) {
-                return transfer(level, channel, clientPortPositions(client, "output"), warehouse.containers(), warehouse);
+                sourcePositions = clientPortPositions(client, "output");
+                targetPositions = warehouse.containers();
+            } else {
+                sourcePositions = warehouse.containers();
+                targetPositions = clientPortPositions(client, "input");
             }
-            if (channel.keepQuantity() > 0 && countClientItems(level, client, channel) >= channel.keepQuantity()) {
+            // 接收端保有量：接收端持有的匹配物品达到上限即停止转运（0 表示无限供应）。
+            int targetKeep = channel.keepTargetQuantity();
+            int targetRemaining = targetKeep > 0 ? targetKeep - countItems(level, targetPositions, channel) : Integer.MAX_VALUE;
+            if (targetRemaining <= 0) {
                 return false;
             }
-            return transfer(level, channel, warehouse.containers(), clientPortPositions(client, "input"), warehouse);
+            // 发送端保有量：发送端只外发超出保有量的部分（0 表示不保留）。
+            int sourceKeep = channel.keepSourceQuantity();
+            int sourceSurplus = sourceKeep > 0 ? countItems(level, sourcePositions, channel) - sourceKeep : Integer.MAX_VALUE;
+            if (sourceSurplus <= 0) {
+                return false;
+            }
+            return transfer(level, channel, sourcePositions, targetPositions, warehouse, Math.min(sourceSurplus, targetRemaining));
         } catch (RuntimeException exception) {
             SimuKraft.LOGGER.warn("Simukraft: Logistics transfer failed for channel {}", channel.channelId(), exception);
             return false;
@@ -87,8 +102,9 @@ public final class LogisticsWorkService {
                                     LogisticsChannelData channel,
                                     List<BlockPos> sourcePositions,
                                     List<BlockPos> targetPositions,
-                                    LogisticsWarehouseData warehouse) {
-        if (sourcePositions.isEmpty() || targetPositions.isEmpty()) {
+                                    LogisticsWarehouseData warehouse,
+                                    int maxMove) {
+        if (sourcePositions.isEmpty() || targetPositions.isEmpty() || maxMove <= 0) {
             return false;
         }
         for (BlockPos source : sourcePositions) {
@@ -104,11 +120,15 @@ public final class LogisticsWorkService {
                 if (target == null || target.amount() <= 0) {
                     continue;
                 }
+                int moveAmount = Math.min(target.amount(), maxMove);
+                if (moveAmount <= 0) {
+                    continue;
+                }
                 double cost = transferCost(warehouse.boxPos(), target.pos());
                 if (!charge(level, warehouse.cityId(), cost)) {
                     return false;
                 }
-                ItemStack extracted = GenericContainerAccess.extractFromSlot(level, source, snapshot.slot(), snapshot.access(), snapshot.side(), target.amount(),
+                ItemStack extracted = GenericContainerAccess.extractFromSlot(level, source, snapshot.slot(), snapshot.access(), snapshot.side(), moveAmount,
                         current -> ItemStack.isSameItemSameComponents(current, stack) && matches(channel, current, level));
                 if (extracted.isEmpty()) {
                     refund(level, warehouse.cityId(), cost);
@@ -167,9 +187,9 @@ public final class LogisticsWorkService {
         return null;
     }
 
-    private static int countClientItems(ServerLevel level, LogisticsClientData client, LogisticsChannelData channel) {
+    private static int countItems(ServerLevel level, List<BlockPos> positions, LogisticsChannelData channel) {
         int total = 0;
-        for (BlockPos pos : clientPortPositions(client, "input")) {
+        for (BlockPos pos : positions) {
             if (!level.isLoaded(pos)) {
                 continue;
             }

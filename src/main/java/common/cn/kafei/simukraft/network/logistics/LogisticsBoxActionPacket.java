@@ -162,8 +162,12 @@ public record LogisticsBoxActionPacket(BlockPos boxPos,
             case TOGGLE_CHANNEL -> LogisticsControlBoxService.toggleChannel(level, packet.channelId());
             case DELETE_CHANNEL -> LogisticsControlBoxService.removeChannel(level, packet.channelId());
             case SET_CHANNEL_KEEP_QUANTITY -> {
+                // value 形如 "发送端保有量|接收端保有量"，缺失则按 0 处理。
+                String[] parts = packet.value().split("\\|", -1);
                 try {
-                    yield LogisticsControlBoxService.setChannelKeepQuantity(level, packet.channelId(), Integer.parseInt(packet.value()));
+                    int source = parts.length > 0 && !parts[0].isBlank() ? Integer.parseInt(parts[0].trim()) : 0;
+                    int target = parts.length > 1 && !parts[1].isBlank() ? Integer.parseInt(parts[1].trim()) : 0;
+                    yield LogisticsControlBoxService.setChannelKeepQuantities(level, packet.channelId(), source, target);
                 } catch (NumberFormatException ignored) {
                     yield LogisticsControlBoxService.ActionResult.INVALID_TARGET;
                 }
