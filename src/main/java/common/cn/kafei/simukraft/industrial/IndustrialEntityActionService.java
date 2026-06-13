@@ -14,6 +14,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.IShearable;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -87,6 +88,38 @@ public final class IndustrialEntityActionService {
      */
     public static ActionResult requireDrops(ServerLevel level, PlacedBuildingRecord building, IndustrialDefinition definition, IndustrialDefinition.StepDefinition step, CitizenEntity worker) {
         return matchingDrops(level, building, definition, step, worker).isEmpty() ? ActionResult.MISSING_DROPS : ActionResult.SUCCESS;
+    }
+
+    public static ActionResult shear(ServerLevel level, PlacedBuildingRecord building, IndustrialDefinition definition, IndustrialDefinition.StepDefinition step, CitizenEntity worker) {
+        List<BlockPos> outputContainers = IndustrialControlBoxService.resolveContainerPositions(building, definition, containerName(step.output(), step.container(), "output"));
+        if (outputContainers.isEmpty()) {
+            return ActionResult.OUTPUT_FULL;
+        }
+        List<Animal> targets = animals(level, building, definition, step).stream()
+                .filter(a -> !a.isBaby() && a instanceof IShearable s && s.isShearable(null, ItemStack.EMPTY, level, a.blockPosition()))
+                .sorted(Comparator.comparingDouble(a -> worker != null ? a.distanceToSqr(worker) : 0.0D))
+                .toList();
+        if (targets.isEmpty()) {
+            return ActionResult.MISSING_ENTITIES;
+        }
+        int limit = Math.max(1, step.count());
+        int sheared = 0;
+        for (Animal animal : targets) {
+            if (sheared >= limit) break;
+            List<ItemStack> drops = ((IShearable) animal).onSheared(null, ItemStack.EMPTY, level, animal.blockPosition());
+            for (ItemStack drop : drops) {
+                ItemStack remaining = insertIntoContainers(level, outputContainers, drop.copy());
+                if (!remaining.isEmpty()) {
+                    return sheared > 0 ? ActionResult.SUCCESS : ActionResult.OUTPUT_FULL;
+                }
+            }
+            if (worker != null) {
+                worker.getLookControl().setLookAt(animal);
+                worker.triggerWorkSwing(InteractionHand.MAIN_HAND);
+            }
+            sheared++;
+        }
+        return sheared > 0 ? ActionResult.SUCCESS : ActionResult.MISSING_ENTITIES;
     }
 
     public static ActionResult collectDrops(ServerLevel level, PlacedBuildingRecord building, IndustrialDefinition definition, IndustrialDefinition.StepDefinition step, CitizenEntity worker) {

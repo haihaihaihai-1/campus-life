@@ -222,6 +222,9 @@ public final class IndustrialWorkService {
             case "collect_drops" -> entityAction(manager, data,
                     IndustrialEntityActionService.collectDrops(level, building, definition, step, entity),
                     "gui.simukraft.industrial.status.collecting_drops");
+            case "shear_entities", "shear_sheep" -> entityAction(manager, data,
+                    IndustrialEntityActionService.shear(level, building, definition, step, entity),
+                    "gui.simukraft.industrial.status.shearing");
             case "place_block", "set_block" -> blockAction(manager, data,
                     IndustrialBlockActionService.placeBlock(level, building, definition, step, entity),
                     "gui.simukraft.industrial.status.placing_block", step);

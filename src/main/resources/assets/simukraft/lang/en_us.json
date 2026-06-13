@@ -693,6 +693,7 @@
     "gui.simukraft.industrial.status.inspecting_container":  "Inspecting container",
     "gui.simukraft.industrial.status.breeding":  "Breeding entities",
     "gui.simukraft.industrial.status.slaughtering":  "Slaughtering entities",
+    "gui.simukraft.industrial.status.shearing":  "Shearing sheep",
     "gui.simukraft.industrial.status.collecting_drops":  "Collecting drops",
     "gui.simukraft.industrial.status.placing_block":  "Placing block",
     "gui.simukraft.industrial.status.placing_fluid":  "Placing fluid",

@@ -83,9 +83,12 @@ public final class CityManager extends SavedData {
         if (sqliteLoaded) {
             return;
         }
-        sqliteLoaded = true;
         CompoundTag sqliteTag = SimuSqliteStorage.loadCities(level);
-        if (sqliteTag == null || sqliteTag.isEmpty()) {
+        if (sqliteTag == null) {
+            return;
+        }
+        sqliteLoaded = true;
+        if (sqliteTag.isEmpty()) {
             return;
         }
         CityManager loaded = load(sqliteTag, level.registryAccess());

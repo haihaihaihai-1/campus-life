@@ -693,6 +693,7 @@
     "gui.simukraft.industrial.status.inspecting_container":  "查看容器",
     "gui.simukraft.industrial.status.breeding":  "繁殖生物",
     "gui.simukraft.industrial.status.slaughtering":  "屠宰生物",
+    "gui.simukraft.industrial.status.shearing":  "剪羊毛",
     "gui.simukraft.industrial.status.collecting_drops":  "收集掉落物",
     "gui.simukraft.industrial.status.placing_block":  "放置方块",
     "gui.simukraft.industrial.status.placing_fluid":  "放置液体",
