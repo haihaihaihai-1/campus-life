@@ -50,7 +50,7 @@ class LogisticsSqliteRepositoryTest {
                 List.of(new LogisticsPortData("input", "Input", "manual", inputPos)), 31L);
         LogisticsChannelData channel = new LogisticsChannelData(
                 channelId, warehouseId, clientId, LogisticsDirection.CLIENT_TO_WAREHOUSE, "Iron",
-                true, List.of(LogisticsItemFilter.item("minecraft:iron_ingot")), 32L);
+                true, List.of(LogisticsItemFilter.item("minecraft:iron_ingot")), 32L, 0);
 
         repository.saveDimension(rootTag(warehouse, client, channel), "minecraft:overworld");
         CompoundTag loaded = repository.loadDimension("minecraft:overworld");
@@ -84,7 +84,7 @@ class LogisticsSqliteRepositoryTest {
                 "logistics_client_box", "4, 64, 0", List.of(new LogisticsPortData("output", "Output", "manual", new BlockPos(4, 64, 1))), 11L);
         LogisticsChannelData channel = new LogisticsChannelData(
                 UUID.randomUUID(), warehouseId, clientId, LogisticsDirection.WAREHOUSE_TO_CLIENT,
-                "Route", true, List.of(), 12L);
+                "Route", true, List.of(), 12L, 0);
 
         repository.saveDimension(rootTag(warehouse, client, channel), "minecraft:overworld");
         repository.saveDimension(emptyRootTag(), "minecraft:the_nether");

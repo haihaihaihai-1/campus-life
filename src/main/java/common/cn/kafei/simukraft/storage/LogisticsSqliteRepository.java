@@ -402,8 +402,8 @@ public final class LogisticsSqliteRepository {
 
     private void saveChannel(Connection connection, CompoundTag tag) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO logistics_channels(channel_id, warehouse_id, client_id, direction, name, enabled, filters, updated_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?) "
-                        + "ON CONFLICT(channel_id) DO UPDATE SET warehouse_id = excluded.warehouse_id, client_id = excluded.client_id, direction = excluded.direction, name = excluded.name, enabled = excluded.enabled, filters = excluded.filters, updated_at = excluded.updated_at")) {
+                "INSERT INTO logistics_channels(channel_id, warehouse_id, client_id, direction, name, enabled, filters, updated_at, keep_quantity) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                        + "ON CONFLICT(channel_id) DO UPDATE SET warehouse_id = excluded.warehouse_id, client_id = excluded.client_id, direction = excluded.direction, name = excluded.name, enabled = excluded.enabled, filters = excluded.filters, updated_at = excluded.updated_at, keep_quantity = excluded.keep_quantity")) {
             statement.setString(1, tag.getUUID("ChannelId").toString());
             statement.setString(2, tag.hasUUID("WarehouseId") ? tag.getUUID("WarehouseId").toString() : "");
             statement.setString(3, tag.hasUUID("ClientId") ? tag.getUUID("ClientId").toString() : "");
@@ -412,6 +412,7 @@ public final class LogisticsSqliteRepository {
             statement.setInt(6, tag.getBoolean("Enabled") ? 1 : 0);
             statement.setString(7, tag.getList("Filters", CompoundTag.TAG_COMPOUND).toString());
             statement.setLong(8, tag.getLong("UpdatedAt"));
+            statement.setInt(9, tag.contains("KeepQuantity") ? tag.getInt("KeepQuantity") : 0);
             statement.executeUpdate();
         }
     }
@@ -526,6 +527,7 @@ public final class LogisticsSqliteRepository {
                     tag.putString("Name", resultSet.getString("name"));
                     tag.putBoolean("Enabled", resultSet.getInt("enabled") != 0);
                     tag.putLong("UpdatedAt", resultSet.getLong("updated_at"));
+                    tag.putInt("KeepQuantity", resultSet.getInt("keep_quantity"));
                     try {
                         tag.put("Filters", net.minecraft.nbt.TagParser.parseTag("{Filters:" + resultSet.getString("filters") + "}").getList("Filters", CompoundTag.TAG_COMPOUND));
                     } catch (Exception exception) {

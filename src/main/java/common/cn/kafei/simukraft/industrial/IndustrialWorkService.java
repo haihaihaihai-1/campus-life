@@ -112,6 +112,9 @@ public final class IndustrialWorkService {
     }
 
     private static void tickBox(ServerLevel level, IndustrialBoxManager manager, IndustrialBoxData data, BoxRuntime boxRuntime, long gameTime) {
+        if (!level.isLoaded(data.boxPos())) {
+            return;
+        }
         if (!IndustrialControlBoxService.isIndustrialControlBox(level, data.boxPos())) {
             manager.remove(data.boxPos());
             boxRuntime.reset();

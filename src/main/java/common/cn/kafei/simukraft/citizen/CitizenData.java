@@ -37,6 +37,7 @@ public final class CitizenData {
     private long childGrowthDueDay;
     private long bornDay;
     private long deathDay;
+    private String dimensionId;
     private final ConcurrentMap<String, Integer> skills = new ConcurrentHashMap<>();
 
     public CitizenData(UUID uuid) {
@@ -57,6 +58,7 @@ public final class CitizenData {
         this.happiness = 50.0D;
         this.dead = false;
         this.deathDay = 0L;
+        this.dimensionId = "minecraft:overworld";
     }
 
     public static CitizenData fromTag(CompoundTag tag) {
@@ -89,6 +91,7 @@ public final class CitizenData {
         data.bornDay = tag.getLong("BornDay");
         data.dead = tag.getBoolean("Dead");
         data.deathDay = tag.getLong("DeathDay");
+        data.dimensionId = tag.contains("DimensionId") ? tag.getString("DimensionId") : "minecraft:overworld";
         CompoundTag skillTag = tag.getCompound("Skills");
         for (String key : skillTag.getAllKeys()) {
             data.skills.put(key, skillTag.getInt(key));
@@ -133,6 +136,7 @@ public final class CitizenData {
         tag.putLong("BornDay", bornDay);
         tag.putBoolean("Dead", dead);
         tag.putLong("DeathDay", deathDay);
+        tag.putString("DimensionId", dimensionId);
         CompoundTag skillTag = new CompoundTag();
         skills.forEach(skillTag::putInt);
         tag.put("Skills", skillTag);
@@ -169,6 +173,9 @@ public final class CitizenData {
         }
         if (skinPath == null) {
             skinPath = "";
+        }
+        if (dimensionId == null || dimensionId.isBlank()) {
+            dimensionId = "minecraft:overworld";
         }
         if (workplaceId == null) {
             workplacePos = null;
@@ -401,6 +408,14 @@ public final class CitizenData {
 
     public long deathDay() {
         return deathDay;
+    }
+
+    public String dimensionId() {
+        return dimensionId;
+    }
+
+    public void setDimensionId(String dimensionId) {
+        this.dimensionId = (dimensionId != null && !dimensionId.isBlank()) ? dimensionId : "minecraft:overworld";
     }
 
     // markDead：保留市民档案，但让其退出人口、岗位和 AI 调度。

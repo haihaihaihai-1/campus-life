@@ -75,6 +75,8 @@ public final class LogisticsServerBoxScreenOpener {
 
         private final LogisticsServerBoxOpenResponsePacket packet;
         private ActiveTab currentTab;
+        private final java.util.List<net.minecraft.client.gui.components.EditBox> keepQtyBoxes = new java.util.ArrayList<>();
+        private final java.util.Map<UUID, Integer> localKeepQty = new java.util.HashMap<>();
 
         private LogisticsServerBoxScreen(LogisticsServerBoxOpenResponsePacket packet, ActiveTab currentTab) {
             super(Component.translatable("gui.simukraft.logistics.server.title"));
@@ -183,6 +185,7 @@ public final class LogisticsServerBoxScreenOpener {
 
         /** buildRouteButtons: 创建路径管理按钮。 */
         private void buildRouteButtons(int x, int y) {
+            keepQtyBoxes.clear();
             Button addRoute = addRenderableWidget(LogisticsNativeStyle.button(Component.literal("+ ").append(Component.translatable("gui.simukraft.logistics.channel.create")),
                     x + 120, y - 2, 112, 18, () -> LogisticsChannelCreateScreenOpener.open(packet, null)));
             addRoute.active = hasWarehouse() && !packet.clients().isEmpty();
@@ -197,7 +200,43 @@ public final class LogisticsServerBoxScreenOpener {
                 addRenderableWidget(LogisticsNativeStyle.button(Component.literal("x"),
                         x + 280, rowY, 24, 16,
                         () -> send(LogisticsBoxActionPacket.Action.DELETE_CHANNEL, null, channelId, BlockPos.ZERO, "", LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of())));
-                rowY += 40;
+                int displayQty = localKeepQty.getOrDefault(channelId, channel.keepQuantity());
+                net.minecraft.client.gui.components.EditBox qtyBox = new net.minecraft.client.gui.components.EditBox(
+                        this.font, x + 62, rowY + 26, 44, 12, Component.empty());
+                qtyBox.setValue(String.valueOf(displayQty));
+                qtyBox.setMaxLength(7);
+                qtyBox.setFilter(s -> s.matches("\\d*"));
+                addRenderableWidget(qtyBox);
+                keepQtyBoxes.add(qtyBox);
+                final int idx = keepQtyBoxes.size() - 1;
+                if (displayQty > 0) {
+                    addRenderableWidget(LogisticsNativeStyle.button(
+                            Component.translatable("gui.simukraft.logistics.channel.keep_supply"),
+                            x + 108, rowY + 26, 60, 12,
+                            () -> {
+                                localKeepQty.put(channelId, 0);
+                                send(LogisticsBoxActionPacket.Action.SET_CHANNEL_KEEP_QUANTITY, null, channelId, BlockPos.ZERO, "0", LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of());
+                                rebuildUI();
+                            }));
+                } else {
+                    addRenderableWidget(LogisticsNativeStyle.button(
+                            Component.translatable("gui.simukraft.logistics.channel.unlimited_supply"),
+                            x + 108, rowY + 26, 60, 12,
+                            () -> {
+                                String val = keepQtyBoxes.get(idx).getValue();
+                                int qty;
+                                try {
+                                    qty = val.isBlank() ? 0 : Math.max(0, Integer.parseInt(val));
+                                } catch (NumberFormatException ignored) {
+                                    return;
+                                }
+                                if (qty == 0) qty = 64;
+                                localKeepQty.put(channelId, qty);
+                                send(LogisticsBoxActionPacket.Action.SET_CHANNEL_KEEP_QUANTITY, null, channelId, BlockPos.ZERO, String.valueOf(qty), LogisticsDirection.WAREHOUSE_TO_CLIENT, List.of());
+                                rebuildUI();
+                            }));
+                }
+                rowY += 48;
                 if (rowY > this.height - 20) {
                     break;
                 }
@@ -258,7 +297,8 @@ public final class LogisticsServerBoxScreenOpener {
                         x + 31, rowY, 198, LogisticsNativeStyle.TEXT);
                 LogisticsNativeStyle.drawFitString(graphics, this.font, clientName(channel.clientId()) + " | " + LogisticsItemDisplayName.filterText(channel.filters()),
                         x + 10, rowY + 11, 225, LogisticsNativeStyle.TEXT_DIM);
-                rowY += 40;
+                graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.keep_qty"), x + 10, rowY + 28, LogisticsNativeStyle.TEXT_DIM);
+                rowY += 48;
                 if (rowY > this.height - 20) {
                     break;
                 }

@@ -57,6 +57,9 @@ public final class CitizenTeleportService {
         if (data.dead()) {
             return false;
         }
+        if (!level.dimension().location().toString().equals(data.dimensionId())) {
+            return false;
+        }
         Vec3 landing = boundedLandingTarget(level, target);
         if (landing == null) {
             return false;
@@ -74,7 +77,11 @@ public final class CitizenTeleportService {
             citizenEntity.setUUID(data.uuid());
             citizenEntity.setPersistenceRequired();
             citizenEntity.moveTo(landing.x, landing.y, landing.z, level.random.nextFloat() * 360.0F, 0.0F);
-            level.addFreshEntity(citizenEntity);
+            if (level.getEntity(data.uuid()) instanceof CitizenEntity existing && !existing.isRemoved()) {
+                citizenEntity = existing;
+            } else {
+                level.addFreshEntity(citizenEntity);
+            }
             CitizenManager.get(level).syncEntity(citizenEntity);
         }
         citizenEntity.getNavigation().stop();

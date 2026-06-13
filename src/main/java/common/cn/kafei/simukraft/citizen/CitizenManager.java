@@ -303,6 +303,7 @@ public final class CitizenManager extends SavedData {
         data.setLifespan(entity.getLifespan());
         data.setSick(entity.isSick());
         data.setChild(entity.isChildNpc());
+        data.setDimensionId(entity.level().dimension().location().toString());
         if (entity.level() instanceof ServerLevel level) {
             data.setHappiness(45.0D + level.random.nextDouble() * 20.0D);
         }

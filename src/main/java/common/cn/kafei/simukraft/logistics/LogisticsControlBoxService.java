@@ -182,7 +182,8 @@ public final class LogisticsControlBoxService {
                 name != null && !name.isBlank() ? name : client.displayName(),
                 true,
                 filters,
-                level.getGameTime());
+                level.getGameTime(),
+                0);
         LogisticsManager.get(level).updateChannel(channel);
         return ActionResult.SUCCESS;
     }
@@ -194,6 +195,16 @@ public final class LogisticsControlBoxService {
             return ActionResult.NOT_FOUND;
         }
         LogisticsManager.get(level).updateChannel(channel.withEnabled(!channel.enabled(), level.getGameTime()));
+        return ActionResult.SUCCESS;
+    }
+
+    /** setChannelKeepQuantity: 设置路线接收端保有量，0 表示无限制。 */
+    public static ActionResult setChannelKeepQuantity(ServerLevel level, UUID channelId, int quantity) {
+        LogisticsChannelData channel = LogisticsManager.get(level).channel(channelId);
+        if (channel == null) {
+            return ActionResult.NOT_FOUND;
+        }
+        LogisticsManager.get(level).updateChannel(channel.withKeepQuantity(quantity, level.getGameTime()));
         return ActionResult.SUCCESS;
     }
 
@@ -396,7 +407,7 @@ public final class LogisticsControlBoxService {
 
     private static ChannelEntry channelEntry(LogisticsChannelData channel) {
         return new ChannelEntry(channel.channelId(), channel.clientId(), channel.direction(), channel.name(), channel.enabled(),
-                channel.filters().stream().map(LogisticsItemFilter::itemId).toList());
+                channel.filters().stream().map(LogisticsItemFilter::itemId).toList(), channel.keepQuantity());
     }
 
     public enum ActionResult {
@@ -442,7 +453,7 @@ public final class LogisticsControlBoxService {
     public record ClientInventoryEntry(UUID clientId, List<LogisticsInventoryEntry> inventory) {
     }
 
-    public record ChannelEntry(UUID channelId, UUID clientId, LogisticsDirection direction, String name, boolean enabled, List<String> filters) {
+    public record ChannelEntry(UUID channelId, UUID clientId, LogisticsDirection direction, String name, boolean enabled, List<String> filters, int keepQuantity) {
         public String directionName() {
             return direction != null ? direction.name().toLowerCase(Locale.ROOT) : "";
         }

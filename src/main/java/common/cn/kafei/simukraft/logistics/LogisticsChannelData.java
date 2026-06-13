@@ -15,17 +15,23 @@ public record LogisticsChannelData(UUID channelId,
                                    String name,
                                    boolean enabled,
                                    List<LogisticsItemFilter> filters,
-                                   long updatedAt) {
+                                   long updatedAt,
+                                   int keepQuantity) {
     public LogisticsChannelData {
         channelId = channelId != null ? channelId : UUID.randomUUID();
         direction = direction != null ? direction : LogisticsDirection.WAREHOUSE_TO_CLIENT;
         name = name != null && !name.isBlank() ? name.trim() : direction.name().toLowerCase(java.util.Locale.ROOT);
         filters = filters != null ? filters.stream().filter(LogisticsItemFilter::valid).toList() : List.of();
         updatedAt = Math.max(0L, updatedAt);
+        keepQuantity = Math.max(0, keepQuantity);
     }
 
     public LogisticsChannelData withEnabled(boolean nextEnabled, long gameTime) {
-        return new LogisticsChannelData(channelId, warehouseId, clientId, direction, name, nextEnabled, filters, gameTime);
+        return new LogisticsChannelData(channelId, warehouseId, clientId, direction, name, nextEnabled, filters, gameTime, keepQuantity);
+    }
+
+    public LogisticsChannelData withKeepQuantity(int qty, long gameTime) {
+        return new LogisticsChannelData(channelId, warehouseId, clientId, direction, name, enabled, filters, gameTime, Math.max(0, qty));
     }
 
     public CompoundTag toTag() {
@@ -49,6 +55,7 @@ public record LogisticsChannelData(UUID channelId,
             filterTags.add(filterTag);
         });
         tag.put("Filters", filterTags);
+        tag.putInt("KeepQuantity", keepQuantity);
         return tag;
     }
 
@@ -67,6 +74,7 @@ public record LogisticsChannelData(UUID channelId,
                 tag.getString("Name"),
                 !tag.contains("Enabled") || tag.getBoolean("Enabled"),
                 filters,
-                tag.getLong("UpdatedAt"));
+                tag.getLong("UpdatedAt"),
+                tag.contains("KeepQuantity") ? tag.getInt("KeepQuantity") : 0);
     }
 }

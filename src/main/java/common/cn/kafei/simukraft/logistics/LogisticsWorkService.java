@@ -73,6 +73,9 @@ public final class LogisticsWorkService {
             if (channel.direction() == LogisticsDirection.CLIENT_TO_WAREHOUSE) {
                 return transfer(level, channel, clientPortPositions(client, "output"), warehouse.containers(), warehouse);
             }
+            if (channel.keepQuantity() > 0 && countClientItems(level, client, channel) >= channel.keepQuantity()) {
+                return false;
+            }
             return transfer(level, channel, warehouse.containers(), clientPortPositions(client, "input"), warehouse);
         } catch (RuntimeException exception) {
             SimuKraft.LOGGER.warn("Simukraft: Logistics transfer failed for channel {}", channel.channelId(), exception);
@@ -162,6 +165,21 @@ public final class LogisticsWorkService {
             }
         }
         return null;
+    }
+
+    private static int countClientItems(ServerLevel level, LogisticsClientData client, LogisticsChannelData channel) {
+        int total = 0;
+        for (BlockPos pos : clientPortPositions(client, "input")) {
+            if (!level.isLoaded(pos)) {
+                continue;
+            }
+            for (GenericContainerAccess.SlotSnapshot snapshot : GenericContainerAccess.snapshotSlots(level, pos)) {
+                if (!snapshot.stack().isEmpty() && matches(channel, snapshot.stack(), level)) {
+                    total += snapshot.stack().getCount();
+                }
+            }
+        }
+        return total;
     }
 
     private static boolean matches(LogisticsChannelData channel, ItemStack stack, ServerLevel level) {

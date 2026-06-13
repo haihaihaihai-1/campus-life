@@ -46,6 +46,7 @@ public record LogisticsBoxActionPacket(BlockPos boxPos,
         ADD_CHANNEL,
         TOGGLE_CHANNEL,
         DELETE_CHANNEL,
+        SET_CHANNEL_KEEP_QUANTITY,
         DEPOSIT_INVENTORY,
         EXTRACT_ITEM
     }
@@ -160,6 +161,13 @@ public record LogisticsBoxActionPacket(BlockPos boxPos,
             case ADD_CHANNEL -> LogisticsControlBoxService.addChannel(level, packet.boxPos(), packet.clientId(), packet.direction(), packet.value(), packet.filters());
             case TOGGLE_CHANNEL -> LogisticsControlBoxService.toggleChannel(level, packet.channelId());
             case DELETE_CHANNEL -> LogisticsControlBoxService.removeChannel(level, packet.channelId());
+            case SET_CHANNEL_KEEP_QUANTITY -> {
+                try {
+                    yield LogisticsControlBoxService.setChannelKeepQuantity(level, packet.channelId(), Integer.parseInt(packet.value()));
+                } catch (NumberFormatException ignored) {
+                    yield LogisticsControlBoxService.ActionResult.INVALID_TARGET;
+                }
+            }
             case DEPOSIT_INVENTORY -> LogisticsControlBoxService.depositPlayerInventory(level, packet.boxPos(), player);
             case EXTRACT_ITEM -> LogisticsControlBoxService.extractWarehouseItem(level, packet.boxPos(), player, packet.value());
             default -> LogisticsControlBoxService.ActionResult.INVALID_TARGET;

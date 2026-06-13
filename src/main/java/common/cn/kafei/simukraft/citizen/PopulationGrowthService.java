@@ -5,12 +5,13 @@ import common.cn.kafei.simukraft.city.CityManager;
 import common.cn.kafei.simukraft.config.ServerConfig;
 import net.minecraft.server.level.ServerLevel;
 
+@SuppressWarnings("unused")
 public final class PopulationGrowthService {
     private PopulationGrowthService() {
     }
 
     public static int tick(ServerLevel level) {
-        if (level == null) {
+        if (level == null || level.getServer() == null || !level.equals(level.getServer().overworld())) {
             return 0;
         }
         int interval = ServerConfig.populationGrowthIntervalTicks();

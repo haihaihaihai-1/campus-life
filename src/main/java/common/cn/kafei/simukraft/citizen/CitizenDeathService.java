@@ -11,9 +11,11 @@ import common.cn.kafei.simukraft.entity.CitizenEntity;
 import common.cn.kafei.simukraft.job.CityJobAssignmentService;
 import common.cn.kafei.simukraft.job.CitizenEmploymentService;
 import common.cn.kafei.simukraft.network.building.controlbox.ResidentialControlBoxViewUpdatePacket;
+import common.cn.kafei.simukraft.city.group.CityGroupMessageService;
 import common.cn.kafei.simukraft.network.hud.HudSyncService;
 import common.cn.kafei.simukraft.path.CitizenNavigationService;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -42,6 +44,7 @@ public final class CitizenDeathService {
         CitizenManager.get(level).markCitizenDead(data.uuid(), level.getDayTime() / 24000L + 1L);
         if (cityId != null) {
             CityJobAssignmentService.invalidate(cityId);
+            CityGroupMessageService.warningToCity(level, cityId, Component.translatable("message.simukraft.citizen.death", data.name()));
         }
         syncResidentialControlBox(level, oldHomeId);
         level.players().forEach(player -> HudSyncService.syncToPlayer(player, true));

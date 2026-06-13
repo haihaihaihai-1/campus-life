@@ -16,6 +16,8 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -93,7 +95,11 @@ public class CitizenEntity extends PathfinderMob {
             rescueFromWall(true);
             return false;
         }
-        return super.hurt(source, amount);
+        boolean result = super.hurt(source, amount);
+        if (result && !level().isClientSide()) {
+            addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, false, false));
+        }
+        return result;
     }
 
     @Override
