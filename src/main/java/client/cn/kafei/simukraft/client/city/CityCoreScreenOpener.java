@@ -6,16 +6,20 @@ import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import client.cn.kafei.simukraft.client.ui.SimuKraftWindowFrame;
 import client.cn.kafei.simukraft.client.city.map.SimuMapManager;
+import client.cn.kafei.simukraft.client.citizen.CitizenAvatarFactory;
 import client.cn.kafei.simukraft.client.city.map.SimuMapRegion;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
 import common.cn.kafei.simukraft.network.city.chunk.CityChunkBatchPurchasePacket;
+import common.cn.kafei.simukraft.network.city.chunk.CityChunkBatchReleasePacket;
 import common.cn.kafei.simukraft.network.city.chunk.CityChunkPurchasePacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreCreateCityPacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreManageCityPacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenResponsePacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapRequestPacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapResponsePacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageActionPacket;
 import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageRequestPacket;
+import common.cn.kafei.simukraft.network.citizen.manage.CityCitizenManageResponsePacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMemberActionPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersRequestPacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersResponsePacket;
@@ -72,6 +76,7 @@ public final class CityCoreScreenOpener {
     private static final int BACK_BUTTON_WIDTH = 52;
     private static final int BACK_BUTTON_HEIGHT = 20;
     private static volatile CityChunkMapElement activeMapElement;
+    private static volatile CityCoreWindow activeWindow;
 
     private CityCoreScreenOpener() {
     }
@@ -256,6 +261,98 @@ public final class CityCoreScreenOpener {
             return Component.translatable("screen.simukraft.city_core.finance.reason.unknown").getString();
         }
         return Component.translatable("screen.simukraft.city_core.finance.reason." + reason).getString();
+    }
+
+    public static void openCitizens(CityCitizenManageResponsePacket packet) {
+        CityCoreWindow window = activeWindow;
+        if (window == null) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        minecraft.execute(() -> window.openTab("citizens", "screen.simukraft.city_core.menu.citizens", citizensPanel(packet)));
+    }
+
+    private static UIElement citizensPanel(CityCitizenManageResponsePacket packet) {
+        UIElement outer = new UIElement().layout(layout -> {
+            layout.widthPercent(100);
+            layout.heightPercent(100);
+            layout.flexDirection(FlexDirection.COLUMN);
+            layout.paddingAll(8);
+            layout.gapAll(6);
+        });
+
+        TextField searchField = textField("", 200);
+        searchField.layout(layout -> {
+            layout.widthPercent(100);
+            layout.height(20);
+            layout.flexShrink(0);
+        });
+        searchField.getTextFieldStyle().placeholder(Component.translatable("screen.simukraft.city_core.citizen_manage.search"));
+        outer.addChild(searchField);
+
+        UIElement listPanel = new UIElement().layout(layout -> {
+            layout.widthPercent(100);
+            layout.flexDirection(FlexDirection.COLUMN);
+            layout.gapAll(4);
+        });
+
+        Runnable rebuild = () -> {
+            listPanel.clearAllChildren();
+            String q = searchField.getValue().toLowerCase(Locale.ROOT).trim();
+            boolean any = false;
+            for (CityCitizenManageResponsePacket.CitizenEntry citizen : packet.citizens()) {
+                String n = citizen.name() == null ? "" : citizen.name();
+                if (!q.isEmpty() && !n.toLowerCase(Locale.ROOT).contains(q)) continue;
+                listPanel.addChild(citizenRow(packet, citizen));
+                any = true;
+            }
+            if (!any) listPanel.addChild(line(Component.translatable("screen.simukraft.city_core.citizen_manage.empty")));
+        };
+
+        searchField.setTextResponder(t -> rebuild.run());
+        rebuild.run();
+
+        ScrollerView scroller = scrollable(listPanel);
+        scroller.layout(layout -> {
+            layout.flex(1);
+            layout.widthPercent(100);
+        });
+        outer.addChild(scroller);
+        return outer;
+    }
+
+    private static UIElement citizenRow(CityCitizenManageResponsePacket packet, CityCitizenManageResponsePacket.CitizenEntry citizen) {
+        UIElement row = new UIElement().layout(layout -> {
+            layout.widthPercent(100);
+            layout.height(44);
+            layout.flexDirection(FlexDirection.ROW);
+            layout.gapAll(6);
+            layout.alignItems(AlignItems.CENTER);
+        });
+        UIElement avatar = CitizenAvatarFactory.createHead(citizen.skinPath(), 0xFFFFFFFF);
+        avatar.layout(layout -> {
+            layout.width(32);
+            layout.height(32);
+            layout.flexShrink(0);
+        });
+        row.addChild(avatar);
+        UIElement info = new UIElement().layout(layout -> {
+            layout.flex(1);
+            layout.flexDirection(FlexDirection.COLUMN);
+            layout.gapAll(3);
+        });
+        info.addChild(line(Component.translatable("screen.simukraft.city_core.citizen_manage.row_info",
+                Component.translatable(citizen.jobKey()),
+                Component.translatable(citizen.workStatusKey()),
+                String.valueOf(citizen.age()),
+                Component.translatable("screen.simukraft.city_core.citizen_manage.gender_" + citizen.gender()))));
+        info.addChild(line(Component.literal(citizen.name() == null || citizen.name().isBlank() ? "-" : citizen.name())));
+        row.addChild(info);
+        if (packet.canManage()) {
+            row.addChild(memberActionButton("screen.simukraft.city_core.citizen_manage.dismiss", 52,
+                    () -> { PacketDistributor.sendToServer(new CityCitizenManageActionPacket(packet.pos(), CityCitizenManageActionPacket.Action.DISMISS, citizen.citizenId())); close(); }));
+            row.addChild(memberActionButton("screen.simukraft.city_core.citizen_manage.exile", 44,
+                    () -> { PacketDistributor.sendToServer(new CityCitizenManageActionPacket(packet.pos(), CityCitizenManageActionPacket.Action.EXILE, citizen.citizenId())); close(); }));
+        }
+        return row;
     }
 
     private static void requestMembers(CityCoreOpenResponsePacket packet) {
@@ -634,6 +731,7 @@ public final class CityCoreScreenOpener {
         }
 
         private CityCoreWindow(CityCoreOpenResponsePacket packet, CityCoreMembersResponsePacket membersPacket, CityCoreMapResponsePacket mapPacket) {
+            CityCoreScreenOpener.activeWindow = this;
             this.packet = packet;
             this.membersPacket = membersPacket;
             this.mapPacket = mapPacket;
@@ -1024,15 +1122,24 @@ public final class CityCoreScreenOpener {
                 return;
             }
             Minecraft minecraft = Minecraft.getInstance();
-            Component title = Component.translatable("screen.simukraft.city_core.map.menu.chunk", contextMenuChunkX, contextMenuChunkZ);
-            boolean owned = cache.isChunkOwned(ChunkPos.asLong(contextMenuChunkX, contextMenuChunkZ));
-            Component action = owned
-                    ? Component.translatable("screen.simukraft.city_core.map.menu.claim_unavailable")
-                    : packet.canManageCity()
-                    ? Component.translatable("screen.simukraft.city_core.map.menu.claim")
-                    : Component.translatable("screen.simukraft.city_core.map.menu.no_permission");
-            contextMenuWidth = Math.max(minecraft.font.width(title), minecraft.font.width(action)) + 16;
-            contextMenuHeight = 38;
+            boolean hasBatch = !batchClaimChunks.isEmpty();
+            Component title = hasBatch
+                    ? Component.translatable("screen.simukraft.city_core.map.menu.batch_selected", batchClaimChunks.size())
+                    : Component.translatable("screen.simukraft.city_core.map.menu.chunk", contextMenuChunkX, contextMenuChunkZ);
+            long singleChunkLong = ChunkPos.asLong(contextMenuChunkX, contextMenuChunkZ);
+            boolean singleOwned = !hasBatch && cache.isChunkOwned(singleChunkLong);
+            boolean singleCurrentCity = !hasBatch && cache.isChunkInCurrentCity(singleChunkLong);
+            boolean canClaim = packet.canManageCity() && (hasBatch || !singleOwned);
+            boolean canAbandon = packet.canManageCity() && (hasBatch
+                    ? batchClaimChunks.stream().anyMatch(cache::isChunkInCurrentCity)
+                    : singleCurrentCity);
+            Component claimAction = !packet.canManageCity()
+                    ? Component.translatable("screen.simukraft.city_core.map.menu.no_permission")
+                    : singleOwned ? Component.translatable("screen.simukraft.city_core.map.menu.claim_unavailable")
+                    : Component.translatable("screen.simukraft.city_core.map.menu.claim");
+            Component abandonAction = Component.translatable("screen.simukraft.city_core.map.menu.abandon");
+            contextMenuWidth = Math.max(minecraft.font.width(title), Math.max(minecraft.font.width(claimAction), minecraft.font.width(abandonAction))) + 16;
+            contextMenuHeight = 54;
             int menuX = (int) contextMenuX;
             int menuY = (int) contextMenuY;
             if (menuX + contextMenuWidth > startX + width) {
@@ -1048,8 +1155,10 @@ public final class CityCoreScreenOpener {
             guiContext.graphics.fill(menuX, menuY, menuX + contextMenuWidth, menuY + contextMenuHeight, 0xEE202020);
             guiContext.graphics.fill(menuX, menuY, menuX + contextMenuWidth, menuY + 1, 0xFFFFFFFF);
             guiContext.graphics.fill(menuX, menuY + 19, menuX + contextMenuWidth, menuY + 20, 0x80FFFFFF);
+            guiContext.graphics.fill(menuX, menuY + 35, menuX + contextMenuWidth, menuY + 36, 0x80FFFFFF);
             guiContext.graphics.drawString(minecraft.font, title, menuX + 6, menuY + 6, 0xFFFFFFFF, false);
-            guiContext.graphics.drawString(minecraft.font, action, menuX + 6, menuY + 24, owned || !packet.canManageCity() ? 0xFFAAAAAA : 0xFFFFFF55, false);
+            guiContext.graphics.drawString(minecraft.font, claimAction, menuX + 6, menuY + 24, canClaim ? 0xFFFFFF55 : 0xFFAAAAAA, false);
+            guiContext.graphics.drawString(minecraft.font, abandonAction, menuX + 6, menuY + 40, canAbandon ? 0xFFFF5555 : 0xFFAAAAAA, false);
         }
 
         private boolean handleContextMenuClick(double mouseX, double mouseY) {
@@ -1064,9 +1173,44 @@ public final class CityCoreScreenOpener {
                 return true;
             }
             contextMenuVisible = false;
-            long chunkLong = ChunkPos.asLong(contextMenuChunkX, contextMenuChunkZ);
-            if (packet.canManageCity() && !cache.isChunkOwned(chunkLong)) {
-                PacketDistributor.sendToServer(new CityChunkPurchasePacket(packet.pos(), contextMenuChunkX, contextMenuChunkZ));
+            if (mouseY < contextMenuDrawY + 36) {
+                // 认领
+                if (!batchClaimChunks.isEmpty() && packet.canManageCity()) {
+                    List<CityChunkBatchPurchasePacket.ChunkEntry> chunks = batchClaimChunks.stream()
+                            .map(ChunkPos::new)
+                            .map(chunkPos -> new CityChunkBatchPurchasePacket.ChunkEntry(chunkPos.x, chunkPos.z))
+                            .toList();
+                    batchClaimChunks.clear();
+                    PacketDistributor.sendToServer(new CityChunkBatchPurchasePacket(packet.pos(), chunks));
+                } else if (batchClaimChunks.isEmpty() && packet.canManageCity()) {
+                    long chunkLong = ChunkPos.asLong(contextMenuChunkX, contextMenuChunkZ);
+                    if (!cache.isChunkOwned(chunkLong)) {
+                        PacketDistributor.sendToServer(new CityChunkPurchasePacket(packet.pos(), contextMenuChunkX, contextMenuChunkZ));
+                    }
+                }
+            } else {
+                // 放弃区块
+                if (packet.canManageCity()) {
+                    long coreChunkLong = ChunkPos.asLong(packet.centerChunkX(), packet.centerChunkZ());
+                    if (!batchClaimChunks.isEmpty()) {
+                        List<CityChunkBatchReleasePacket.ChunkEntry> releaseChunks = batchClaimChunks.stream()
+                                .filter(cache::isChunkInCurrentCity)
+                                .filter(c -> c != coreChunkLong)
+                                .map(ChunkPos::new)
+                                .map(cp -> new CityChunkBatchReleasePacket.ChunkEntry(cp.x, cp.z))
+                                .toList();
+                        batchClaimChunks.clear();
+                        if (!releaseChunks.isEmpty()) {
+                            PacketDistributor.sendToServer(new CityChunkBatchReleasePacket(packet.pos(), releaseChunks));
+                        }
+                    } else {
+                        long singleChunk = ChunkPos.asLong(contextMenuChunkX, contextMenuChunkZ);
+                        if (singleChunk != coreChunkLong && cache.isChunkInCurrentCity(singleChunk)) {
+                            PacketDistributor.sendToServer(new CityChunkBatchReleasePacket(packet.pos(),
+                                    List.of(new CityChunkBatchReleasePacket.ChunkEntry(contextMenuChunkX, contextMenuChunkZ))));
+                        }
+                    }
+                }
             }
             return true;
         }
@@ -1077,26 +1221,11 @@ public final class CityCoreScreenOpener {
             }
             int chunkX = screenToChunk(mouseX, mapCenterX(), offsetX, 16.0D * zoomLevel);
             int chunkZ = screenToChunk(mouseY, mapCenterY(), offsetY, 16.0D * zoomLevel);
-            long chunkLong = ChunkPos.asLong(chunkX, chunkZ);
-            if (!cache.isChunkOwned(chunkLong)) {
-                batchClaimChunks.add(chunkLong);
-            }
+            batchClaimChunks.add(ChunkPos.asLong(chunkX, chunkZ));
         }
 
         private void finishBatchClaim() {
-            if (!batchClaiming) {
-                return;
-            }
             batchClaiming = false;
-            if (batchClaimChunks.isEmpty()) {
-                return;
-            }
-            List<CityChunkBatchPurchasePacket.ChunkEntry> chunks = batchClaimChunks.stream()
-                    .map(ChunkPos::new)
-                    .map(chunkPos -> new CityChunkBatchPurchasePacket.ChunkEntry(chunkPos.x, chunkPos.z))
-                    .toList();
-            batchClaimChunks.clear();
-            PacketDistributor.sendToServer(new CityChunkBatchPurchasePacket(packet.pos(), chunks));
         }
 
         private int screenToChunk(double screenValue, double centerValue, double offsetValue, double chunkSize) {
@@ -1133,6 +1262,11 @@ public final class CityCoreScreenOpener {
                 return;
             }
             if (event.button == 0) {
+                if (!batchClaimChunks.isEmpty()) {
+                    batchClaimChunks.clear();
+                    event.stopPropagation();
+                    return;
+                }
                 event.target.startDrag(new Vector2f((float) offsetX, (float) offsetY), null);
                 event.stopPropagation();
                 return;

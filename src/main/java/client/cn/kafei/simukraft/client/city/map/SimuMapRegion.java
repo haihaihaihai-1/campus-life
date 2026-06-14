@@ -91,7 +91,6 @@ public class SimuMapRegion {
         }
 
         if (textureNeedsUpload && renderedImage != null) {
-            textureNeedsUpload = false;
             if (RenderSystem.isOnRenderThreadOrInit()) {
                 uploadNow();
             } else {
@@ -111,10 +110,22 @@ public class SimuMapRegion {
                 if (renderedImage != null) {
                     renderedImage.upload(0, 0, 0, false);
                     imageLoaded = true;
+                    textureNeedsUpload = false;
                 }
             }
         } catch (Exception e) {
             LOGGER.error("Simukraft: Failed to upload map region texture ({}, {})", regionX, regionZ, e);
+        }
+    }
+
+    private void deleteTextureOnRenderThread() {
+        if (textureId == -1) return;
+        int id = textureId;
+        textureId = -1;
+        if (RenderSystem.isOnRenderThreadOrInit()) {
+            GlStateManager._deleteTexture(id);
+        } else {
+            Minecraft.getInstance().submit(() -> GlStateManager._deleteTexture(id));
         }
     }
 
@@ -136,10 +147,7 @@ public class SimuMapRegion {
                 renderedImage = null;
             }
         }
-        if (textureId != -1) {
-            GlStateManager._deleteTexture(textureId);
-            textureId = -1;
-        }
+        deleteTextureOnRenderThread();
         imageLoaded = false;
         data = null;
     }
@@ -152,10 +160,7 @@ public class SimuMapRegion {
                 renderedImage = null;
             }
         }
-        if (textureId != -1) {
-            GlStateManager._deleteTexture(textureId);
-            textureId = -1;
-        }
+        deleteTextureOnRenderThread();
         imageLoaded = false;
     }
 

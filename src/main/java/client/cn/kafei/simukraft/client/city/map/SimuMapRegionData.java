@@ -25,7 +25,7 @@ public class SimuMapRegionData {
     public final short[] flags = new short[AREA];
 
     /** 数据是否被修改，需要重新渲染。 */
-    private boolean dirty = true;
+    private volatile boolean dirty = true;
 
     /** 该数据所属 region 坐标。 */
     public final int regionX;
@@ -43,7 +43,7 @@ public class SimuMapRegionData {
     }
 
     /** 设置指定位置的地图采样数据。 */
-    public void setData(int localX, int localZ, short h, int argbColor, boolean water, int light) {
+    public synchronized void setData(int localX, int localZ, short h, int argbColor, boolean water, int light) {
         int idx = index(localX, localZ);
         short f = (short) ((water ? 1 : 0) | ((light & 0xF) << 1));
         if (height[idx] == h && color[idx] == argbColor && flags[idx] == f) {

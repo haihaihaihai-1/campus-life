@@ -434,6 +434,7 @@ public final class CitizenNavigationService {
                 continue;
             }
             citizen.getNavigation().stop();
+            citizen.getMoveControl().setWantedPosition(citizen.getX(), citizen.getY(), citizen.getZ(), 0.0);
             PathCrowdCoordinator.clear(level, entry.getKey());
             iterator.remove();
             if (result == ActiveTickResult.REPATH) {

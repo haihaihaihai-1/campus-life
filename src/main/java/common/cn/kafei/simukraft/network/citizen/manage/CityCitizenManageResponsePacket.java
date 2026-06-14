@@ -43,6 +43,7 @@ public record CityCitizenManageResponsePacket(BlockPos pos, String cityName, boo
             buffer.writeUtf(entry.workStatusKey(), 128);
             buffer.writeVarInt(entry.age());
             buffer.writeUtf(entry.gender(), 16);
+            buffer.writeUtf(entry.skinPath() != null ? entry.skinPath() : "", 256);
         }
     }
 
@@ -59,7 +60,8 @@ public record CityCitizenManageResponsePacket(BlockPos pos, String cityName, boo
                     buffer.readUtf(128),
                     buffer.readUtf(128),
                     buffer.readVarInt(),
-                    buffer.readUtf(16)));
+                    buffer.readUtf(16),
+                    buffer.readUtf(256)));
         }
         return new CityCitizenManageResponsePacket(pos, cityName, canManage, citizens);
     }
@@ -69,6 +71,6 @@ public record CityCitizenManageResponsePacket(BlockPos pos, String cityName, boo
     }
 
     /** CitizenEntry: 单个市民的展示信息。jobKey/workStatusKey 为可本地化的翻译键。 */
-    public record CitizenEntry(UUID citizenId, String name, String jobKey, String workStatusKey, int age, String gender) {
+    public record CitizenEntry(UUID citizenId, String name, String jobKey, String workStatusKey, int age, String gender, String skinPath) {
     }
 }

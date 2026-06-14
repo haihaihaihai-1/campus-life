@@ -16,6 +16,7 @@ import common.cn.kafei.simukraft.network.farmland.FarmlandBoxOpenResponsePacket;
 import common.cn.kafei.simukraft.network.farmland.FarmlandBoxSetAreaPacket;
 import common.cn.kafei.simukraft.network.farmland.FarmlandBoxSetCropPacket;
 import common.cn.kafei.simukraft.network.city.chunk.CityChunkBatchPurchasePacket;
+import common.cn.kafei.simukraft.network.city.chunk.CityChunkBatchReleasePacket;
 import common.cn.kafei.simukraft.network.city.chunk.CityChunkPurchasePacket;
 import common.cn.kafei.simukraft.network.city.chunk.CityChunkSyncPacket;
 import common.cn.kafei.simukraft.network.city.core.CityCoreCreateCityPacket;
@@ -91,6 +92,7 @@ public final class ModNetwork {
         registrar.playToServer(CityCoreMapRequestPacket.TYPE, CityCoreMapRequestPacket.STREAM_CODEC, CityCoreMapRequestPacket::handle);
         registrar.playToServer(CityChunkPurchasePacket.TYPE, CityChunkPurchasePacket.STREAM_CODEC, CityChunkPurchasePacket::handle);
         registrar.playToServer(CityChunkBatchPurchasePacket.TYPE, CityChunkBatchPurchasePacket.STREAM_CODEC, CityChunkBatchPurchasePacket::handle);
+        registrar.playToServer(CityChunkBatchReleasePacket.TYPE, CityChunkBatchReleasePacket.STREAM_CODEC, CityChunkBatchReleasePacket::handle);
         registrar.playToServer(EmploymentStateRequestPacket.TYPE, EmploymentStateRequestPacket.STREAM_CODEC, EmploymentStateRequestPacket::handle);
         registrar.playToServer(NpcHireListRequestPacket.TYPE, NpcHireListRequestPacket.STREAM_CODEC, NpcHireListRequestPacket::handle);
         registrar.playToServer(NpcHireAssignPacket.TYPE, NpcHireAssignPacket.STREAM_CODEC, NpcHireAssignPacket::handle);

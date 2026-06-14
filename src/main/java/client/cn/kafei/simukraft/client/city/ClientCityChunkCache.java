@@ -6,6 +6,7 @@ import client.cn.kafei.simukraft.client.city.map.SimuMapStorage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 import java.util.Collections;
@@ -85,6 +86,15 @@ public final class ClientCityChunkCache {
         return currentScopeCache().chunkOwnerIndex.get(chunkLong);
     }
 
+    public int getDataVersion() {
+        return currentScopeCache().dataVersion;
+    }
+
+    public boolean regionHasOwnedChunks(int regionX, int regionZ) {
+        long key = (long) regionX << 32 | Integer.toUnsignedLong(regionZ);
+        return currentScopeCache().regionWithChunks.contains(key);
+    }
+
     public synchronized void clear() {
         scopedCaches.remove(currentScope());
     }
@@ -123,10 +133,17 @@ public final class ClientCityChunkCache {
         private final Map<Long, UUID> chunkOwnerIndex = new ConcurrentHashMap<>();
         private final Map<UUID, CityCoreEntry> allCityCores = new ConcurrentHashMap<>();
         private volatile UUID currentCityId;
+        private volatile int dataVersion;
+        private volatile Set<Long> regionWithChunks = Set.of();
 
         private void rebuildChunkOwnerIndex() {
             chunkOwnerIndex.clear();
             allCityChunks.forEach((cityId, chunks) -> chunks.forEach(chunk -> chunkOwnerIndex.put(chunk, cityId)));
+            Set<Long> regions = new HashSet<>();
+            chunkOwnerIndex.keySet().forEach(chunk -> regions.add(
+                    (long)(ChunkPos.getX(chunk) >> 5) << 32 | Integer.toUnsignedLong(ChunkPos.getZ(chunk) >> 5)));
+            regionWithChunks = Set.copyOf(regions);
+            dataVersion++;
         }
     }
 

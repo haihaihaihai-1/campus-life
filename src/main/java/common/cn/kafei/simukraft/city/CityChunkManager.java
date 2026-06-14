@@ -108,6 +108,13 @@ public final class CityChunkManager extends SavedData {
         }
     }
 
+    private void deleteChunkIncremental(UUID cityId, long chunkLong) {
+        ServerLevel targetLevel = level;
+        if (targetLevel != null && cityId != null) {
+            SimuSqliteStorage.deleteCityChunk(targetLevel, cityId, chunkLong);
+        }
+    }
+
     private void deleteCityChunksIncremental(UUID cityId) {
         ServerLevel targetLevel = level;
         if (targetLevel != null && cityId != null) {
@@ -164,6 +171,21 @@ public final class CityChunkManager extends SavedData {
         chunks.add(chunkLong);
         chunkCityIndex.put(chunkLong, cityId);
         saveChunkIncremental(cityId, chunkLong);
+        setDirty();
+        return true;
+    }
+
+    public synchronized boolean unclaimChunk(UUID cityId, long chunkLong) {
+        if (cityId == null || !cityId.equals(chunkCityIndex.get(chunkLong))) {
+            return false;
+        }
+        Set<Long> chunks = cityChunks.get(cityId);
+        if (chunks == null) {
+            return false;
+        }
+        chunks.remove(chunkLong);
+        chunkCityIndex.remove(chunkLong);
+        deleteChunkIncremental(cityId, chunkLong);
         setDirty();
         return true;
     }

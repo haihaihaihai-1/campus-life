@@ -14,9 +14,8 @@ import xaero.map.highlight.ChunkHighlighter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @OnlyIn(Dist.CLIENT)
 public final class SimuKraftCityHighlighter extends ChunkHighlighter {
@@ -33,21 +32,16 @@ public final class SimuKraftCityHighlighter extends ChunkHighlighter {
         super(true);
     }
 
-    /** regionHasHighlights: 判断 Xaero 区域内是否存在城市认领区块。 */
+    private volatile int cachedDataVersion = -1;
+    private final ConcurrentHashMap<Long, Integer> regionHashCache = new ConcurrentHashMap<>();
+
+    /** regionHasHighlights: O(1) lookup via prebuilt region set in ClientCityChunkCache. */
     @Override
     public boolean regionHasHighlights(ResourceKey<Level> dimension, int regionX, int regionZ) {
         if (!isCurrentDimension(dimension)) {
             return false;
         }
-        Map<UUID, Set<Long>> allCityChunks = ClientCityChunkCache.getInstance().getAllCityChunks();
-        for (Set<Long> chunks : allCityChunks.values()) {
-            for (long chunkLong : chunks) {
-                if ((ChunkPos.getX(chunkLong) >> 5) == regionX && (ChunkPos.getZ(chunkLong) >> 5) == regionZ) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return ClientCityChunkCache.getInstance().regionHasOwnedChunks(regionX, regionZ);
     }
 
     /** getColors: 返回中心填充和四边边框颜色，边界只画不同城市/未认领相邻处。 */
@@ -74,18 +68,27 @@ public final class SimuKraftCityHighlighter extends ChunkHighlighter {
         return this.resultStore;
     }
 
-    /** calculateRegionHash: 让 Xaero 在城市区块同步变化后刷新对应区域高亮。 */
+    /** calculateRegionHash: version-aware cache — recomputes only when city data changes. */
     @Override
     public int calculateRegionHash(ResourceKey<Level> dimension, int regionX, int regionZ) {
         if (!isCurrentDimension(dimension)) {
             return 0;
         }
+        ClientCityChunkCache cache = ClientCityChunkCache.getInstance();
+        int v = cache.getDataVersion();
+        if (v != cachedDataVersion) {
+            regionHashCache.clear();
+            cachedDataVersion = v;
+        }
+        long key = (long) regionX << 32 | Integer.toUnsignedLong(regionZ);
+        return regionHashCache.computeIfAbsent(key, k -> computeRegionHash(cache, regionX, regionZ));
+    }
+
+    private static int computeRegionHash(ClientCityChunkCache cache, int regionX, int regionZ) {
         List<OwnedChunk> ownedChunks = new ArrayList<>();
-        ClientCityChunkCache.getInstance().getAllCityChunks().forEach((cityId, chunks) -> {
+        cache.getAllCityChunks().forEach((cityId, chunks) -> {
             for (long chunkLong : chunks) {
-                int chunkX = ChunkPos.getX(chunkLong);
-                int chunkZ = ChunkPos.getZ(chunkLong);
-                if ((chunkX >> 5) == regionX && (chunkZ >> 5) == regionZ) {
+                if ((ChunkPos.getX(chunkLong) >> 5) == regionX && (ChunkPos.getZ(chunkLong) >> 5) == regionZ) {
                     ownedChunks.add(new OwnedChunk(cityId, chunkLong));
                 }
             }

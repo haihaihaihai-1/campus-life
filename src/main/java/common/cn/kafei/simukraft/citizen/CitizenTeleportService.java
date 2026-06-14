@@ -39,7 +39,7 @@ public final class CitizenTeleportService {
             return false;
         }
         Vec3 landing = boundedLandingTarget(level, target);
-        if (landing == null || !withinCurrentVerticalRange(citizenEntity.position(), landing)) {
+        if (landing == null) {
             return false;
         }
         citizenEntity.getNavigation().stop();
@@ -66,9 +66,6 @@ public final class CitizenTeleportService {
         }
         // 先合并已加载的同 UUID 实体；找不到时才按居民数据补生成实体。
         CitizenEntity citizenEntity = reconcileLoadedCitizenEntities(level, data.uuid(), landing);
-        if (citizenEntity != null && !withinCurrentVerticalRange(citizenEntity.position(), landing)) {
-            return false;
-        }
         if (citizenEntity == null) {
             citizenEntity = ModEntities.CITIZEN.get().create(level);
             if (citizenEntity == null) {

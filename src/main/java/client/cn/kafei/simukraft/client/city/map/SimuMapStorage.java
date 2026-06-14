@@ -8,11 +8,14 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -84,9 +87,10 @@ public class SimuMapStorage {
         }
 
         Path file = getRegionFile(worldId, dimension, region.regionX, region.regionZ);
+        Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
         try {
             Files.createDirectories(file.getParent());
-            try (DataOutputStream out = new DataOutputStream(Files.newOutputStream(file))) {
+            try (DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(tmp)))) {
                 out.writeInt(MAGIC);
                 out.writeShort(VERSION);
                 for (short height : data.height) {
@@ -99,9 +103,11 @@ public class SimuMapStorage {
                     out.writeShort(flags);
                 }
             }
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             LOGGER.error("Simukraft: Failed to save map region ({}, {}) for world={} dim={}",
                     region.regionX, region.regionZ, worldId, dimensionToDir(dimension), e);
+            try { Files.deleteIfExists(tmp); } catch (IOException ignored) {}
         }
     }
 
@@ -195,7 +201,7 @@ public class SimuMapStorage {
     }
 
     private static SimuMapRegionData readRegionFile(Path file) {
-        try (DataInputStream in = new DataInputStream(Files.newInputStream(file))) {
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
             int magic = in.readInt();
             if (magic != MAGIC) {
                 LOGGER.warn("Simukraft: Invalid magic in {}", file.getFileName());

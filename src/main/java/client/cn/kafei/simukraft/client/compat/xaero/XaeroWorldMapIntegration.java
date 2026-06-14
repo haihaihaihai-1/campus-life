@@ -59,7 +59,6 @@ public final class XaeroWorldMapIntegration {
             if (mapWorld == null) {
                 return;
             }
-            mapWorld.clearAllCachedHighlightHashes();
             refreshLoadedRegions(processor, mapWorld.getCurrentDimension());
         } catch (RuntimeException exception) {
             SimuKraft.LOGGER.warn("Simukraft: Failed to refresh Xaero city chunk highlights.", exception);

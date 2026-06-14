@@ -3,6 +3,7 @@ package client.cn.kafei.simukraft.client.city.map;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import com.mojang.blaze3d.platform.NativeImage;
+import java.util.Arrays;
 
 /**
  * 地图渲染器。
@@ -36,9 +37,16 @@ public class SimuMapRenderer {
             image = region.getOrCreateImage();
         }
 
-        short[] heights = data.height;
-        int[] colors = data.color;
-        short[] flags = data.flags;
+        short[] heights;
+        int[] colors;
+        short[] flags;
+        synchronized (data) {
+            heights = Arrays.copyOf(data.height, SimuMapRegionData.AREA);
+            colors = Arrays.copyOf(data.color, SimuMapRegionData.AREA);
+            flags = Arrays.copyOf(data.flags, SimuMapRegionData.AREA);
+            data.clearDirty();
+        }
+
         int regWX = region.regionX * 512;
         int regWZ = region.regionZ * 512;
 
@@ -90,7 +98,6 @@ public class SimuMapRenderer {
             }
         }
 
-        data.clearDirty();
         region.markTextureNeedsUpload();
     }
 

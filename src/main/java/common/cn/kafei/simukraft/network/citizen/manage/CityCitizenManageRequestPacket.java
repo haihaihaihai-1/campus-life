@@ -70,7 +70,8 @@ public record CityCitizenManageRequestPacket(BlockPos pos) implements CustomPack
                         citizen.jobType().translationKey(),
                         citizen.workStatus(),
                         citizen.age(),
-                        citizen.gender()))
+                        citizen.gender(),
+                        citizen.skinPath()))
                 .toList();
         PacketDistributor.sendToPlayer(player, new CityCitizenManageResponsePacket(pos, city.cityName(), canManage, entries));
     }

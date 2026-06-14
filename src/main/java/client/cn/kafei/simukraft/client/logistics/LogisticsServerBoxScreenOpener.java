@@ -74,6 +74,7 @@ public final class LogisticsServerBoxScreenOpener {
         private static final int TAB_X = 5;
 
         private static final int ROUTE_ROW_H = 48;
+        private static final int SCROLLBAR_W = 6;
         /** savedRouteScrollRow: 静态保存路由列表滚动行，服务端刷新重建界面后仍保持位置。 */
         private static int savedRouteScrollRow = 0;
 
@@ -112,6 +113,26 @@ public final class LogisticsServerBoxScreenOpener {
         private void clampRouteScroll() {
             routeScrollRow = Math.max(0, Math.min(maxRouteScroll(), routeScrollRow));
             savedRouteScrollRow = routeScrollRow;
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (currentTab == ActiveTab.ROUTES && maxRouteScroll() > 0) {
+                int panelR = this.width - 6;
+                int sbX = panelR - SCROLLBAR_W - 1;
+                int panelT = routeViewportTop() - 6;
+                int panelB = routeViewportBottom() + 4;
+                if (mouseX >= sbX && mouseX < sbX + SCROLLBAR_W && mouseY >= panelT + 1 && mouseY < panelB - 1) {
+                    int trackH = panelB - 2 - (panelT + 1);
+                    int thumbH = Math.max(8, trackH * routeVisibleRows() / Math.max(1, packet.channels().size()));
+                    double rel = (mouseY - panelT - 1 - thumbH / 2.0) / Math.max(1, trackH - thumbH);
+                    routeScrollRow = (int) Math.round(rel * maxRouteScroll());
+                    clampRouteScroll();
+                    rebuildUI();
+                    return true;
+                }
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
         }
 
         @Override
@@ -323,6 +344,14 @@ public final class LogisticsServerBoxScreenOpener {
             Component header = Component.translatable("gui.simukraft.logistics.server.tab.routes")
                     .append(Component.literal(" (" + channels.size() + ")"));
             graphics.drawString(this.font, header, x, y, LogisticsNativeStyle.TEXT_WARN);
+            int panelL = x - 6;
+            int panelT = routeViewportTop() - 6;
+            int panelR = this.width - 6;
+            int panelB = routeViewportBottom() + 4;
+            graphics.fill(panelL, panelT, panelR, panelT + 1, LogisticsNativeStyle.TEXT_WARN);
+            graphics.fill(panelL, panelB - 1, panelR, panelB, LogisticsNativeStyle.TEXT_WARN);
+            graphics.fill(panelL, panelT, panelL + 1, panelB, LogisticsNativeStyle.TEXT_WARN);
+            graphics.fill(panelR - 1, panelT, panelR, panelB, LogisticsNativeStyle.TEXT_WARN);
             if (channels.isEmpty()) {
                 graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.empty"), x, y + 30, LogisticsNativeStyle.TEXT_MUTED);
                 return;
@@ -330,11 +359,7 @@ public final class LogisticsServerBoxScreenOpener {
             int top = routeViewportTop();
             int visible = routeVisibleRows();
             int last = Math.min(channels.size(), routeScrollRow + visible);
-            if (maxRouteScroll() > 0) {
-                graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.scroll_hint",
-                                (routeScrollRow + 1) + "-" + last, channels.size()),
-                        x + 150, y, LogisticsNativeStyle.TEXT_DIM);
-            }
+            graphics.enableScissor(panelL + 2, panelT + 1, panelR - SCROLLBAR_W - 2, panelB - 1);
             for (int i = routeScrollRow; i < last; i++) {
                 LogisticsControlBoxService.ChannelEntry channel = channels.get(i);
                 int rowY = top + (i - routeScrollRow) * ROUTE_ROW_H;
@@ -347,6 +372,16 @@ public final class LogisticsServerBoxScreenOpener {
                 graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.keep_source"), x + 10, rowY + 28, LogisticsNativeStyle.TEXT_DIM);
                 graphics.drawString(this.font, Component.translatable("gui.simukraft.logistics.channel.keep_target"), x + 116, rowY + 28, LogisticsNativeStyle.TEXT_DIM);
             }
+            graphics.disableScissor();
+            int sbX = panelR - SCROLLBAR_W - 1;
+            int sbTop = panelT + 1;
+            int sbBot = panelB - 1;
+            int trackH = sbBot - sbTop;
+            int total = channels.size();
+            int thumbH = Math.max(8, trackH * visible / Math.max(1, total));
+            int thumbY = sbTop + (maxRouteScroll() > 0 ? (trackH - thumbH) * routeScrollRow / maxRouteScroll() : 0);
+            graphics.fill(sbX, sbTop, sbX + SCROLLBAR_W, sbBot, 0xAA222244);
+            graphics.fill(sbX, thumbY, sbX + SCROLLBAR_W, thumbY + thumbH, 0xCC6666AA);
         }
 
         /** send: 发送物流服务端盒动作包。 */

@@ -65,6 +65,19 @@ public final class CityChunkSqliteRepository {
         }
     }
 
+    public synchronized void deleteChunk(UUID cityId, long chunkLong, String dimensionId) {
+        if (cityId == null) return;
+        try (Connection connection = database.openConnection();
+             PreparedStatement statement = connection.prepareStatement("DELETE FROM city_chunks WHERE city_id = ? AND chunk_long = ? AND dimension_id = ?")) {
+            statement.setString(1, cityId.toString());
+            statement.setLong(2, chunkLong);
+            statement.setString(3, dimensionId);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            SimuKraft.LOGGER.error("Failed to delete city chunk from SQLite", exception);
+        }
+    }
+
     public synchronized void deleteCity(UUID cityId, String dimensionId) {
         if (cityId == null) {
             return;

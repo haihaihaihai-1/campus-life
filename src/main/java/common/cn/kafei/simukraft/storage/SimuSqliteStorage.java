@@ -116,6 +116,13 @@ public final class SimuSqliteStorage {
         }
     }
 
+    public static void deleteCityChunk(ServerLevel level, UUID cityId, long chunkLong) {
+        SimuSqliteStorage storage = openSafely(level);
+        if (storage != null && cityId != null) {
+            storage.cityChunks.deleteChunk(cityId, chunkLong, level.dimension().location().toString());
+        }
+    }
+
     public static CompoundTag loadCityPois(ServerLevel level) {
         SimuSqliteStorage storage = openSafely(level);
         return storage != null ? storage.cityPois.loadAll() : null;
