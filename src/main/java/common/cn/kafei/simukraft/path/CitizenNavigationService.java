@@ -372,6 +372,8 @@ public final class CitizenNavigationService {
             }
             PathSnapshot snapshot = runtime.snapshotCache.acquire(level, currentRequest.startPos(), currentRequest.targetBlockPos(), ServerConfig.pathLocalRadiusBlocks());
             HybridPathfinder.PathSearch search = HybridPathfinder.begin(currentRequest, snapshot);
+            search.stepping.set(true);
+            executor().execute(() -> { try { while (search.result == null) search.step(); } finally { search.stepping.set(false); } });
             runtime.pending.put(citizenId, new RunningRequest(search, cacheKey));
             processed++;
         }
@@ -383,7 +385,7 @@ public final class CitizenNavigationService {
             RunningRequest running = entry.getValue();
             HybridPathfinder.PathSearch search = running.search();
             if (search.result == null && search.stepping.compareAndSet(false, true)) {
-                executor().execute(() -> { search.step(); search.stepping.set(false); });
+                executor().execute(() -> { try { while (search.result == null) search.step(); } finally { search.stepping.set(false); } });
             }
             PathResult result = search.result;
             if (result == null) {
