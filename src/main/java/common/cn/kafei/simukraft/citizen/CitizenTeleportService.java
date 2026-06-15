@@ -18,9 +18,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-@SuppressWarnings("null")
 public final class CitizenTeleportService {
-    private static final double MAX_TELEPORT_VERTICAL_DELTA = 1.0D;
     private static final double MAX_LOW_STAND_OFFSET = 0.75D;
     private static final int NEARBY_SAFE_HORIZONTAL_RADIUS = 2;
     private static final int NEARBY_SAFE_MIN_Y_OFFSET = -1;
@@ -294,13 +292,6 @@ public final class CitizenTeleportService {
         return Math.abs(landing.x - target.x) <= 1.0D
                 && Math.abs(landing.y - target.y) <= 1.0D
                 && Math.abs(landing.z - target.z) <= 1.0D;
-    }
-
-    /**
-     * withinCurrentVerticalRange：传送只能落在 NPC 当前实际高度 ±1 内，避免兜底传送把 NPC 送上屋顶。
-     */
-    private static boolean withinCurrentVerticalRange(Vec3 current, Vec3 landing) {
-        return current != null && landing != null && Math.abs(landing.y - current.y) <= MAX_TELEPORT_VERTICAL_DELTA;
     }
 
     private static void spawnTeleportParticles(ServerLevel level, Vec3 position, RandomSource random) {

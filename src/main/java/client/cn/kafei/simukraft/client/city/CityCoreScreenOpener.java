@@ -824,7 +824,6 @@ public final class CityCoreScreenOpener {
         private int contextMenuWidth;
         private int contextMenuHeight;
         private boolean contextMenuVisible;
-        private boolean batchClaiming;
         private boolean mapConsumerReleased;
 
         private CityChunkMapElement(CityCoreMapResponsePacket packet) {
@@ -1225,7 +1224,6 @@ public final class CityCoreScreenOpener {
         }
 
         private void finishBatchClaim() {
-            batchClaiming = false;
         }
 
         private int screenToChunk(double screenValue, double centerValue, double offsetValue, double chunkSize) {
@@ -1273,7 +1271,6 @@ public final class CityCoreScreenOpener {
             }
             if (event.button == 2) {
                 contextMenuVisible = false;
-                batchClaiming = true;
                 batchClaimChunks.clear();
                 collectBatchClaimChunk(event.x, event.y);
                 event.target.startDrag(BATCH_CLAIM_DRAG_MARKER, null);

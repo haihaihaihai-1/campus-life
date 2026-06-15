@@ -12,9 +12,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class BuildingCatalog {
     private static final String ROOT_DIR = "simukraftbuilding";
+    private static final ConcurrentHashMap<String, List<BuildingDefinition>> CATALOG_CACHE = new ConcurrentHashMap<>();
 
     private BuildingCatalog() {
     }
@@ -30,8 +32,12 @@ public final class BuildingCatalog {
     }
 
     public static List<BuildingDefinition> listBuildings(String category) {
+        return CATALOG_CACHE.computeIfAbsent(normalizeCategory(category), BuildingCatalog::scanCategory);
+    }
+
+    private static List<BuildingDefinition> scanCategory(String normalizedCategory) {
         BuildingBuiltinResourceService.ensureCopied(rootDirectory());
-        Path categoryDir = categoryDirectory(category);
+        Path categoryDir = rootDirectory().resolve(normalizedCategory);
         if (!Files.isDirectory(categoryDir)) {
             return List.of();
         }
@@ -41,13 +47,13 @@ public final class BuildingCatalog {
                     .filter(BuildingCatalog::isMetaFile)
                     .sorted(Comparator.comparing(path -> path.getFileName().toString().toLowerCase(Locale.ROOT)))
                     .forEach(path -> {
-                        BuildingDefinition definition = readDefinition(normalizeCategory(category), path);
+                        BuildingDefinition definition = readDefinition(normalizedCategory, path);
                         if (definition != null) {
                             buildings.add(definition);
                         }
                     });
         } catch (IOException exception) {
-            SimuKraft.LOGGER.error("Simukraft: Failed to scan building category {}", category, exception);
+            SimuKraft.LOGGER.error("Simukraft: Failed to scan building category {}", normalizedCategory, exception);
             return List.of();
         }
         return List.copyOf(buildings);

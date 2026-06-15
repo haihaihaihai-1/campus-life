@@ -38,6 +38,8 @@ public final class CitizenHomeRestService {
     private static final int REST_END_TIME = 0;
     // 记录本晚已经处理过的居民，避免每 40 tick 反复传送造成抖动。
     private static final ConcurrentMap<String, Set<UUID>> RESTED_CITIZENS_BY_LEVEL = new ConcurrentHashMap<>();
+    // 缓存每个 POI 当晚的 home target，仅计算一次，天亮时随 RESTED_CITIZENS_BY_LEVEL 一起清除。
+    private static final ConcurrentMap<String, ConcurrentMap<UUID, Vec3>> HOME_TARGETS_BY_LEVEL = new ConcurrentHashMap<>();
 
     private CitizenHomeRestService() {
     }
@@ -56,8 +58,8 @@ public final class CitizenHomeRestService {
             return;
         }
         Set<UUID> restedCitizens = RESTED_CITIZENS_BY_LEVEL.computeIfAbsent(levelKey, ignored -> ConcurrentHashMap.newKeySet());
-        // 同一张床可能分给多个居民，本 tick 只计算一次安全落点。
-        ConcurrentMap<UUID, Vec3> homeTargets = new ConcurrentHashMap<>();
+        // 同一张床可能分给多个居民，夜间只计算一次安全落点并跨 tick 复用。
+        ConcurrentMap<UUID, Vec3> homeTargets = HOME_TARGETS_BY_LEVEL.computeIfAbsent(levelKey, ignored -> new ConcurrentHashMap<>());
         CityPoiManager poiManager = CityPoiManager.get(level);
         CitizenManager manager = CitizenManager.get(level);
         for (CitizenData citizen : manager.allCitizens()) {
@@ -137,7 +139,9 @@ public final class CitizenHomeRestService {
     // 清理指定存档的夜间回家标记，防止同一维度名在不同存档间复用。
     public static void clearServerCaches(MinecraftServer server) {
         String serverKey = SaveScopedCacheKey.serverKey(server);
-        RESTED_CITIZENS_BY_LEVEL.keySet().removeIf(key -> key.startsWith(serverKey + "|"));
+        String prefix = serverKey + "|";
+        RESTED_CITIZENS_BY_LEVEL.keySet().removeIf(key -> key.startsWith(prefix));
+        HOME_TARGETS_BY_LEVEL.keySet().removeIf(key -> key.startsWith(prefix));
     }
 
     // resolveHomeTarget：解析住宅床边的安全脚底坐标，供回家和新入住生成共用。
