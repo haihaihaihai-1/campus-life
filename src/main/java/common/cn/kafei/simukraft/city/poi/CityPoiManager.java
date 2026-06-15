@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -21,6 +22,15 @@ import java.util.concurrent.ConcurrentMap;
 public final class CityPoiManager extends SavedData {
     private static final String DATA_NAME = SimuKraft.MOD_ID + "_city_pois";
     private static final Factory<CityPoiManager> FACTORY = new Factory<>(CityPoiManager::new, CityPoiManager::load, null);
+    private static final ConcurrentHashMap<UUID, CityPoiData> GLOBAL_POI_CACHE = new ConcurrentHashMap<>();
+
+    public static CityPoiData lookupPoi(UUID poiId) {
+        return poiId == null ? null : GLOBAL_POI_CACHE.get(poiId);
+    }
+
+    public static void clearGlobalCache() {
+        GLOBAL_POI_CACHE.clear();
+    }
 
     private final ConcurrentMap<UUID, CityPoiData> pois = new ConcurrentHashMap<>();
     // cityPoiIndex 和 posIndex 是查询加速索引，真实数据仍以 pois 为准。
@@ -62,6 +72,7 @@ public final class CityPoiManager extends SavedData {
     }
 
     public synchronized void reloadFromSqlite(ServerLevel level) {
+        pois.forEach((id, poi) -> GLOBAL_POI_CACHE.remove(id));
         pois.clear();
         cityPoiIndex.clear();
         posIndex.clear();
@@ -69,23 +80,31 @@ public final class CityPoiManager extends SavedData {
         loadFromSqlite(level);
     }
 
-    private synchronized void loadFromSqlite(ServerLevel level) {
+    private void loadFromSqlite(ServerLevel level) {
         if (sqliteLoaded) {
             return;
         }
-        sqliteLoaded = true;
-        // SQLite 是主要持久化来源；SavedData 作为兼容兜底，加载后重建索引。
-        CompoundTag sqliteTag = SimuSqliteStorage.loadCityPois(level);
-        if (sqliteTag == null || sqliteTag.isEmpty()) {
-            return;
+        synchronized (this) {
+            if (sqliteLoaded) {
+                return;
+            }
+            sqliteLoaded = true;
         }
-        CityPoiManager loaded = load(sqliteTag, level.registryAccess());
-        pois.clear();
-        cityPoiIndex.clear();
-        posIndex.clear();
-        pois.putAll(loaded.pois);
-        cityPoiIndex.putAll(loaded.cityPoiIndex);
-        posIndex.putAll(loaded.posIndex);
+        // SQLite 是主要持久化来源；SavedData 作为兼容兜底，加载后重建索引。在后台线程执行 I/O，不阻塞服务器线程。
+        ServerLevel captured = level;
+        CompletableFuture.runAsync(() -> {
+            CompoundTag sqliteTag = SimuSqliteStorage.loadCityPois(captured);
+            if (sqliteTag == null || sqliteTag.isEmpty()) {
+                return;
+            }
+            CityPoiManager loaded = load(sqliteTag, captured.registryAccess());
+            synchronized (CityPoiManager.this) {
+                pois.putAll(loaded.pois);
+                cityPoiIndex.putAll(loaded.cityPoiIndex);
+                posIndex.putAll(loaded.posIndex);
+            }
+            GLOBAL_POI_CACHE.putAll(loaded.pois);
+        });
     }
 
     private void savePoiIncremental(CityPoiData poi) {
@@ -117,6 +136,7 @@ public final class CityPoiManager extends SavedData {
                 replacePoi(existing, updated);
                 CityJobAssignmentService.invalidate(existing.cityId());
                 CityJobAssignmentService.invalidate(cityId);
+                GLOBAL_POI_CACHE.put(updated.poiId(), updated);
                 savePoiIncremental(updated);
                 setDirty();
                 return updated;
@@ -125,6 +145,7 @@ public final class CityPoiManager extends SavedData {
         CityPoiData poi = new CityPoiData(requestedPoiId != null ? requestedPoiId : UUID.randomUUID(), cityId, immutablePos, type, Math.max(0, capacity), true);
         putLoaded(poi);
         CityJobAssignmentService.invalidate(cityId);
+        GLOBAL_POI_CACHE.put(poi.poiId(), poi);
         savePoiIncremental(poi);
         setDirty();
         return poi;
@@ -140,6 +161,7 @@ public final class CityPoiManager extends SavedData {
             return false;
         }
         pois.put(poiId, poi.withActive(false));
+        GLOBAL_POI_CACHE.put(poiId, pois.get(poiId));
         if (level != null) {
             SimuSqliteStorage.saveCityPoi(level, pois.get(poiId).toTag());
         }
@@ -154,6 +176,7 @@ public final class CityPoiManager extends SavedData {
             return false;
         }
         pois.put(poiId, poi.withActive(false));
+        GLOBAL_POI_CACHE.put(poiId, pois.get(poiId));
         if (level != null) {
             SimuSqliteStorage.saveCityPoi(level, pois.get(poiId).toTag());
         }
@@ -171,6 +194,7 @@ public final class CityPoiManager extends SavedData {
             CityPoiData poi = pois.remove(poiId);
             if (poi != null) {
                 posIndex.remove(poi.pos(), poiId);
+                GLOBAL_POI_CACHE.remove(poiId);
             }
         });
         CityJobAssignmentService.invalidate(cityId);
