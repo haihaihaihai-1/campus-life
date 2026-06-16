@@ -171,12 +171,16 @@ final class PathCrowdCoordinator {
         return STATES.computeIfAbsent(levelKey(level), key -> new ConcurrentHashMap<>());
     }
 
+    private static final java.util.WeakHashMap<MinecraftServer, String> SERVER_KEY_CACHE = new java.util.WeakHashMap<>();
+
     private static String levelKey(ServerLevel level) {
         return serverKey(level.getServer()) + "|" + level.dimension().location();
     }
 
     private static String serverKey(MinecraftServer server) {
-        return server == null ? "unknown" : server.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT);
+        if (server == null) return "unknown";
+        return SERVER_KEY_CACHE.computeIfAbsent(server, s ->
+                s.getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT));
     }
 
     private record CrowdMoveState(double dirX, double dirZ, long gameTime) {

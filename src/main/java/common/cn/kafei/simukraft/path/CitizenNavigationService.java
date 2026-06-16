@@ -777,12 +777,12 @@ public final class CitizenNavigationService {
     private static final class LevelRuntime {
         private final ConcurrentLinkedQueue<UUID> queue = new ConcurrentLinkedQueue<>();
         private final java.util.Set<UUID> queuedCitizenIds = ConcurrentHashMap.newKeySet();
-        private final ConcurrentMap<UUID, PathRequest> latestRequests = new ConcurrentHashMap<>();
-        private final ConcurrentMap<UUID, RunningRequest> pending = new ConcurrentHashMap<>();
-        private final ConcurrentMap<UUID, ActiveNavigation> active = new ConcurrentHashMap<>();
-        private final ConcurrentMap<UUID, Long> cooldowns = new ConcurrentHashMap<>();
-        private final ConcurrentMap<UUID, Long> blockedSince = new ConcurrentHashMap<>();
-        private final ConcurrentMap<Long, OpenedDoor> openedDoors = new ConcurrentHashMap<>();
+        private final Map<UUID, PathRequest> latestRequests = new java.util.HashMap<>();
+        private final Map<UUID, RunningRequest> pending = new java.util.HashMap<>();
+        private final Map<UUID, ActiveNavigation> active = new java.util.HashMap<>();
+        private final Map<UUID, Long> cooldowns = new java.util.HashMap<>();
+        private final Map<UUID, Long> blockedSince = new java.util.HashMap<>();
+        private final Map<Long, OpenedDoor> openedDoors = new java.util.HashMap<>();
         private final PathResultCache pathCache = new PathResultCache();
         private final PathSnapshotCache snapshotCache = new PathSnapshotCache();
         private long loadedCitizenCountTick = Long.MIN_VALUE;
@@ -812,11 +812,34 @@ public final class CitizenNavigationService {
         private int actionWaypointIndex = -1;
         private boolean jumpTriggered;
         private double lastDistance = Double.MAX_VALUE;
+        private final boolean[] turnFlags;
+        private final double[] segmentLengths;
         private ActiveNavigation(PathResult result) {
             this.target = result.target();
             this.intent = result.intent();
             this.waypoints = result.waypoints();
             this.waypointIndex = waypoints.size() > 1 ? 1 : 0;
+            int n = waypoints.size();
+            this.turnFlags = new boolean[n];
+            for (int i = 1; i < n - 1; i++) {
+                Vec3 prev = waypoints.get(i - 1).position();
+                Vec3 cur  = waypoints.get(i).position();
+                Vec3 nxt  = waypoints.get(i + 1).position();
+                double inX = cur.x - prev.x, inZ = cur.z - prev.z;
+                double outX = nxt.x - cur.x,  outZ = nxt.z - cur.z;
+                double inLen = Math.sqrt(inX * inX + inZ * inZ);
+                double outLen = Math.sqrt(outX * outX + outZ * outZ);
+                if (inLen >= 1.0E-4D && outLen >= 1.0E-4D) {
+                    turnFlags[i] = (inX * outX + inZ * outZ) / (inLen * outLen) < TURN_DOT_THRESHOLD;
+                }
+            }
+            this.segmentLengths = new double[n];
+            for (int i = 1; i < n; i++) {
+                Vec3 from = waypoints.get(i - 1).position();
+                Vec3 to   = waypoints.get(i).position();
+                double dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+                this.segmentLengths[i] = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            }
         }
 
         private boolean sameTarget(Vec3 other) {
@@ -997,7 +1020,7 @@ public final class CitizenNavigationService {
                 return to;
             }
             double progress = ((position.x - from.x) * segmentX + (position.y - from.y) * segmentY + (position.z - from.z) * segmentZ) / segmentLengthSqr;
-            double segmentLength = Math.sqrt(segmentLengthSqr);
+            double segmentLength = segmentLengths[index];
             double lookahead = requiresWaypointCentering(index, waypoint.mode()) ? CORNER_LOOKAHEAD_BLOCKS : SEGMENT_LOOKAHEAD_BLOCKS;
             double targetProgress = clamp(progress, 0.0D, 1.0D) + lookahead / segmentLength;
             targetProgress = clamp(targetProgress, 0.0D, 1.0D);
@@ -1138,23 +1161,7 @@ public final class CitizenNavigationService {
          * the goal cell.
          */
         private boolean isTurnWaypoint(int index) {
-            if (index <= 0 || index >= waypoints.size() - 1) {
-                return false;
-            }
-            Vec3 previous = waypoints.get(index - 1).position();
-            Vec3 current = waypoints.get(index).position();
-            Vec3 next = waypoints.get(index + 1).position();
-            double inX = current.x - previous.x;
-            double inZ = current.z - previous.z;
-            double outX = next.x - current.x;
-            double outZ = next.z - current.z;
-            double inLength = Math.sqrt(inX * inX + inZ * inZ);
-            double outLength = Math.sqrt(outX * outX + outZ * outZ);
-            if (inLength < 1.0E-4D || outLength < 1.0E-4D) {
-                return false;
-            }
-            double directionDot = (inX * outX + inZ * outZ) / (inLength * outLength);
-            return directionDot < TURN_DOT_THRESHOLD;
+            return index > 0 && index < waypoints.size() - 1 && turnFlags[index];
         }
 
         private double arrivalDistance(int index, MovementMode mode) {
@@ -1184,8 +1191,11 @@ public final class CitizenNavigationService {
     }
 
     private static final class SaveKey {
-        private static String serverKey(MinecraftServer server) {
-            return server == null ? "unknown" : server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT);
+        private static final java.util.WeakHashMap<net.minecraft.server.MinecraftServer, String> CACHE = new java.util.WeakHashMap<>();
+        private static String serverKey(net.minecraft.server.MinecraftServer server) {
+            if (server == null) return "unknown";
+            return CACHE.computeIfAbsent(server, s ->
+                    s.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT));
         }
     }
 }

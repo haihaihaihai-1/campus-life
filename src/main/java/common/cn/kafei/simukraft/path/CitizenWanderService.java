@@ -159,12 +159,11 @@ public final class CitizenWanderService {
         WANDER_COOLDOWNS.put(cooldownKey(level, citizenId), level.getGameTime() + Math.max(1, ticks));
     }
 
+    private static final java.util.WeakHashMap<net.minecraft.server.MinecraftServer, String> SERVER_KEY_CACHE = new java.util.WeakHashMap<>();
+
     private static String cooldownKey(ServerLevel level, UUID citizenId) {
-        String serverKey = level.getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
-                .toAbsolutePath()
-                .normalize()
-                .toString()
-                .toLowerCase(Locale.ROOT);
+        String serverKey = SERVER_KEY_CACHE.computeIfAbsent(level.getServer(), s ->
+                s.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize().toString().toLowerCase(Locale.ROOT));
         return serverKey + "|" + level.dimension().location() + "|" + citizenId;
     }
 }

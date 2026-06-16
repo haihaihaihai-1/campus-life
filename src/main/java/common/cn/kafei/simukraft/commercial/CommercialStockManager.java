@@ -11,15 +11,20 @@ import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @SuppressWarnings("null")
 public final class CommercialStockManager extends SavedData {
+    private static final ExecutorService IO_EXECUTOR = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "simukraft-commercial-stock-io"); t.setDaemon(true); return t; });
     private static final String DATA_NAME = SimuKraft.MOD_ID + "_commercial_stock";
     private static final Factory<CommercialStockManager> FACTORY = new Factory<>(CommercialStockManager::new, CommercialStockManager::load, null);
 
     private final ConcurrentMap<BlockPos, ConcurrentMap<String, CommercialStockData>> stock = new ConcurrentHashMap<>();
+    private final Set<String> pendingSaves = ConcurrentHashMap.newKeySet();
     private volatile boolean sqliteLoaded;
     private volatile ServerLevel level;
 
@@ -93,15 +98,15 @@ public final class CommercialStockManager extends SavedData {
 
     /** persist: 持久化单个库存条目。 */
     public void persist(CommercialStockData data) {
-        if (data == null) {
-            return;
-        }
+        if (data == null) return;
         data.touch();
         stock.computeIfAbsent(data.boxPos(), ignored -> new ConcurrentHashMap<>()).put(data.itemId(), data);
         setDirty();
-        if (level != null) {
-            SimuSqliteStorage.saveCommercialStockEntry(level, data.toTag());
-        }
+        ServerLevel lv = level;
+        String key = data.boxPos().asLong() + "|" + data.itemId();
+        if (lv == null || !pendingSaves.add(key)) return;
+        CompoundTag snap = data.toTag();
+        IO_EXECUTOR.execute(() -> { try { SimuSqliteStorage.saveCommercialStockEntry(lv, snap); } finally { pendingSaves.remove(key); } });
     }
 
     /** removeBox: 删除指定商业箱的所有库存。 */

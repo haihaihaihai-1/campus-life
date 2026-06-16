@@ -1,16 +1,16 @@
 package common.cn.kafei.simukraft.path;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.Collection;
-import java.util.Map;
 
-public record PathSnapshot(ResourceLocation dimensionId, BlockPos startPos, BlockPos targetPos, Map<Long, PathCell> cells,
+public record PathSnapshot(ResourceLocation dimensionId, BlockPos startPos, BlockPos targetPos, Long2ObjectOpenHashMap<PathCell> cells,
                            LongSet bodyPassages, int minY, int maxY, long createdAt, boolean complete) {
-    public PathSnapshot(ResourceLocation dimensionId, BlockPos startPos, BlockPos targetPos, Map<Long, PathCell> cells,
+    public PathSnapshot(ResourceLocation dimensionId, BlockPos startPos, BlockPos targetPos, Long2ObjectOpenHashMap<PathCell> cells,
                         int minY, int maxY, long createdAt, boolean complete) {
         this(dimensionId, startPos, targetPos, cells, LongSets.EMPTY_SET, minY, maxY, createdAt, complete);
     }

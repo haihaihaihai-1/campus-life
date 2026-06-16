@@ -73,22 +73,51 @@ public final class CitySqliteRepository {
     public synchronized CompoundTag loadAll() {
         CompoundTag tag = new CompoundTag();
         ListTag cities = new ListTag();
-        try (Connection connection = database.openConnection();
-             PreparedStatement statement = connection.prepareStatement("SELECT * FROM cities ORDER BY city_id");
-             ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) {
-                String cityId = resultSet.getString("city_id");
-                CompoundTag cityTag = new CompoundTag();
-                cityTag.putUUID("CityId", java.util.UUID.fromString(cityId));
-                cityTag.putString("CityName", resultSet.getString("city_name"));
-                cityTag.putInt("CoreX", resultSet.getInt("core_x"));
-                cityTag.putInt("CoreY", resultSet.getInt("core_y"));
-                cityTag.putInt("CoreZ", resultSet.getInt("core_z"));
-                cityTag.putDouble("Funds", resultSet.getDouble("funds"));
-                cityTag.putInt("CityLevel", resultSet.getInt("city_level"));
-                cityTag.put("Members", loadCityMembers(connection, cityId));
-                cityTag.put("FinanceTransactions", loadFinanceTransactions(connection, cityId));
-                cities.add(cityTag);
+        try (Connection connection = database.openConnection()) {
+            // Bulk-load all members, group by city_id
+            java.util.Map<String, ListTag> membersByCity = new java.util.HashMap<>();
+            try (PreparedStatement s = connection.prepareStatement("SELECT * FROM city_members ORDER BY city_id, player_id");
+                 ResultSet rs = s.executeQuery()) {
+                while (rs.next()) {
+                    CompoundTag member = new CompoundTag();
+                    member.putUUID("PlayerId", java.util.UUID.fromString(rs.getString("player_id")));
+                    member.putString("PlayerName", rs.getString("player_name"));
+                    member.putString("PermissionLevel", rs.getString("permission_level"));
+                    membersByCity.computeIfAbsent(rs.getString("city_id"), k -> new ListTag()).add(member);
+                }
+            }
+            // Bulk-load all finance transactions, group by city_id
+            java.util.Map<String, ListTag> financesByCity = new java.util.HashMap<>();
+            try (PreparedStatement s = connection.prepareStatement("SELECT * FROM finance_transactions ORDER BY city_id, sort_index");
+                 ResultSet rs = s.executeQuery()) {
+                while (rs.next()) {
+                    CompoundTag finance = new CompoundTag();
+                    finance.putLong("Time", rs.getLong("time"));
+                    SqliteNbtHelper.putNullableUuid(finance, "ActorId", rs.getString("actor_id"));
+                    finance.putString("ActorName", rs.getString("actor_name"));
+                    finance.putDouble("Amount", rs.getDouble("amount"));
+                    finance.putDouble("BalanceAfter", rs.getDouble("balance_after"));
+                    finance.putString("Type", rs.getString("type"));
+                    finance.putString("Reason", rs.getString("reason"));
+                    financesByCity.computeIfAbsent(rs.getString("city_id"), k -> new ListTag()).add(finance);
+                }
+            }
+            try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM cities ORDER BY city_id");
+                 ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String cityId = resultSet.getString("city_id");
+                    CompoundTag cityTag = new CompoundTag();
+                    cityTag.putUUID("CityId", java.util.UUID.fromString(cityId));
+                    cityTag.putString("CityName", resultSet.getString("city_name"));
+                    cityTag.putInt("CoreX", resultSet.getInt("core_x"));
+                    cityTag.putInt("CoreY", resultSet.getInt("core_y"));
+                    cityTag.putInt("CoreZ", resultSet.getInt("core_z"));
+                    cityTag.putDouble("Funds", resultSet.getDouble("funds"));
+                    cityTag.putInt("CityLevel", resultSet.getInt("city_level"));
+                    cityTag.put("Members", membersByCity.getOrDefault(cityId, new ListTag()));
+                    cityTag.put("FinanceTransactions", financesByCity.getOrDefault(cityId, new ListTag()));
+                    cities.add(cityTag);
+                }
             }
             tag.put("Cities", cities);
             return cities.isEmpty() ? null : tag;
@@ -145,41 +174,4 @@ public final class CitySqliteRepository {
         }
     }
 
-    private ListTag loadCityMembers(Connection connection, String cityId) throws SQLException {
-        ListTag members = new ListTag();
-        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM city_members WHERE city_id = ? ORDER BY player_id")) {
-            statement.setString(1, cityId);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    CompoundTag member = new CompoundTag();
-                    member.putUUID("PlayerId", java.util.UUID.fromString(resultSet.getString("player_id")));
-                    member.putString("PlayerName", resultSet.getString("player_name"));
-                    member.putString("PermissionLevel", resultSet.getString("permission_level"));
-                    members.add(member);
-                }
-            }
-        }
-        return members;
-    }
-
-    private ListTag loadFinanceTransactions(Connection connection, String cityId) throws SQLException {
-        ListTag finances = new ListTag();
-        try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM finance_transactions WHERE city_id = ? ORDER BY sort_index")) {
-            statement.setString(1, cityId);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    CompoundTag finance = new CompoundTag();
-                    finance.putLong("Time", resultSet.getLong("time"));
-                    SqliteNbtHelper.putNullableUuid(finance, "ActorId", resultSet.getString("actor_id"));
-                    finance.putString("ActorName", resultSet.getString("actor_name"));
-                    finance.putDouble("Amount", resultSet.getDouble("amount"));
-                    finance.putDouble("BalanceAfter", resultSet.getDouble("balance_after"));
-                    finance.putString("Type", resultSet.getString("type"));
-                    finance.putString("Reason", resultSet.getString("reason"));
-                    finances.add(finance);
-                }
-            }
-        }
-        return finances;
-    }
 }

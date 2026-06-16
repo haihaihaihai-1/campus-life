@@ -172,13 +172,7 @@ public final class SimuKraft {
             FarmlandFarmingService.tick(level);
             HudSyncService.tick(level);
             CityPermissionInviteService.tick(level);
-            if (level.getGameTime() % 200L == 0L) {
-                saveDimensionSqlite(level);
-            }
         });
-        if (event.getServer().overworld().getGameTime() % 200L == 0L) {
-            saveGlobalSqlite(event.getServer());
-        }
         PlayerWelcomeService.tick(event.getServer());
     }
 

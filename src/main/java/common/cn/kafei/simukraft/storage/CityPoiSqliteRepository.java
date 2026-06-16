@@ -23,8 +23,21 @@ public final class CityPoiSqliteRepository {
             SqliteNbtHelper.clearTables(connection, "city_pois");
             try {
                 ListTag pois = tag.getList("Pois", CompoundTag.TAG_COMPOUND);
-                for (int i = 0; i < pois.size(); i++) {
-                    savePoi(connection, pois.getCompound(i));
+                if (!pois.isEmpty()) {
+                    try (PreparedStatement statement = connection.prepareStatement(
+                            "INSERT INTO city_pois(poi_id, city_id, pos_long, type, capacity, active) VALUES(?, ?, ?, ?, ?, ?) ON CONFLICT(poi_id) DO UPDATE SET city_id = excluded.city_id, pos_long = excluded.pos_long, type = excluded.type, capacity = excluded.capacity, active = excluded.active")) {
+                        for (int i = 0; i < pois.size(); i++) {
+                            CompoundTag poi = pois.getCompound(i);
+                            statement.setString(1, poi.getUUID("PoiId").toString());
+                            statement.setString(2, poi.getUUID("CityId").toString());
+                            statement.setLong(3, poi.getLong("Pos"));
+                            statement.setString(4, poi.getString("Type"));
+                            statement.setInt(5, poi.getInt("Capacity"));
+                            statement.setInt(6, poi.getBoolean("Active") ? 1 : 0);
+                            statement.addBatch();
+                        }
+                        statement.executeBatch();
+                    }
                 }
                 connection.commit();
             } catch (SQLException exception) {

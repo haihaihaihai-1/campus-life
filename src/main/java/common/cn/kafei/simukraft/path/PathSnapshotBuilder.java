@@ -19,9 +19,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Samples the live world on the server thread into an immutable {@link PathSnapshot}.
  *
@@ -58,7 +55,7 @@ final class PathSnapshotBuilder {
     static PathSnapshot build(ServerLevel level, BlockPos start, BlockPos target, int radius) {
         SnapshotBounds bounds = bounds(level, start, target, radius);
         SampleCache cache = new SampleCache(level);
-        Map<Long, PathCell> cells = new HashMap<>();
+        Long2ObjectOpenHashMap<PathCell> cells = new Long2ObjectOpenHashMap<>();
         LongOpenHashSet bodyPassages = new LongOpenHashSet();
         BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         boolean complete = true;
@@ -82,7 +79,7 @@ final class PathSnapshotBuilder {
             }
         }
         return new PathSnapshot(level.dimension().location(), start.immutable(), target.immutable(),
-                Map.copyOf(cells), LongSets.unmodifiable(bodyPassages), bounds.minY(), bounds.maxY(), level.getGameTime(), complete);
+                cells, LongSets.unmodifiable(bodyPassages), bounds.minY(), bounds.maxY(), level.getGameTime(), complete);
     }
 
     /**
@@ -263,7 +260,9 @@ final class PathSnapshotBuilder {
                         continue;
                     }
                     for (AABB box : shape.toAabbs()) {
-                        if (box.move(x, y, z).intersects(npcBox)) {
+                        if (box.maxX + x > npcBox.minX && box.minX + x < npcBox.maxX
+                                && box.maxY + y > npcBox.minY && box.minY + y < npcBox.maxY
+                                && box.maxZ + z > npcBox.minZ && box.minZ + z < npcBox.maxZ) {
                             return false;
                         }
                     }

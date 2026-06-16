@@ -4,11 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSets;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
@@ -522,7 +521,7 @@ class HybridPathfinderRegressionTest {
      * In-memory builder for an immutable {@link PathSnapshot} scene.
      */
     private static final class Scene {
-        private final Map<Long, PathCell> cells = new HashMap<>();
+        private final Long2ObjectOpenHashMap<PathCell> cells = new Long2ObjectOpenHashMap<>();
         private final LongOpenHashSet bodyPassages = new LongOpenHashSet();
         private int minY = Integer.MAX_VALUE;
         private int maxY = Integer.MIN_VALUE;
@@ -559,7 +558,7 @@ class HybridPathfinderRegressionTest {
         private PathCase path(int startX, int startY, int startZ, int targetX, int targetY, int targetZ) {
             BlockPos start = new BlockPos(startX, startY, startZ);
             BlockPos targetBlock = new BlockPos(targetX, targetY, targetZ);
-            PathSnapshot snapshot = new PathSnapshot(DIMENSION, start, targetBlock, Map.copyOf(cells),
+            PathSnapshot snapshot = new PathSnapshot(DIMENSION, start, targetBlock, cells,
                     LongSets.unmodifiable(bodyPassages), minY, maxY, 0L, true);
             Vec3 target = new Vec3(targetX + 0.5D, targetY, targetZ + 0.5D);
             PathRequest request = new PathRequest(UUID.randomUUID(), DIMENSION, start, target, MovementIntent.WALK, 0L);

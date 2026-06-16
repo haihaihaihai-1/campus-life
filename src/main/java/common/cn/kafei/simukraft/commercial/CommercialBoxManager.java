@@ -10,15 +10,20 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @SuppressWarnings("null")
 public final class CommercialBoxManager extends SavedData {
+    private static final ExecutorService IO_EXECUTOR = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "simukraft-commercial-box-io"); t.setDaemon(true); return t; });
     private static final String DATA_NAME = SimuKraft.MOD_ID + "_commercial_boxes";
     private static final Factory<CommercialBoxManager> FACTORY = new Factory<>(CommercialBoxManager::new, CommercialBoxManager::load, null);
 
     private final ConcurrentMap<BlockPos, CommercialBoxData> boxes = new ConcurrentHashMap<>();
+    private final Set<BlockPos> pendingSaves = ConcurrentHashMap.newKeySet();
     private volatile boolean sqliteLoaded;
     private volatile ServerLevel level;
 
@@ -87,15 +92,15 @@ public final class CommercialBoxManager extends SavedData {
 
     /** persist: 持久化单个商业箱状态。 */
     public void persist(CommercialBoxData data) {
-        if (data == null) {
-            return;
-        }
+        if (data == null) return;
         data.touch();
         boxes.put(data.boxPos(), data);
         setDirty();
-        if (level != null) {
-            SimuSqliteStorage.saveCommercialBox(level, data.toTag());
-        }
+        ServerLevel lv = level;
+        BlockPos key = data.boxPos();
+        if (lv == null || !pendingSaves.add(key)) return;
+        CompoundTag snap = data.toTag();
+        IO_EXECUTOR.execute(() -> { try { SimuSqliteStorage.saveCommercialBox(lv, snap); } finally { pendingSaves.remove(key); } });
     }
 
     /** remove: 删除商业箱状态。 */

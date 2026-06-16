@@ -643,17 +643,14 @@ final class HybridPathfinder {
         }
         PathCell best = null;
         double bestDistance = Double.MAX_VALUE;
-        for (PathCell cell : snapshot.allCells()) {
-            int dx = Math.abs(cell.x() - target.getX());
-            int dy = Math.abs(cell.y() - target.getY());
-            int dz = Math.abs(cell.z() - target.getZ());
-            if (dx > range || dy > range || dz > range) {
-                continue;
-            }
-            double distance = cell.pos().distSqr(target);
-            if (distance < bestDistance) {
-                best = cell;
-                bestDistance = distance;
+        for (int dx = -range; dx <= range; dx++) {
+            for (int dy = -range; dy <= range; dy++) {
+                for (int dz = -range; dz <= range; dz++) {
+                    PathCell cell = snapshot.cell(target.getX() + dx, target.getY() + dy, target.getZ() + dz);
+                    if (cell == null) continue;
+                    double d = (double)(dx * dx + dy * dy + dz * dz);
+                    if (d < bestDistance) { best = cell; bestDistance = d; }
+                }
             }
         }
         return best;

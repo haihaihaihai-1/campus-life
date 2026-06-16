@@ -51,7 +51,9 @@ public final class CitizenHomeRestService {
         String levelKey = SaveScopedCacheKey.levelKey(level);
         if (!isRestTime(level)) {
             RESTED_CITIZENS_BY_LEVEL.remove(levelKey);
-            restoreHomeRestingCitizens(level);
+            if (level.getGameTime() % 20L == 0L) {
+                restoreHomeRestingCitizens(level);
+            }
             return;
         }
         if (level.getGameTime() % 40L != 0L) {

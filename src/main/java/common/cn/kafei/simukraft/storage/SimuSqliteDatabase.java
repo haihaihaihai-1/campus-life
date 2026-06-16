@@ -53,7 +53,13 @@ public final class SimuSqliteDatabase implements Closeable {
         return (Connection) Proxy.newProxyInstance(
             Connection.class.getClassLoader(),
             new Class[]{Connection.class},
-            (proxy, method, args) -> "close".equals(method.getName()) ? null : method.invoke(c, args));
+            (proxy, method, args) -> {
+                if ("close".equals(method.getName())) {
+                    try { if (!c.getAutoCommit()) c.setAutoCommit(true); } catch (java.sql.SQLException ignored) {}
+                    return null;
+                }
+                return method.invoke(c, args);
+            });
     }
 
     public Path databasePath() {

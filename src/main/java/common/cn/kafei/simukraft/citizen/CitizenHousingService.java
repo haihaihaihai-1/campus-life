@@ -49,13 +49,10 @@ public final class CitizenHousingService {
         if (level == null || cityId == null || spawnPos == null || maxSpawns <= 0) {
             return 0;
         }
+        java.util.List<CityPoiData> vacantHomes = new java.util.ArrayList<>(vacantHomes(level, cityId));
         int spawned = 0;
-        while (spawned < maxSpawns) {
-            List<CityPoiData> vacantHomes = vacantHomes(level, cityId);
-            if (vacantHomes.isEmpty()) {
-                break;
-            }
-            CityPoiData home = vacantHomes.getFirst();
+        while (spawned < maxSpawns && !vacantHomes.isEmpty()) {
+            CityPoiData home = vacantHomes.remove(0);
             Vec3 spawnTarget = resolveNewResidentSpawnTarget(level, home, spawnPos);
             var citizen = CitizenService.spawnCitizen(level, spawnTarget, cityId, true);
             if (citizen.isEmpty()) {

@@ -29,12 +29,21 @@ public final class HudSyncService {
         if (level == null || level.getGameTime() % SYNC_INTERVAL_TICKS != 0L) {
             return;
         }
-        for (ServerPlayer player : level.players()) {
-            syncToPlayer(player, false);
+        java.util.List<ServerPlayer> players = level.players();
+        if (players.isEmpty()) {
+            return;
+        }
+        int worldPopulation = CitizenManager.get(level).getWorldPopulation();
+        for (ServerPlayer player : players) {
+            syncToPlayer(player, false, worldPopulation);
         }
     }
 
     public static void syncToPlayer(ServerPlayer player, boolean force) {
+        syncToPlayer(player, force, CitizenManager.get(player.serverLevel()).getWorldPopulation());
+    }
+
+    private static void syncToPlayer(ServerPlayer player, boolean force, int worldPopulation) {
         if (player == null) {
             return;
         }
@@ -42,7 +51,6 @@ public final class HudSyncService {
         Optional<CityData> city = CityService.findPlayerCity(level, player.getUUID());
         int currentDay = (int) Math.max(1L, level.getDayTime() / 24000L + 1L);
         boolean creativeMode = player.isCreative();
-        int worldPopulation = CitizenManager.get(level).getWorldPopulation();
         HudState state = city.map(cityData -> {
             CityPermissionLevel permissionLevel = CityService.getPlayerPermission(cityData, player.getUUID());
             return new HudState(

@@ -37,8 +37,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -50,6 +53,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("null")
 public final class PlannerWorkService {
     private static final ConcurrentMap<String, LevelRuntime> LEVEL_RUNTIMES = new ConcurrentHashMap<>();
+    private static final ExecutorService IO_EXECUTOR = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "simukraft-planner-io"); t.setDaemon(true); return t; });
     private static final int SAVE_BLOCK_INTERVAL = 16;
     private static final int SCAN_LIMIT_PER_TICK = 2048;
     private static final long MATERIAL_RETRY_INTERVAL_TICKS = 40L;
@@ -92,7 +96,7 @@ public final class PlannerWorkService {
             return;
         }
         runtime(level).tasks.remove(citizenId);
-        SimuSqliteStorage.deletePlanningTask(level, citizenId);
+        IO_EXECUTOR.execute(() -> SimuSqliteStorage.deletePlanningTask(level, citizenId));
     }
 
     public static boolean hasActiveTask(ServerLevel level, UUID citizenId) {
@@ -140,7 +144,7 @@ public final class PlannerWorkService {
             return;
         }
         TaskRuntime removed = runtime(level).tasks.remove(citizenId);
-        SimuSqliteStorage.deletePlanningTask(level, citizenId);
+        IO_EXECUTOR.execute(() -> SimuSqliteStorage.deletePlanningTask(level, citizenId));
         if (removed != null) {
             CitizenService.findCitizen(level, citizenId)
                     .filter(citizen -> !citizen.dead())
@@ -162,6 +166,7 @@ public final class PlannerWorkService {
                     .filter(citizen -> !citizen.dead())
                     .ifPresent(citizen -> flushXp(level, citizen, taskRuntime));
             PlanningTaskData paused = taskRuntime.task.withStatus(PlanningTaskStatus.PAUSED_OFFLINE.id(), System.currentTimeMillis());
+            waitForPendingSave(taskRuntime);
             SimuSqliteStorage.savePlanningTask(level, paused);
         });
     }
@@ -239,7 +244,7 @@ public final class PlannerWorkService {
             }
             PlanningTaskData updated = task.withProgress(index, completed, PlanningTaskStatus.WAITING_MATERIALS.id(), now);
             taskRuntime.task = updated;
-            SimuSqliteStorage.savePlanningTask(level, updated);
+            persistAsync(level, taskRuntime, updated);
             setStatus(level, citizen, taskRuntime, "缺少方块: 规划" + progressSuffix(updated), CitizenWorkStatus.WORKING, PlanningTaskStatus.WAITING_MATERIALS);
             return;
         }
@@ -252,7 +257,7 @@ public final class PlannerWorkService {
         setStatus(level, citizen, taskRuntime, "规划中(" + operationLabel(task.operation()) + ")" + progressSuffix(updated), CitizenWorkStatus.WORKING, PlanningTaskStatus.PLANNING);
         if (index - taskRuntime.lastSavedIndex >= SAVE_BLOCK_INTERVAL) {
             taskRuntime.lastSavedIndex = index;
-            SimuSqliteStorage.savePlanningTask(level, updated);
+            persistAsync(level, taskRuntime, updated);
         }
     }
 
@@ -344,7 +349,7 @@ public final class PlannerWorkService {
     private static void completeTask(ServerLevel level, CitizenData citizen, LevelRuntime runtime, TaskRuntime taskRuntime) {
         flushXp(level, citizen, taskRuntime);
         runtime.tasks.remove(citizen.uuid(), taskRuntime);
-        SimuSqliteStorage.deletePlanningTask(level, citizen.uuid());
+        IO_EXECUTOR.execute(() -> SimuSqliteStorage.deletePlanningTask(level, citizen.uuid()));
         // 规划师完成任务后保留雇佣，转待命，等待下一个规划任务。
         citizen.setWorkStatus(CitizenWorkStatus.IDLE);
         citizen.setStatusLabel("规划完成，待命中");
@@ -354,11 +359,15 @@ public final class PlannerWorkService {
     }
 
     private static void hydrate(ServerLevel level, LevelRuntime runtime) {
-        if (runtime.hydrated) {
+        if (runtime.hydrated) return;
+        if (runtime.loadFuture == null) {
+            runtime.loadFuture = CompletableFuture.supplyAsync(() -> SimuSqliteStorage.loadPlanningTasks(level), IO_EXECUTOR);
             return;
         }
+        if (!runtime.loadFuture.isDone()) return;
         runtime.hydrated = true;
-        List<PlanningTaskData> tasks = SimuSqliteStorage.loadPlanningTasks(level);
+        List<PlanningTaskData> tasks;
+        try { tasks = runtime.loadFuture.get(); } catch (Exception e) { tasks = List.of(); }
         for (PlanningTaskData task : tasks) {
             PlanningTaskStatus status = PlanningTaskStatus.from(task.status());
             if (status == PlanningTaskStatus.COMPLETED || status == PlanningTaskStatus.INTERRUPTED) {
@@ -383,7 +392,7 @@ public final class PlannerWorkService {
     private static void setStatus(ServerLevel level, CitizenData citizen, TaskRuntime taskRuntime, String label, CitizenWorkStatus workStatus, PlanningTaskStatus taskStatus) {
         if (PlanningTaskStatus.from(taskRuntime.task.status()) != taskStatus) {
             taskRuntime.task = taskRuntime.task.withStatus(taskStatus.id(), System.currentTimeMillis());
-            SimuSqliteStorage.savePlanningTask(level, taskRuntime.task);
+            persistAsync(level, taskRuntime, taskRuntime.task);
         }
         if (label.equals(citizen.statusLabel()) && citizen.workStatusType() == workStatus) {
             return;
@@ -541,6 +550,23 @@ public final class PlannerWorkService {
         return " " + Math.min(task.completedBlocks(), targetTotal) + "/" + targetTotal;
     }
 
+    private static void persistAsync(ServerLevel level, TaskRuntime rt, PlanningTaskData snap) {
+        if (rt.saveInFlight) return;
+        rt.saveInFlight = true;
+        CompletableFuture.runAsync(() -> SimuSqliteStorage.savePlanningTask(level, snap), IO_EXECUTOR)
+                .whenComplete((v, ex) -> {
+                    rt.saveInFlight = false;
+                    if (ex != null) SimuKraft.LOGGER.error("Simukraft: Failed to save planning task {}", snap.taskId(), ex);
+                    else if (!snap.equals(rt.task)) persistAsync(level, rt, rt.task);
+                });
+    }
+
+    private static void waitForPendingSave(TaskRuntime rt) {
+        for (int i = 0; rt != null && rt.saveInFlight && i < 50; i++) {
+            try { Thread.sleep(10); } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
+        }
+    }
+
     private static LevelRuntime runtime(ServerLevel level) {
         return LEVEL_RUNTIMES.computeIfAbsent(runtimeKey(level), ignored -> new LevelRuntime());
     }
@@ -558,6 +584,7 @@ public final class PlannerWorkService {
     private static final class LevelRuntime {
         private final ConcurrentMap<UUID, TaskRuntime> tasks = new ConcurrentHashMap<>();
         private volatile boolean hydrated;
+        private volatile CompletableFuture<List<PlanningTaskData>> loadFuture;
     }
 
     private static final class TaskRuntime {
@@ -566,6 +593,7 @@ public final class PlannerWorkService {
         private int lastSavedIndex;
         private long nextRetryTick;
         private final AtomicInteger pendingXp = new AtomicInteger();
+        volatile boolean saveInFlight;
 
         private TaskRuntime(PlanningTaskData task) {
             this.task = task;

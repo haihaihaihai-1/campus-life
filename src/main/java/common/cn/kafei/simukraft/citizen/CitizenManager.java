@@ -14,15 +14,19 @@ import net.minecraft.world.level.saveddata.SavedData;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @SuppressWarnings("null")
 public final class CitizenManager extends SavedData {
     private static final String DATA_NAME = SimuKraft.MOD_ID + "_citizens";
+    private static final ExecutorService IO_EXECUTOR = Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "simukraft-citizen-io"); t.setDaemon(true); return t; });
     private static final int AI_BUDGET_PER_TICK = 20;
     private static final int SAVE_DIRTY_INTERVAL_TICKS = 100;
     // CITIZEN_STATUS_UPDATE_INTERVAL_TICKS：居民状态轮询间隔，用 UUID 错峰执行。
@@ -35,6 +39,7 @@ public final class CitizenManager extends SavedData {
 
     // 居民主数据在服务端内存中维护，SQLite 负责档案持久化，饱食度独立保存在实体 NBT。
     private final ConcurrentMap<UUID, CitizenData> citizens = new ConcurrentHashMap<>();
+    private final Set<UUID> pendingSaves = ConcurrentHashMap.newKeySet();
     // 分帧处理居民状态，避免城市人口变大后单 tick 扫全量。
     private final ConcurrentLinkedQueue<UUID> aiQueue = new ConcurrentLinkedQueue<>();
     private final AtomicInteger dirtyCounter = new AtomicInteger();
@@ -178,9 +183,11 @@ public final class CitizenManager extends SavedData {
 
     private void saveCitizenIncremental(CitizenData data) {
         ServerLevel targetLevel = level;
-        if (targetLevel != null && data != null) {
-            SimuSqliteStorage.saveCitizen(targetLevel, data.toTag());
-        }
+        if (targetLevel == null || data == null) return;
+        UUID id = data.uuid();
+        if (!pendingSaves.add(id)) return;
+        CompoundTag snap = data.toTag();
+        IO_EXECUTOR.execute(() -> { try { SimuSqliteStorage.saveCitizen(targetLevel, snap); } finally { pendingSaves.remove(id); } });
     }
 
     private void deleteCitizenIncremental(UUID uuid) {

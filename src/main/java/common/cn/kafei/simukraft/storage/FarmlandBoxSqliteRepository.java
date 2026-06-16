@@ -27,8 +27,30 @@ public final class FarmlandBoxSqliteRepository {
             SqliteNbtHelper.clearTables(connection, "farmland_boxes");
             try {
                 ListTag boxes = tag.getList("Boxes", CompoundTag.TAG_COMPOUND);
-                for (int i = 0; i < boxes.size(); i++) {
-                    saveBox(connection, boxes.getCompound(i));
+                if (!boxes.isEmpty()) {
+                    try (PreparedStatement statement = connection.prepareStatement(
+                            "INSERT INTO farmland_boxes(box_pos_long, crop, plot_min_long, plot_max_long, chest_pos_long, running) VALUES(?, ?, ?, ?, ?, ?) "
+                                    + "ON CONFLICT(box_pos_long) DO UPDATE SET crop = excluded.crop, plot_min_long = excluded.plot_min_long, plot_max_long = excluded.plot_max_long, chest_pos_long = excluded.chest_pos_long, running = excluded.running")) {
+                        for (int i = 0; i < boxes.size(); i++) {
+                            CompoundTag box = boxes.getCompound(i);
+                            statement.setLong(1, box.getLong("BoxPos"));
+                            if (box.contains("Crop")) { statement.setString(2, box.getString("Crop")); }
+                            else { statement.setNull(2, java.sql.Types.VARCHAR); }
+                            if (box.contains("Plot")) {
+                                CompoundTag plot = box.getCompound("Plot");
+                                statement.setLong(3, plot.getLong("Min"));
+                                statement.setLong(4, plot.getLong("Max"));
+                            } else {
+                                statement.setNull(3, java.sql.Types.INTEGER);
+                                statement.setNull(4, java.sql.Types.INTEGER);
+                            }
+                            if (box.contains("ChestPos")) { statement.setLong(5, box.getLong("ChestPos")); }
+                            else { statement.setNull(5, java.sql.Types.INTEGER); }
+                            statement.setInt(6, box.getBoolean("Running") ? 1 : 0);
+                            statement.addBatch();
+                        }
+                        statement.executeBatch();
+                    }
                 }
                 connection.commit();
             } catch (SQLException exception) {

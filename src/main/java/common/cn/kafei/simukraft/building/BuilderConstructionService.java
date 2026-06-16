@@ -108,7 +108,7 @@ public final class BuilderConstructionService {
         }
         TaskRuntime removed = runtime(level).tasksByCitizen.remove(citizenId);
         waitForPendingSave(removed);
-        SimuSqliteStorage.deleteBuildingTask(level, citizenId);
+        IO_EXECUTOR.execute(() -> SimuSqliteStorage.deleteBuildingTask(level, citizenId));
     }
 
     // hasActiveBuildTask：供职业外观判断建筑师是否需要播放施工动作。
@@ -147,9 +147,11 @@ public final class BuilderConstructionService {
                     .filter(citizen -> !citizen.dead())
                     .ifPresent(citizen -> flushPendingBuilderXp(level, citizen, removed));
             BuildingTaskData interrupted = withStatus(removed.task, BuildingTaskStatus.INTERRUPTED);
-            SimuSqliteStorage.saveBuildingTask(level, interrupted);
+            IO_EXECUTOR.execute(() -> {
+                SimuSqliteStorage.saveBuildingTask(level, interrupted);
+                SimuSqliteStorage.deleteBuildingTask(level, citizenId);
+            });
         }
-        SimuSqliteStorage.deleteBuildingTask(level, citizenId);
         SimuKraft.LOGGER.info("Simukraft: Building task interrupted for {} ({})", citizenId, reason != null ? reason : "unknown");
     }
 
@@ -293,7 +295,8 @@ public final class BuilderConstructionService {
         ConstructionCompletionNotificationService.notifyCompleted(level, citizen, task);
         flushPendingBuilderXp(level, citizen, taskRuntime);
         runtime.tasksByCitizen.remove(citizen.uuid(), taskRuntime);
-        SimuSqliteStorage.deleteBuildingTask(level, citizen.uuid());
+        UUID citizenUuid = citizen.uuid();
+        IO_EXECUTOR.execute(() -> SimuSqliteStorage.deleteBuildingTask(level, citizenUuid));
         CitizenEmploymentService.clearAfterJobFinished(level, citizen.uuid());
         SimuKraft.LOGGER.info("Simukraft: Building completed by {} for {}", citizen.name(), task.displayName());
     }
