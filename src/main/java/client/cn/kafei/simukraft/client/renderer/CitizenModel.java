@@ -16,12 +16,12 @@ public class CitizenModel extends PlayerModel<CitizenEntity> {
     // setupAnim：先跑原版基础姿势，再把旧版施工曲线固定套到右手。
     @Override
     public void setupAnim(CitizenEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-        boolean builderWorkSwing = CitizenAnimationActions.canUseBuilderWorkSwing(entity);
-        if (builderWorkSwing) {
+        boolean workSwing = CitizenAnimationActions.canUseWorkSwing(entity);
+        if (workSwing) {
             this.attackTime = 0.0F;
         }
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
-        if (builderWorkSwing) {
+        if (workSwing) {
             CitizenAnimationActions.applyBuilderWorkSwing(this, ageInTicks);
         }
     }

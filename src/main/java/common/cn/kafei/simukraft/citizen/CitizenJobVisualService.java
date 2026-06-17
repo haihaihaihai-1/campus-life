@@ -1,6 +1,7 @@
 package common.cn.kafei.simukraft.citizen;
 
 import common.cn.kafei.simukraft.building.BuilderConstructionService;
+import common.cn.kafei.simukraft.planner.PlannerWorkService;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
 import common.cn.kafei.simukraft.job.CityJobType;
 import net.minecraft.server.level.ServerLevel;
@@ -14,12 +15,16 @@ import java.util.concurrent.ConcurrentMap;
 
 @SuppressWarnings("null")
 public final class CitizenJobVisualService {
+    public static final CitizenJobVisualAction SWING_WHEN_BUILDING = BuilderConstructionService::hasActiveBuildTask;
+    public static final CitizenJobVisualAction SWING_WHEN_PLANNING = PlannerWorkService::hasActiveTask;
+
     private static final CitizenJobVisualRule EMPTY_RULE = new CitizenJobVisualRule(ItemStack.EMPTY, ItemStack.EMPTY, CitizenJobVisualAction.NONE);
     private static final ConcurrentMap<CityJobType, CitizenJobVisualRule> RULES = new ConcurrentHashMap<>();
     private static final ConcurrentMap<UUID, ItemStack> MAIN_HAND_OVERRIDES = new ConcurrentHashMap<>();
 
     static {
-        define(CityJobType.BUILDER, new CitizenJobVisualRule(new ItemStack(Items.COBBLESTONE), ItemStack.EMPTY, CitizenJobVisualAction.SWING_RIGHT_HAND_WHEN_BUILDING));
+        define(CityJobType.BUILDER, new CitizenJobVisualRule(new ItemStack(Items.COBBLESTONE), ItemStack.EMPTY, SWING_WHEN_BUILDING));
+        define(CityJobType.PLANNER, new CitizenJobVisualRule(new ItemStack(Items.IRON_SHOVEL), ItemStack.EMPTY, SWING_WHEN_PLANNING));
         define(CityJobType.STORAGE_WORKER, new CitizenJobVisualRule(new ItemStack(Items.CHEST), ItemStack.EMPTY, CitizenJobVisualAction.NONE));
     }
 
@@ -74,8 +79,7 @@ public final class CitizenJobVisualService {
     }
 
     private static void applyAction(ServerLevel level, CitizenEntity entity, CitizenData data, CitizenJobVisualAction action) {
-        boolean active = action == CitizenJobVisualAction.SWING_RIGHT_HAND_WHEN_BUILDING && BuilderConstructionService.hasActiveBuildTask(level, data.uuid());
-        entity.setHasActiveVisualTask(active);
+        entity.setHasActiveVisualTask(action.isActive(level, data.uuid()));
     }
 
     private static ItemStack normalizeVisualStack(ItemStack stack) {
@@ -93,8 +97,10 @@ public final class CitizenJobVisualService {
         }
     }
 
-    public enum CitizenJobVisualAction {
-        NONE,
-        SWING_RIGHT_HAND_WHEN_BUILDING
+    @FunctionalInterface
+    public interface CitizenJobVisualAction {
+        boolean isActive(ServerLevel level, UUID citizenId);
+
+        CitizenJobVisualAction NONE = (level, citizenId) -> false;
     }
 }

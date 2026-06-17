@@ -3,7 +3,6 @@ package client.cn.kafei.simukraft.client.renderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
-import common.cn.kafei.simukraft.job.CityJobType;
 import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
@@ -14,11 +13,8 @@ public final class CitizenAnimationActions {
     private CitizenAnimationActions() {
     }
 
-    // canUseBuilderWorkSwing：判断是否应播放建筑师独立施工动作，避免影响其他职业。
-    public static boolean canUseBuilderWorkSwing(CitizenEntity entity) {
-        return entity != null
-                && entity.hasActiveVisualTask()
-                && CityJobType.BUILDER.name().equalsIgnoreCase(entity.getJob());
+    public static boolean canUseWorkSwing(CitizenEntity entity) {
+        return entity != null && entity.hasActiveVisualTask();
     }
 
     // applyBuilderWorkSwing：照抄原版攻击动画算法，但把旧版施工曲线固定应用到右手。

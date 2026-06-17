@@ -922,5 +922,8 @@
     "message.simukraft.logistics.limit_reached":  "The logistics binding limit has been reached.",
     "message.simukraft.logistics.invalid_target":  "Invalid logistics target.",
     "message.simukraft.logistics.not_found":  "Logistics data was not found.",
-    "message.simukraft.logistics.area_too_large":  "The logistics selection is too large. Please select a smaller area."
+    "message.simukraft.logistics.area_too_large":  "The logistics selection is too large. Please select a smaller area.",
+    "status.simukraft.planner.resting_night":  "Resting (night): Planning",
+    "status.simukraft.planner.waiting_materials":  "Waiting for blocks: Planning%s",
+    "status.simukraft.planner.working":  "Planning (%s)%s"
 }

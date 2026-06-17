@@ -5,7 +5,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.storage.LevelResource;
 
 import java.io.Closeable;
-import java.lang.reflect.Proxy;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -22,7 +21,6 @@ public final class SimuSqliteDatabase implements Closeable {
 
     private final Path databasePath;
     private final String jdbcUrl;
-    private Connection cachedConnection;
 
     private SimuSqliteDatabase(Path databasePath) {
         loadDriver();
@@ -41,25 +39,16 @@ public final class SimuSqliteDatabase implements Closeable {
     }
 
     public Connection openConnection() throws SQLException {
-        if (cachedConnection == null || cachedConnection.isClosed()) {
-            cachedConnection = DriverManager.getConnection(jdbcUrl);
-            try (Statement statement = cachedConnection.createStatement()) {
-                statement.execute("PRAGMA journal_mode=WAL");
-                statement.execute("PRAGMA busy_timeout=5000");
-                statement.execute("PRAGMA foreign_keys=ON");
-            }
+        Connection c = DriverManager.getConnection(jdbcUrl);
+        try (Statement stmt = c.createStatement()) {
+            stmt.execute("PRAGMA journal_mode=WAL");
+            stmt.execute("PRAGMA busy_timeout=5000");
+            stmt.execute("PRAGMA foreign_keys=ON");
+        } catch (SQLException e) {
+            try { c.close(); } catch (SQLException ignored) {}
+            throw e;
         }
-        Connection c = cachedConnection;
-        return (Connection) Proxy.newProxyInstance(
-            Connection.class.getClassLoader(),
-            new Class[]{Connection.class},
-            (proxy, method, args) -> {
-                if ("close".equals(method.getName())) {
-                    try { if (!c.getAutoCommit()) c.setAutoCommit(true); } catch (java.sql.SQLException ignored) {}
-                    return null;
-                }
-                return method.invoke(c, args);
-            });
+        return c;
     }
 
     public Path databasePath() {
@@ -67,12 +56,7 @@ public final class SimuSqliteDatabase implements Closeable {
     }
 
     @Override
-    public void close() {
-        if (cachedConnection != null) {
-            try { cachedConnection.close(); } catch (java.sql.SQLException ignored) {}
-            cachedConnection = null;
-        }
-    }
+    public void close() {}
 
     private static void loadDriver() {
         if (DRIVER_LOADED.get()) {

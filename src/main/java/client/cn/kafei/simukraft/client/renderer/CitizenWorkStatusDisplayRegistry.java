@@ -135,10 +135,16 @@ public final class CitizenWorkStatusDisplayRegistry {
                 : Optional.empty();
     }
 
-    /** localizedOrLiteral: 翻译键走本地化，普通文本保持原样。 */
+    /** localizedOrLiteral: 翻译键走本地化，JSON Component 直接反序列化，普通文本保持原样。 */
     private static Component localizedOrLiteral(String value) {
         if (isBlank(value)) {
             return Component.empty();
+        }
+        if (value.startsWith("{")) {
+            try {
+                Component c = Component.Serializer.fromJson(value, net.minecraft.core.RegistryAccess.EMPTY);
+                if (c != null) return c;
+            } catch (Exception ignored) {}
         }
         return I18n.exists(value) ? Component.translatable(value) : Component.literal(value);
     }

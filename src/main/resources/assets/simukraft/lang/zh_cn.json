@@ -609,6 +609,8 @@
     "message.simukraft.plan_area.too_big":  "规划区域太大(最多 %s 个方块)。",
     "message.simukraft.plan_area.not_enough_funds":  "城市资金不足以支付本次规划(花费 %s)。",
     "message.simukraft.plan_area.started":  "规划师已开始：%s，%s 个方块。",
+    "message.simukraft.planner.task_started":  "规划师%s 已接受%s任务。",
+    "message.simukraft.planner.task_completed":  "%s 已完成规划任务（%s）。",
     "message.simukraft.plan_area.no_targets":  "选区内没有需要规划的目标方块。",
     "job.meat_merchant":  "肉铺商人",
     "job.fruit_merchant":  "水果商人",
@@ -922,5 +924,8 @@
     "message.simukraft.logistics.limit_reached":  "物流绑定数量已达到上限。",
     "message.simukraft.logistics.invalid_target":  "物流目标无效。",
     "message.simukraft.logistics.not_found":  "物流数据不存在。",
-    "message.simukraft.logistics.area_too_large":  "物流选区过大，请缩小后重试。"
+    "message.simukraft.logistics.area_too_large":  "物流选区过大，请缩小后重试。",
+    "status.simukraft.planner.resting_night":  "夜间休息中: 规划",
+    "status.simukraft.planner.waiting_materials":  "缺少方块: 规划%s",
+    "status.simukraft.planner.working":  "规划中(%s)%s"
 }

@@ -19,7 +19,9 @@ import common.cn.kafei.simukraft.protection.NpcBlockProtectionPolicy;
 import common.cn.kafei.simukraft.registry.ModBlocks;
 import common.cn.kafei.simukraft.storage.SimuSqliteStorage;
 import common.cn.kafei.simukraft.util.SaveScopedCacheKey;
+import common.cn.kafei.simukraft.city.group.CityGroupMessageService;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
@@ -89,6 +91,9 @@ public final class PlannerWorkService {
         runtime.hydrated = true;
         runtime.tasks.put(task.citizenId(), new TaskRuntime(task));
         SimuSqliteStorage.savePlanningTask(level, task);
+        CitizenService.findCitizen(level, task.citizenId()).ifPresent(citizen ->
+                CityGroupMessageService.successToCity(level, task.cityId(),
+                        Component.translatable("message.simukraft.planner.task_started", citizen.name(), Component.translatable(task.operation().translationKey()))));
     }
 
     public static void cancelTask(ServerLevel level, UUID citizenId) {
@@ -190,17 +195,19 @@ public final class PlannerWorkService {
             interruptTask(level, citizen.uuid(), "build_box_removed");
             return;
         }
+        var citizenEntity = CitizenTeleportService.findCitizenEntity(level, citizen.uuid());
         if (shouldRest(level)) {
-            setStatus(level, citizen, taskRuntime, "夜间休息中: 规划", CitizenWorkStatus.RESTING, PlanningTaskStatus.PAUSED_RESTING);
+            setStatus(level, citizen, taskRuntime, "status.simukraft.planner.resting_night", CitizenWorkStatus.RESTING, PlanningTaskStatus.PAUSED_RESTING);
+            if (citizenEntity != null) citizenEntity.setHasActiveVisualTask(false);
             return;
         }
         // 规划师待在建筑盒处工作；离得远先寻路/传送过去。
         Vec3 anchor = Vec3.atBottomCenterOf(boxPos.above());
-        var citizenEntity = CitizenTeleportService.findCitizenEntity(level, citizen.uuid());
         if (citizenEntity == null) {
             return;
         }
         if (citizenEntity.position().distanceToSqr(anchor) > REACH * REACH) {
+            citizenEntity.setHasActiveVisualTask(false);
             if (!CitizenNavigationService.requestMove(level, citizen.uuid(), anchor, MovementIntent.WORK)) {
                 CitizenTeleportService.teleportCitizen(level, citizen.uuid(), anchor);
             }
@@ -208,6 +215,7 @@ public final class PlannerWorkService {
         }
 
         BlockPos chestPos = resolveTaskChest(level, task);
+        citizenEntity.setHasActiveVisualTask(true);
         int budget = consumeBudget(taskRuntime, citizen);
         int index = Math.max(0, task.currentIndex());
         int total = task.totalBlocks();
@@ -245,7 +253,9 @@ public final class PlannerWorkService {
             PlanningTaskData updated = task.withProgress(index, completed, PlanningTaskStatus.WAITING_MATERIALS.id(), now);
             taskRuntime.task = updated;
             persistAsync(level, taskRuntime, updated);
-            setStatus(level, citizen, taskRuntime, "缺少方块: 规划" + progressSuffix(updated), CitizenWorkStatus.WORKING, PlanningTaskStatus.WAITING_MATERIALS);
+            setStatus(level, citizen, taskRuntime,
+                    Component.Serializer.toJson(Component.translatable("status.simukraft.planner.waiting_materials", progressSuffix(updated)), level.registryAccess()),
+                    CitizenWorkStatus.WORKING, PlanningTaskStatus.WAITING_MATERIALS);
             return;
         }
         if (index >= total) {
@@ -254,7 +264,9 @@ public final class PlannerWorkService {
         }
         PlanningTaskData updated = task.withProgress(index, completed, PlanningTaskStatus.PLANNING.id(), now);
         taskRuntime.task = updated;
-        setStatus(level, citizen, taskRuntime, "规划中(" + operationLabel(task.operation()) + ")" + progressSuffix(updated), CitizenWorkStatus.WORKING, PlanningTaskStatus.PLANNING);
+        setStatus(level, citizen, taskRuntime,
+                Component.Serializer.toJson(Component.translatable("status.simukraft.planner.working", Component.translatable(task.operation().translationKey()), progressSuffix(updated)), level.registryAccess()),
+                CitizenWorkStatus.WORKING, PlanningTaskStatus.PLANNING);
         if (index - taskRuntime.lastSavedIndex >= SAVE_BLOCK_INTERVAL) {
             taskRuntime.lastSavedIndex = index;
             persistAsync(level, taskRuntime, updated);
@@ -350,6 +362,8 @@ public final class PlannerWorkService {
         flushXp(level, citizen, taskRuntime);
         runtime.tasks.remove(citizen.uuid(), taskRuntime);
         IO_EXECUTOR.execute(() -> SimuSqliteStorage.deletePlanningTask(level, citizen.uuid()));
+        CityGroupMessageService.successToCity(level, taskRuntime.task.cityId(),
+                Component.translatable("message.simukraft.planner.task_completed", citizen.name(), Component.translatable(taskRuntime.task.operation().translationKey())));
         CitizenEmploymentService.clearAfterJobFinished(level, citizen.uuid());
         SimuKraft.LOGGER.info("Simukraft: Planning task completed by {}", citizen.name());
     }
@@ -531,14 +545,6 @@ public final class PlannerWorkService {
             return true;
         }
         return GenericContainerAccess.isContainer(level, pos);
-    }
-
-    private static String operationLabel(PlanOperation operation) {
-        return switch (operation) {
-            case REMOVE -> "清除";
-            case FILL -> "填充";
-            case REPLACE -> "替换";
-        };
     }
 
     private static String progressSuffix(PlanningTaskData task) {
