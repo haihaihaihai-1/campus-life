@@ -23,6 +23,13 @@ LDLib/LDLib2 UI
 
 ## 最近同步
 
+2026-06-17：
+
+- NPC 夜间回家后会在床上进入横卧姿势（`Pose.SLEEPING`）；一床一人，玩家右键床可唤醒；已到床边才躺，不在途中进入卧姿；醒来定位到预先计算的安全落点，不卡头。
+- 修复 NPC 可睡入玩家或村民已占用的床：`CitizenBedSleepService.tryStartSleeping` 检查原版 `BlockStateProperties.OCCUPIED` 标志，任何实体睡入该床后均会置位。
+- 规划师完成任务后自动解雇（调用 `CitizenEmploymentService.clearAfterJobFinished`），不再保留待命状态。
+- 雇佣界面（`NpcHireScreen`）和建筑列表界面（`BuildingListScreenOpener`）卡片区域已拓宽（左右各扩至屏宽 2% 起），卡片最小宽度调整，每页至少显示 6 个卡片。
+
 2026-06-10：
 
 - NPC 投喂按旧版体验走地面物品：玩家丢出的食物可被附近未吃饱 NPC 拾取并消耗；工作中的无主掉落物继续被保护，避免吃掉生产物。
