@@ -78,6 +78,13 @@ public final class CitizenHomeRestService {
             Vec3 homeTarget = homeTargets.computeIfAbsent(home.poiId(), ignored -> resolveHomeTarget(level, home.pos()));
             if (restedCitizens.contains(citizen.uuid())) {
                 CitizenTeleportService.reconcileLoadedCitizenEntities(level, citizen.uuid(), homeTarget);
+                CitizenEntity entity = CitizenTeleportService.findCitizenEntity(level, citizen.uuid());
+                if (entity != null && !entity.isSleeping()
+                        && entity.getNavigation().isDone()
+                        && entity.distanceToSqr(homeTarget) <= 2.25
+                        && !CitizenBedSleepService.isOccupiedByOther(levelKey, home.pos(), citizen.uuid())) {
+                    CitizenBedSleepService.tryStartSleeping(level, entity, home.pos(), homeTarget);
+                }
                 continue;
             }
             if (moveOrTeleportHome(level, citizen, homeTarget)) {
@@ -106,6 +113,12 @@ public final class CitizenHomeRestService {
             }
             if (!HOME_REST_MARKER.equals(citizen.workNeedDetail())) {
                 continue;
+            }
+            CitizenEntity entityToWake = CitizenTeleportService.findCitizenEntity(level, citizen.uuid());
+            if (entityToWake != null && entityToWake.isSleeping()) {
+                CitizenBedSleepService.wakeUp(level, entityToWake, null);
+            } else {
+                CitizenBedSleepService.release(level, citizen.uuid());
             }
             CitizenWorkStatus nextStatus = citizen.workplaceId() != null && citizen.jobType() != CityJobType.UNEMPLOYED
                     ? CitizenWorkStatus.WORKING
@@ -144,6 +157,7 @@ public final class CitizenHomeRestService {
         String prefix = serverKey + "|";
         RESTED_CITIZENS_BY_LEVEL.keySet().removeIf(key -> key.startsWith(prefix));
         HOME_TARGETS_BY_LEVEL.keySet().removeIf(key -> key.startsWith(prefix));
+        CitizenBedSleepService.clearServerCaches(server);
     }
 
     // resolveHomeTarget：解析住宅床边的安全脚底坐标，供回家和新入住生成共用。
@@ -196,23 +210,21 @@ public final class CitizenHomeRestService {
         if (!isResidentialBedHead(level.getBlockState(bedHeadPos))) {
             return List.of();
         }
-        ArrayList<BlockPos> candidates = new ArrayList<>();
-        BlockState bedHeadState = level.getBlockState(bedHeadPos);
-        BlockPos bedFootPos = resolveBedFootPos(bedHeadPos, bedHeadState);
-        addBedsideCandidates(level, bedHeadPos, bedFootPos, candidates);
-        if (bedFootPos != null) {
-            addBedsideCandidates(level, bedFootPos, bedHeadPos, candidates);
+        BlockPos bedFootPos = resolveBedFootPos(bedHeadPos, level.getBlockState(bedHeadPos));
+        if (bedFootPos == null) {
+            return List.of();
         }
-        return candidates.stream().distinct().toList();
-    }
-
-    private static void addBedsideCandidates(ServerLevel level, BlockPos bedPos, BlockPos connectedBedPos, List<BlockPos> candidates) {
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos candidate = bedPos.relative(direction);
-            if (!candidate.equals(connectedBedPos) && canStandAt(level, candidate)) {
-                candidates.add(candidate.immutable());
+        ArrayList<BlockPos> candidates = new ArrayList<>();
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                if (dx == 0 && dz == 0) continue;
+                BlockPos candidate = bedFootPos.offset(dx, 0, dz);
+                if (!candidate.equals(bedHeadPos) && canStandAt(level, candidate)) {
+                    candidates.add(candidate.immutable());
+                }
             }
         }
+        return candidates.stream().distinct().toList();
     }
 
     private static BlockPos resolveBedFootPos(BlockPos bedHeadPos, BlockState bedHeadState) {

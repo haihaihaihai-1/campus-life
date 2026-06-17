@@ -1,11 +1,14 @@
 package common.cn.kafei.simukraft;
 
 import com.mojang.logging.LogUtils;
+
+import common.cn.kafei.simukraft.citizen.CitizenBedSleepService;
 import common.cn.kafei.simukraft.citizen.CitizenDeathService;
 import common.cn.kafei.simukraft.citizen.CitizenDroppedFoodService;
 import common.cn.kafei.simukraft.citizen.CitizenManager;
 import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenSelfFeedingService;
+import common.cn.kafei.simukraft.citizen.CitizenTeleportService;
 import common.cn.kafei.simukraft.citizen.PopulationGrowthService;
 import common.cn.kafei.simukraft.city.CityChunkManager;
 import common.cn.kafei.simukraft.city.CityManager;
@@ -60,6 +63,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.fml.ModContainer;
@@ -100,6 +104,7 @@ public final class SimuKraft {
         NeoForge.EVENT_BUS.addListener(this::onFarmlandTrample);
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
+        NeoForge.EVENT_BUS.addListener(this::onPlayerInteractBed);
         LOGGER.info("\nWelcome to\n========================================================================\n███████╗██╗███╗   ███╗██╗   ██╗██╗  ██╗██████╗  █████╗ ███████╗████████╗\n██╔════╝██║████╗ ████║██║   ██║██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝\n███████╗██║██╔████╔██║██║   ██║█████╔╝ ██████╔╝███████║█████╗     ██║   \n╚════██║██║██║╚██╔╝██║██║   ██║██╔═██╗ ██╔══██╗██╔══██║██╔══╝     ██║   \n███████║██║██║ ╚═╝ ██║╚██████╔╝██║  ██╗██║  ██║██║  ██║██║        ██║   \n╚══════╝╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝  \n========================================================================\n");
     }
 
@@ -152,6 +157,24 @@ public final class SimuKraft {
         if (event.getEntity() instanceof common.cn.kafei.simukraft.entity.CitizenEntity) {
             event.setCanceled(true);
         }
+    }
+
+    private void onPlayerInteractBed(PlayerInteractEvent.RightClickBlock event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) return;
+        net.minecraft.core.BlockPos clickedPos = event.getPos();
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(clickedPos);
+        if (!state.is(net.minecraft.world.level.block.Blocks.RED_BED)) return;
+        net.minecraft.core.BlockPos bedHeadPos = ResidentialBedPoiService.resolveBedHeadPos(clickedPos, state);
+        if (bedHeadPos == null) return;
+        java.util.UUID occupant = CitizenBedSleepService.getOccupantUUID(level, bedHeadPos);
+        if (occupant == null) return;
+        common.cn.kafei.simukraft.entity.CitizenEntity entity = CitizenTeleportService.findCitizenEntity(level, occupant);
+        if (entity == null) {
+            CitizenBedSleepService.release(level, occupant);
+            return;
+        }
+        CitizenBedSleepService.wakeUp(level, entity, null);
+        event.setCanceled(true);
     }
 
     private void onServerTick(ServerTickEvent.Post event) {

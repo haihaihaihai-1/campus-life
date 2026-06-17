@@ -88,7 +88,7 @@ public final class ResidentialBedPoiService {
         RECORDED_BED_HEADS.keySet().removeIf(key -> key.startsWith(serverKey + "|"));
     }
 
-    private static BlockPos resolveBedHeadPos(BlockPos pos, BlockState state) {
+    public static BlockPos resolveBedHeadPos(BlockPos pos, BlockState state) {
         if (isRedBedHead(state)) {
             return pos.immutable();
         }

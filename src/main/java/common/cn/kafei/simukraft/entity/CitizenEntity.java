@@ -1,6 +1,8 @@
 package common.cn.kafei.simukraft.entity;
 
+import common.cn.kafei.simukraft.citizen.CitizenBedSleepService;
 import common.cn.kafei.simukraft.citizen.CitizenData;
+import common.cn.kafei.simukraft.citizen.CitizenHomeRestService;
 import common.cn.kafei.simukraft.citizen.CitizenDroppedFoodService;
 import common.cn.kafei.simukraft.citizen.CitizenService;
 import common.cn.kafei.simukraft.citizen.CitizenTeleportService;
@@ -142,6 +144,11 @@ public class CitizenEntity extends PathfinderMob {
                 discard();
                 return;
             }
+            if (isSleeping() && !CitizenHomeRestService.isRestTime(serverLevel)) {
+                stopSleeping();
+                CitizenBedSleepService.release(serverLevel, getUUID());
+                CitizenTeleportService.teleportCitizenToNearbySafePosition(serverLevel, this);
+            }
             rescueFromWall(false);
             // 实体每 tick 确保自己有 CitizenData，数据缺失时会自动补全。
             CitizenData data = CitizenService.ensureCitizen(serverLevel, this);
@@ -156,6 +163,7 @@ public class CitizenEntity extends PathfinderMob {
 
     // rescueFromWall：检测到方块碰撞重叠时停止旧导航，并把 NPC 移到附近安全落点。
     private void rescueFromWall(boolean immediate) {
+        if (isSleeping()) return;
         if (!(level() instanceof ServerLevel serverLevel) || !canSyncCitizenData()) {
             return;
         }
