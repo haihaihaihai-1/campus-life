@@ -27,7 +27,7 @@ public final class BuildingPreviewRenderer {
 
     @SubscribeEvent
     public static void onRenderLevelStage(RenderLevelStageEvent event) {
-        if (!isPreviewRenderStage(event.getStage())) {
+        if (!isPreviewRenderStage(event.getStage()) && event.getStage() != RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
@@ -44,6 +44,11 @@ public final class BuildingPreviewRenderer {
             return;
         }
         loggedOnce = false;
+
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) {
+            PreviewSpecialBlockRenderer.render(mesh.entityBlocks(), event.getPoseStack(), minecraft.renderBuffers().bufferSource(), event.getCamera().getPosition());
+            return;
+        }
 
         Matrix4f projection = event.getProjectionMatrix();
         Matrix4f modelView = event.getModelViewMatrix();

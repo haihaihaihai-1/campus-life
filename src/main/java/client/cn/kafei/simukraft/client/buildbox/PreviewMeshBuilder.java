@@ -66,7 +66,7 @@ public final class PreviewMeshBuilder {
                     continue;
                 }
                 BakedModel model = minecraft.getBlockRenderer().getBlockModel(state);
-                if (model.isCustomRenderer()) {
+                if (state.getRenderShape() == RenderShape.ENTITYBLOCK_ANIMATED || model.isCustomRenderer()) {
                     // 箱子、床等方块实体渲染不进普通 mesh，后续如需显示可单独处理。
                     entityBlocks.add(block);
                     continue;
