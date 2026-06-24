@@ -18,7 +18,7 @@ public final class PreviewMesh implements AutoCloseable {
     private VertexBuffer cutoutBuffer;
     private VertexBuffer translucentBuffer;
     private VertexBuffer tripwireBuffer;
-    private final List<PreviewBlockData> entityBlocks;
+    private List<PreviewBlockData> entityBlocks;
 
     public PreviewMesh(BlockPos origin, VertexBuffer solidBuffer, VertexBuffer cutoutMippedBuffer, VertexBuffer cutoutBuffer, VertexBuffer translucentBuffer, VertexBuffer tripwireBuffer, List<PreviewBlockData> entityBlocks) {
         this.origin = origin;
@@ -39,6 +39,12 @@ public final class PreviewMesh implements AutoCloseable {
             return;
         }
         origin = origin.offset(dx, dy, dz);
+        if (!entityBlocks.isEmpty()) {
+            // 床等特殊方块不在 VBO 里，预览平移时需要同步它们的世界坐标。
+            entityBlocks = entityBlocks.stream()
+                    .map(block -> new PreviewBlockData(block.pos().offset(dx, dy, dz), block.state(), block.packedLight()))
+                    .toList();
+        }
     }
 
     public VertexBuffer solidBuffer() {
