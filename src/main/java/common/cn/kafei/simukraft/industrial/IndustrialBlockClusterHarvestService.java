@@ -48,8 +48,9 @@ public final class IndustrialBlockClusterHarvestService {
     private static final int LOG_NEIGHBOR_RADIUS = 1;
     private static final int ATTACHED_VALIDATE_RADIUS = 2;
     private static final int ATTACHED_HARVEST_RADIUS = 3;
-    private static final int MIN_STUMP_DIG_TICKS = 8;
-    private static final int MAX_STUMP_DIG_TICKS = 120;
+    private static final int MIN_STUMP_DIG_TICKS = 1;
+    private static final int MAX_STUMP_DIG_TICKS = 60;
+    private static final double STUMP_DIG_SPEED_MULTIPLIER = 2.5D;
     private static final int SWING_INTERVAL_TICKS = 4;
     private static final long MINING_RUNTIME_TTL_TICKS = 20L * 60L * 10L;
     private static final long MINING_RUNTIME_CLEANUP_INTERVAL_TICKS = 20L * 60L;
@@ -105,7 +106,20 @@ public final class IndustrialBlockClusterHarvestService {
             return ActionResult.CARRY_FULL;
         }
 
-        ScanResult scan = scanForNextCluster(level, building, step, targetTag, config, state);
+        QueuedCluster queuedCluster = nextQueuedCluster(level, building, step, targetTag, config, state, worker != null ? worker.position() : null);
+        if (!queuedCluster.state().equals(state)) {
+            persistMachineState(manager, data, queuedCluster.state());
+            state = queuedCluster.state();
+        }
+        if (queuedCluster.cluster() != null) {
+            HarvestState next = state.withCluster(queuedCluster.cluster()).withoutQueuedTarget(queuedCluster.cluster().target());
+            persistMachineState(manager, data, next);
+            setStatus(manager, data, "gui.simukraft.industrial.status.harvesting_trees",
+                    "锁定队列树桩 " + shortPos(next.target()) + " 方块 " + next.clusterPositions().size());
+            return harvestActiveCluster(level, manager, data, building, definition, step, next, worker, workerId);
+        }
+
+        ScanResult scan = scanForNextCluster(level, building, step, targetTag, config, state, worker != null ? worker.position() : null);
         if (scan.cluster() != null) {
             HarvestState next = scan.state().withCluster(scan.cluster());
             persistMachineState(manager, data, next);
@@ -215,7 +229,7 @@ public final class IndustrialBlockClusterHarvestService {
 
         HarvestState miningState = stump.equals(state.miningTarget()) ? state : state.withMining(stump, 0);
         ItemStack tool = effectiveTool(level, worker, step);
-        int digTicks = stumpDigTicks(level, stump, stumpState, tool);
+        int digTicks = stumpDigTicks(level, stump, stumpState, tool, step);
         int nextTicks = Math.min(digTicks, nextMiningTicks(level, data, miningState, stump));
         worker.getLookControl().setLookAt(Vec3.atCenterOf(stump));
         if (nextTicks == 1 || nextTicks % SWING_INTERVAL_TICKS == 0) {
@@ -435,7 +449,10 @@ public final class IndustrialBlockClusterHarvestService {
     }
 
     /** stumpDigTicks：按方块硬度和 NPC 主手工具估算接近原版挖掘速度的耗时。 */
-    private static int stumpDigTicks(ServerLevel level, BlockPos pos, BlockState state, ItemStack tool) {
+    private static int stumpDigTicks(ServerLevel level, BlockPos pos, BlockState state, ItemStack tool, IndustrialDefinition.StepDefinition step) {
+        if (step != null && step.ticks() > 1) {
+            return Math.max(1, step.ticks());
+        }
         float hardness = state.getDestroySpeed(level, pos);
         if (hardness < 0.0F) {
             return MAX_STUMP_DIG_TICKS;
@@ -446,7 +463,7 @@ public final class IndustrialBlockClusterHarvestService {
         }
         boolean correctTool = !state.requiresCorrectToolForDrops() || (tool != null && tool.isCorrectToolForDrops(state));
         int divisor = correctTool ? 30 : 100;
-        int ticks = (int) Math.ceil((hardness * divisor) / speed);
+        int ticks = (int) Math.ceil((hardness * divisor) / (speed * STUMP_DIG_SPEED_MULTIPLIER));
         return Math.max(MIN_STUMP_DIG_TICKS, Math.min(MAX_STUMP_DIG_TICKS, ticks));
     }
 
@@ -572,41 +589,76 @@ public final class IndustrialBlockClusterHarvestService {
                                                  IndustrialDefinition.StepDefinition step,
                                                  TagKey<Block> targetTag,
                                                  HarvestConfig config,
-                                                 HarvestState state) {
+                                                 HarvestState state,
+                                                 Vec3 workerPosition) {
         HarvestState cursor = state.normalizeCursor(building, config);
+        Cluster bestCluster = cursor.candidateCluster();
         int processed = 0;
         while (processed < config.scanColumnsPerTick() && cursor.ring() <= config.radius()) {
             Column column = cursor.column(building, config);
             if (column != null && level.isLoaded(new BlockPos(column.x(), config.minY(), column.z()))) {
-                Cluster cluster = scanColumn(level, building, step, targetTag, config, column.x(), column.z());
-                if (cluster != null) {
-                    return new ScanResult(cursor.advance(building, config), false, cluster);
+                List<Cluster> clusters = scanColumn(level, building, step, targetTag, config, column.x(), column.z(), workerPosition);
+                for (Cluster cluster : clusters) {
+                    if (isBetterCandidate(cluster, bestCluster, workerPosition)) {
+                        bestCluster = cluster;
+                    }
+                    cursor = cursor.withQueuedTarget(cluster.target(), workerPosition);
                 }
             }
             cursor = cursor.advance(building, config);
             processed++;
         }
-        return new ScanResult(cursor, cursor.ring() > config.radius(), null);
+        boolean completed = cursor.ring() > config.radius();
+        HarvestState resultState = completed ? cursor.withoutQueuedTarget(bestCluster != null ? bestCluster.target() : null) : cursor;
+        return new ScanResult(resultState, completed, completed ? bestCluster : null);
     }
 
-    private static Cluster scanColumn(ServerLevel level,
-                                      PlacedBuildingRecord building,
-                                      IndustrialDefinition.StepDefinition step,
-                                      TagKey<Block> targetTag,
-                                      HarvestConfig config,
-                                      int x,
-                                      int z) {
+    private static List<Cluster> scanColumn(ServerLevel level,
+                                            PlacedBuildingRecord building,
+                                            IndustrialDefinition.StepDefinition step,
+                                            TagKey<Block> targetTag,
+                                            HarvestConfig config,
+                                            int x,
+                                            int z,
+                                            Vec3 workerPosition) {
+        List<Cluster> clusters = new ArrayList<>();
+        Set<BlockPos> seenTargets = new HashSet<>();
         for (int y = config.minY(); y <= config.maxY(); y++) {
             BlockPos pos = new BlockPos(x, y, z);
             if (!level.getBlockState(pos).is(targetTag)) {
                 continue;
             }
-            Cluster cluster = buildCluster(level, building, step, targetTag, config, pos);
-            if (cluster != null) {
-                return cluster;
+            Cluster cluster = buildCluster(level, building, step, targetTag, config, pos, workerPosition);
+            if (cluster != null && seenTargets.add(cluster.target())) {
+                clusters.add(cluster);
             }
         }
-        return null;
+        return clusters;
+    }
+
+    private static QueuedCluster nextQueuedCluster(ServerLevel level,
+                                                   PlacedBuildingRecord building,
+                                                   IndustrialDefinition.StepDefinition step,
+                                                   TagKey<Block> targetTag,
+                                                   HarvestConfig config,
+                                                   HarvestState state,
+                                                   Vec3 workerPosition) {
+        if (state.queuedTargets().isEmpty()) {
+            return new QueuedCluster(state, null);
+        }
+        HarvestState cleaned = state;
+        for (BlockPos target : state.queuedTargets()) {
+            if (target == null || !level.isLoaded(target) || !level.getBlockState(target).is(targetTag)) {
+                cleaned = cleaned.withoutQueuedTarget(target);
+                continue;
+            }
+            Cluster cluster = buildCluster(level, building, step, targetTag, config, target, workerPosition);
+            if (cluster != null) {
+                return new QueuedCluster(cleaned, cluster);
+            }
+            cleaned = cleaned.withoutQueuedTarget(target);
+        }
+        return new QueuedCluster(cleaned, null);
     }
 
     private static Cluster buildCluster(ServerLevel level,
@@ -614,7 +666,8 @@ public final class IndustrialBlockClusterHarvestService {
                                         IndustrialDefinition.StepDefinition step,
                                         TagKey<Block> targetTag,
                                         HarvestConfig config,
-                                        BlockPos start) {
+                                        BlockPos start,
+                                        Vec3 workerPosition) {
         Set<BlockPos> logs = connectedLogs(level, targetTag, config, start);
         if (logs.isEmpty() || logs.size() >= config.maxClusterBlocks()) {
             return null;
@@ -626,7 +679,10 @@ public final class IndustrialBlockClusterHarvestService {
         List<BlockPos> roots = logs.stream()
                 .filter(pos -> pos.getY() == rootY)
                 .filter(pos -> matchesSupport(level, pos.below(), step.supportBlockTag()))
-                .sorted(Comparator.comparingInt((BlockPos pos) -> pos.getX()).thenComparingInt(pos -> pos.getZ()))
+                .sorted(Comparator.comparingDouble((BlockPos pos) -> distanceToTreeSqr(workerPosition, pos))
+                        .thenComparingInt(BlockPos::getY)
+                        .thenComparingInt(BlockPos::getX)
+                        .thenComparingInt(BlockPos::getZ))
                 .toList();
         if (roots.isEmpty()) {
             return null;
@@ -650,6 +706,52 @@ public final class IndustrialBlockClusterHarvestService {
                         .thenComparingInt(BlockPos::getZ))
                 .toList();
         return harvest.isEmpty() ? null : new Cluster(harvest, roots, roots.getFirst());
+    }
+
+    /** isBetterCandidate: 扫描完整作业区前缓存距离 NPC 最近的树簇，避免按外圈游标顺序抢目标。 */
+    private static boolean isBetterCandidate(Cluster candidate, Cluster currentBest, Vec3 workerPosition) {
+        if (candidate == null) {
+            return false;
+        }
+        if (currentBest == null) {
+            return true;
+        }
+        double candidateDistance = clusterDistanceSqr(candidate, workerPosition);
+        double bestDistance = clusterDistanceSqr(currentBest, workerPosition);
+        int distanceCompare = Double.compare(candidateDistance, bestDistance);
+        if (distanceCompare != 0) {
+            return distanceCompare < 0;
+        }
+        return comparePos(candidate.target(), currentBest.target()) < 0;
+    }
+
+    private static double clusterDistanceSqr(Cluster cluster, Vec3 workerPosition) {
+        return cluster != null ? distanceToTreeSqr(workerPosition, cluster.target()) : Double.MAX_VALUE;
+    }
+
+    private static double distanceToTreeSqr(Vec3 workerPosition, BlockPos treePos) {
+        if (workerPosition == null || treePos == null) {
+            return 0.0D;
+        }
+        return Vec3.atCenterOf(treePos).distanceToSqr(workerPosition);
+    }
+
+    private static int comparePos(BlockPos first, BlockPos second) {
+        if (first == null && second == null) {
+            return 0;
+        }
+        if (first == null) {
+            return 1;
+        }
+        if (second == null) {
+            return -1;
+        }
+        int y = Integer.compare(first.getY(), second.getY());
+        if (y != 0) {
+            return y;
+        }
+        int x = Integer.compare(first.getX(), second.getX());
+        return x != 0 ? x : Integer.compare(first.getZ(), second.getZ());
     }
 
     private static Set<BlockPos> connectedLogs(ServerLevel level, TagKey<Block> targetTag, HarvestConfig config, BlockPos start) {
@@ -863,7 +965,11 @@ public final class IndustrialBlockClusterHarvestService {
                                 BlockPos miningTarget,
                                 int miningTicks,
                                 List<BlockPos> clusterPositions,
-                                List<BlockPos> plantPositions) {
+                                List<BlockPos> plantPositions,
+                                List<BlockPos> candidateClusterPositions,
+                                List<BlockPos> candidatePlantPositions,
+                                BlockPos candidateTarget,
+                                List<BlockPos> queuedTargets) {
         static HarvestState read(String text, int currentStep, PlacedBuildingRecord building, HarvestConfig config) {
             try {
                 JsonObject root = JsonParser.parseString(text != null && !text.isBlank() ? text : "{}").getAsJsonObject();
@@ -879,7 +985,11 @@ public final class IndustrialBlockClusterHarvestService {
                         readPos(root.get("miningTarget")),
                         Math.max(0, integer(root, "miningTicks", 0)),
                         readPositions(root.getAsJsonArray("cluster")),
-                        readPositions(root.getAsJsonArray("plant"))
+                        readPositions(root.getAsJsonArray("plant")),
+                        readPositions(root.getAsJsonArray("candidateCluster")),
+                        readPositions(root.getAsJsonArray("candidatePlant")),
+                        readPos(root.get("candidateTarget")),
+                        readPositions(root.getAsJsonArray("queuedTargets"))
                 );
             } catch (Exception exception) {
                 return initial(currentStep, building, config);
@@ -888,11 +998,11 @@ public final class IndustrialBlockClusterHarvestService {
 
         static HarvestState initial(int currentStep, PlacedBuildingRecord building, HarvestConfig config) {
             int ring = Math.max(1, config.startOffset());
-            return new HarvestState(currentStep, ring, minX(building) - ring, minZ(building) - ring, null, null, 0, List.of(), List.of());
+            return new HarvestState(currentStep, ring, minX(building) - ring, minZ(building) - ring, null, null, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
         }
 
         static HarvestState empty(int currentStep) {
-            return new HarvestState(currentStep, 1, 0, 0, null, null, 0, List.of(), List.of());
+            return new HarvestState(currentStep, 1, 0, 0, null, null, 0, List.of(), List.of(), List.of(), List.of(), null, List.of());
         }
 
         HarvestState normalizeCursor(PlacedBuildingRecord building, HarvestConfig config) {
@@ -940,29 +1050,61 @@ public final class IndustrialBlockClusterHarvestService {
                 nextZ--;
             } else {
                 int nextRing = currentRing + 1;
-                return new HarvestState(step, nextRing, minX(building) - nextRing, minZ(building) - nextRing, target, miningTarget, miningTicks, clusterPositions, plantPositions);
+                return new HarvestState(step, nextRing, minX(building) - nextRing, minZ(building) - nextRing, target, miningTarget, miningTicks, clusterPositions, plantPositions, candidateClusterPositions, candidatePlantPositions, candidateTarget, queuedTargets);
             }
-            return new HarvestState(step, currentRing, nextX, nextZ, target, miningTarget, miningTicks, clusterPositions, plantPositions);
+            return new HarvestState(step, currentRing, nextX, nextZ, target, miningTarget, miningTicks, clusterPositions, plantPositions, candidateClusterPositions, candidatePlantPositions, candidateTarget, queuedTargets);
         }
 
         HarvestState withCluster(Cluster cluster) {
-            return new HarvestState(step, ring, x, z, cluster.target(), null, 0, cluster.harvestPositions(), cluster.plantPositions());
+            return new HarvestState(step, ring, x, z, cluster.target(), null, 0, cluster.harvestPositions(), cluster.plantPositions(), List.of(), List.of(), null, queuedTargets);
         }
 
         HarvestState withTarget(BlockPos pos) {
-            return new HarvestState(step, ring, x, z, pos != null ? pos.immutable() : null, null, 0, clusterPositions, plantPositions);
+            return new HarvestState(step, ring, x, z, pos != null ? pos.immutable() : null, null, 0, clusterPositions, plantPositions, candidateClusterPositions, candidatePlantPositions, candidateTarget, queuedTargets);
         }
 
         HarvestState withClusterPositions(List<BlockPos> positions) {
-            return new HarvestState(step, ring, x, z, target, null, 0, copyPositions(positions), plantPositions);
+            return new HarvestState(step, ring, x, z, target, null, 0, copyPositions(positions), plantPositions, candidateClusterPositions, candidatePlantPositions, candidateTarget, queuedTargets);
         }
 
         HarvestState withPlantPositions(List<BlockPos> positions) {
-            return new HarvestState(step, ring, x, z, target, null, 0, clusterPositions, copyPositions(positions));
+            return new HarvestState(step, ring, x, z, target, null, 0, clusterPositions, copyPositions(positions), candidateClusterPositions, candidatePlantPositions, candidateTarget, queuedTargets);
         }
 
         HarvestState withMining(BlockPos pos, int ticks) {
-            return new HarvestState(step, ring, x, z, target, pos != null ? pos.immutable() : null, Math.max(0, ticks), clusterPositions, plantPositions);
+            return new HarvestState(step, ring, x, z, target, pos != null ? pos.immutable() : null, Math.max(0, ticks), clusterPositions, plantPositions, candidateClusterPositions, candidatePlantPositions, candidateTarget, queuedTargets);
+        }
+
+        Cluster candidateCluster() {
+            if (candidateTarget == null || candidateClusterPositions.isEmpty()) {
+                return null;
+            }
+            return new Cluster(candidateClusterPositions, candidatePlantPositions, candidateTarget);
+        }
+
+        HarvestState withQueuedTarget(BlockPos pos, Vec3 origin) {
+            if (pos == null || queuedTargets.contains(pos)) {
+                return this;
+            }
+            List<BlockPos> targets = new ArrayList<>(queuedTargets);
+            targets.add(pos.immutable());
+            targets.sort(Comparator.comparingDouble((BlockPos targetPos) -> distanceToTreeSqr(origin, targetPos))
+                    .thenComparingInt(BlockPos::getY)
+                    .thenComparingInt(BlockPos::getX)
+                    .thenComparingInt(BlockPos::getZ));
+            return new HarvestState(step, ring, x, z, target, miningTarget, miningTicks, clusterPositions, plantPositions,
+                    candidateClusterPositions, candidatePlantPositions, candidateTarget, List.copyOf(targets));
+        }
+
+        HarvestState withoutQueuedTarget(BlockPos pos) {
+            if (pos == null || queuedTargets.isEmpty()) {
+                return this;
+            }
+            List<BlockPos> targets = queuedTargets.stream()
+                    .filter(targetPos -> !pos.equals(targetPos))
+                    .toList();
+            return new HarvestState(step, ring, x, z, target, miningTarget, miningTicks, clusterPositions, plantPositions,
+                    candidateClusterPositions, candidatePlantPositions, candidateTarget, targets);
         }
 
         String toJson() {
@@ -981,11 +1123,22 @@ public final class IndustrialBlockClusterHarvestService {
             }
             root.add("cluster", positionsJson(clusterPositions));
             root.add("plant", positionsJson(plantPositions));
+            if (candidateTarget != null && !candidateClusterPositions.isEmpty()) {
+                root.add("candidateTarget", posJson(candidateTarget));
+                root.add("candidateCluster", positionsJson(candidateClusterPositions));
+                root.add("candidatePlant", positionsJson(candidatePlantPositions));
+            }
+            if (!queuedTargets.isEmpty()) {
+                root.add("queuedTargets", positionsJson(queuedTargets));
+            }
             return root.toString();
         }
     }
 
     private record ScanResult(HarvestState state, boolean completed, Cluster cluster) {
+    }
+
+    private record QueuedCluster(HarvestState state, Cluster cluster) {
     }
 
     private record Cluster(List<BlockPos> harvestPositions, List<BlockPos> plantPositions, BlockPos target) {

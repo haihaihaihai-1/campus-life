@@ -198,6 +198,22 @@ public final class IndustrialControlBoxService {
                 .orElse(null);
     }
 
+    /** isRunningAssignedWorker: 判断指定 NPC 是否正由运行中的工业控制箱接管移动与工作。 */
+    public static boolean isRunningAssignedWorker(ServerLevel level, CitizenData worker) {
+        if (level == null || worker == null || worker.workplacePos() == null || worker.workplaceId() == null) {
+            return false;
+        }
+        UUID expectedWorkplaceId = CitizenEmploymentService.workplaceId(
+                IndustrialConstants.HIRE_SOURCE_TYPE,
+                IndustrialConstants.HIRE_ROLE,
+                worker.workplacePos());
+        if (!expectedWorkplaceId.equals(worker.workplaceId())) {
+            return false;
+        }
+        IndustrialBoxData data = IndustrialBoxManager.get(level).get(worker.workplacePos());
+        return data != null && data.running();
+    }
+
     public static void synchronizeAssignedWorkerMetadata(ServerLevel level, BlockPos boxPos) {
         if (level == null || boxPos == null) {
             return;

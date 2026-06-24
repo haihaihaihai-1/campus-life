@@ -4,6 +4,7 @@ import common.cn.kafei.simukraft.building.BuilderConstructionService;
 import common.cn.kafei.simukraft.city.poi.CityPoiData;
 import common.cn.kafei.simukraft.city.poi.CityPoiManager;
 import common.cn.kafei.simukraft.entity.CitizenEntity;
+import common.cn.kafei.simukraft.industrial.IndustrialControlBoxService;
 import common.cn.kafei.simukraft.job.CityJobType;
 import common.cn.kafei.simukraft.path.CitizenNavigationService;
 import common.cn.kafei.simukraft.path.MovementIntent;
@@ -36,6 +37,9 @@ public final class CitizenWorkplaceMoveService {
         }
         if (CitizenSelfFeedingService.isSelfFeeding(level, citizen.uuid())) {
             return false;
+        }
+        if (citizen.jobType() == CityJobType.INDUSTRIAL_WORKER && IndustrialControlBoxService.isRunningAssignedWorker(level, citizen)) {
+            return true;
         }
         Optional<Vec3> targetOptional = resolveWorkplaceTarget(level, citizen);
         if (targetOptional.isEmpty()) {

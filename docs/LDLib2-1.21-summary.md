@@ -520,6 +520,8 @@ public class MyObject implements IPersistedSerializable {
 - 商业控制盒：显示店员、货物、收入
 - 其他控制盒：显示功能扩展信息
 
+工业控制盒已经开始使用服务端状态视图推送：`IndustrialControlBoxViewSyncService` 在状态变化时向附近玩家发送 `IndustrialControlBoxViewUpdatePacket`，客户端通过 `refreshIfOpen` 重建当前界面。编写类似界面时，不要只依赖打开界面时的一次性响应；长时间运行的机器、伐木、物流等状态应由服务端节流推送，客户端只显示服务端快照。
+
 ## 16. 在本项目中使用 LDLib2 的注意事项
 
 1. 当前依赖是 LDLib，不是 LDLib2
@@ -577,6 +579,7 @@ NPC 数量可能很多，必须避免每 tick 全量同步所有市民数据。
 - 平时只同步实体名、职业、状态
 - 打开城市核心 UI 时才请求城市相关列表
 - 打开单个市民详情时才请求该市民完整数据
+- 控制箱类界面只推送当前打开/附近玩家需要的视图，状态文本可节流，阻塞或缺材料等故障状态可以立即推送
 
 ## 17. 城市核心用 LDLib2 的推荐架构
 

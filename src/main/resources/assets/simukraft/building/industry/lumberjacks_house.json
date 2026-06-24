@@ -33,7 +33,7 @@
     "minYOffset": -4,
     "maxYOffset": 32,
     "excludeBuilding": true,
-    "scanColumnsPerTick": 64
+    "scanColumnsPerTick": 128
   },
   "recipes": [
     {
@@ -61,6 +61,7 @@
           "maxCarryStacks": 18,
           "untilAreaEmpty": true,
           "range": 2.2,
+          "ticks": 40,
           "swing": true,
           "timeoutTicks": 12000
         },

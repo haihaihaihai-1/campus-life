@@ -180,7 +180,8 @@ public final class CitizenNavigationService {
         runtime.latestRequests.remove(citizenId);
         runtime.blockedSince.remove(citizenId);
         runtime.pending.remove(citizenId);
-        ActiveNavigation active = runtime.active.remove(citizenId);
+        runtime.queuedCitizenIds.remove(citizenId);
+        runtime.active.remove(citizenId);
         CitizenEntity citizen = CitizenTeleportService.findCitizenEntity(level, citizenId);
         if (citizen != null) {
             citizen.getNavigation().stop();

@@ -360,3 +360,5 @@ Get-ChildItem .\run\simukraftbuilding\commercial,.\src\main\resources\assets\sim
 - 旧版没有 `sellPrice` / `buyPrice` 的新增兑换项，不应声明为旧版价格来源。
 
 已按该规则校准：建材店 `JCSD` 的 64 个建材交易、伐木工小屋 `lumberjacksHome` 的木头/树苗组交易，以及零售食品店铺的单个物品价格。
+
+注意：这里的 `lumberjacksHome` 是旧版商业交易配置，用于商店买卖木头和树苗；新版工业伐木工小屋 `lumberjacks_house` 使用 `industrial_customization.md` 中的 `workArea`、`harvest_block_clusters` 和 `deposit_carried_items`，会让 NPC 到建筑外真实砍树。两者资源和 JSON 目录不同，不要混用字段。
