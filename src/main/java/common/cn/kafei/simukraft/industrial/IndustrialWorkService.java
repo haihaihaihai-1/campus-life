@@ -179,21 +179,36 @@ public final class IndustrialWorkService {
             advanceStep(manager, data, recipe, boxRuntime);
             boxRuntime.nextTick = gameTime + 1L;
         } else if (result == StepResult.WAITING_MOVE) {
+            if (shouldSkipTimedOutStep(step, boxRuntime, gameTime)) {
+                advanceStep(manager, data, recipe, boxRuntime);
+                boxRuntime.nextTick = gameTime + 1L;
+                return;
+            }
             boxRuntime.nextTick = gameTime + MOVE_RETRY_TICKS;
         } else if (result == StepResult.WAITING_RETRY) {
-            if (step.timeoutTicks() > 0) {
-                if (boxRuntime.timeoutStartAt == 0L) boxRuntime.timeoutStartAt = gameTime;
-                if (gameTime - boxRuntime.timeoutStartAt >= step.timeoutTicks()) {
-                    advanceStep(manager, data, recipe, boxRuntime);
-                    boxRuntime.nextTick = gameTime + 1L;
-                    return;
-                }
+            if (shouldSkipTimedOutStep(step, boxRuntime, gameTime)) {
+                advanceStep(manager, data, recipe, boxRuntime);
+                boxRuntime.nextTick = gameTime + 1L;
+                return;
             }
             boxRuntime.nextTick = gameTime + IDLE_RETRY_TICKS;
         } else {
             boxRuntime.timeoutStartAt = 0L;
             boxRuntime.nextTick = gameTime + 1L;
         }
+    }
+
+    /**
+     * shouldSkipTimedOutStep: 仅允许 JSON 显式声明的步骤在等待超时后跳过，避免缺材料或箱子满时误推进。
+     */
+    private static boolean shouldSkipTimedOutStep(IndustrialDefinition.StepDefinition step, BoxRuntime boxRuntime, long gameTime) {
+        if (!step.skipOnTimeout() || step.timeoutTicks() <= 0) {
+            return false;
+        }
+        if (boxRuntime.timeoutStartAt == 0L) {
+            boxRuntime.timeoutStartAt = gameTime;
+        }
+        return gameTime - boxRuntime.timeoutStartAt >= step.timeoutTicks();
     }
 
     private static StepResult executeStep(ServerLevel level,
@@ -237,9 +252,7 @@ public final class IndustrialWorkService {
             case "require_drops", "require_drop_items", "has_drops" -> entityAction(manager, data,
                     IndustrialEntityActionService.requireDrops(level, building, definition, step, entity),
                     "gui.simukraft.industrial.status.collecting_drops");
-            case "collect_drops" -> entityAction(manager, data,
-                    IndustrialEntityActionService.collectDrops(level, building, definition, step, entity),
-                    "gui.simukraft.industrial.status.collecting_drops");
+            case "collect_drops" -> collectDrops(level, manager, data, boxRuntime, building, definition, worker, entity, step);
             case "shear_entities", "shear_sheep" -> step.ticks() > 0
                     ? shearWithAnimation(level, manager, data, boxRuntime, building, definition, entity, step, gameTime)
                     : entityAction(manager, data,
@@ -626,6 +639,66 @@ public final class IndustrialWorkService {
                 "gui.simukraft.industrial.status.shearing");
     }
 
+    private static StepResult collectDrops(ServerLevel level,
+                                           IndustrialBoxManager manager,
+                                           IndustrialBoxData data,
+                                           BoxRuntime boxRuntime,
+                                           PlacedBuildingRecord building,
+                                           IndustrialDefinition definition,
+                                           CitizenData worker,
+                                           CitizenEntity entity,
+                                           IndustrialDefinition.StepDefinition step) {
+        if (IndustrialCarriedItemService.stackCount(data, level.registryAccess()) >= Math.max(1, step.maxCarryStacks())) {
+            setStatus(manager, data, "gui.simukraft.industrial.status.carry_full", "");
+            return StepResult.PROGRESSED;
+        }
+        var target = IndustrialEntityActionService.nearestDrop(level, building, definition, step, entity);
+        if (target.isEmpty()) {
+            setStatus(manager, data,
+                    IndustrialCarriedItemService.hasItems(data)
+                            ? "gui.simukraft.industrial.status.collecting_drops"
+                            : "gui.simukraft.industrial.status.missing_drops",
+                    "");
+            return StepResult.PROGRESSED;
+        }
+        double range = Math.max(1.5D, step.range());
+        if (entity.position().distanceToSqr(target.get().position()) > range * range) {
+            setStatus(manager, data, "gui.simukraft.industrial.status.collecting_drops", "");
+            CitizenNavigationService.requestMove(level, worker.uuid(), target.get().position(), MovementIntent.WORK);
+            boxRuntime.resetStep(data.currentStep());
+            return StepResult.WAITING_MOVE;
+        }
+        CitizenNavigationService.stop(level, worker.uuid());
+        IndustrialEntityActionService.ActionResult result = IndustrialEntityActionService.collectReachableDrops(
+                level, manager, data, building, definition, step, entity);
+        return switch (result) {
+            case SUCCESS -> {
+                setStatus(manager, data, "gui.simukraft.industrial.status.collecting_drops", "");
+                boolean full = IndustrialCarriedItemService.stackCount(data, level.registryAccess()) >= Math.max(1, step.maxCarryStacks());
+                boolean empty = IndustrialEntityActionService.nearestDrop(level, building, definition, step, entity).isEmpty();
+                yield full || empty ? StepResult.PROGRESSED : StepResult.WAITING;
+            }
+            case CARRY_FULL -> {
+                setStatus(manager, data, "gui.simukraft.industrial.status.carry_full", "");
+                yield StepResult.PROGRESSED;
+            }
+            case MISSING_DROPS -> {
+                setStatus(manager, data,
+                        IndustrialCarriedItemService.hasItems(data)
+                                ? "gui.simukraft.industrial.status.collecting_drops"
+                                : "gui.simukraft.industrial.status.missing_drops",
+                        "");
+                yield IndustrialCarriedItemService.hasItems(data) ? StepResult.PROGRESSED : StepResult.WAITING_RETRY;
+            }
+            case STORAGE_FAILED -> {
+                setStatus(manager, data, "gui.simukraft.industrial.status.carried_storage_failed", "");
+                yield StepResult.WAITING_RETRY;
+            }
+            case MISSING_ENTITIES, MISSING_INPUTS, OUTPUT_FULL -> entityAction(manager, data, result,
+                    "gui.simukraft.industrial.status.collecting_drops");
+        };
+    }
+
     private static StepResult lookAt(PlacedBuildingRecord building, IndustrialDefinition definition, CitizenEntity entity, IndustrialDefinition.StepDefinition step) {
         BlockPos target = IndustrialControlBoxService.resolvePoint(building, definition, step.point(), entity.position());
         if (target == null) {
@@ -814,6 +887,14 @@ public final class IndustrialWorkService {
             }
             case OUTPUT_FULL -> {
                 setStatus(manager, data, "gui.simukraft.industrial.status.output_full", "");
+                yield StepResult.WAITING_RETRY;
+            }
+            case CARRY_FULL -> {
+                setStatus(manager, data, "gui.simukraft.industrial.status.carry_full", "");
+                yield StepResult.PROGRESSED;
+            }
+            case STORAGE_FAILED -> {
+                setStatus(manager, data, "gui.simukraft.industrial.status.carried_storage_failed", "");
                 yield StepResult.WAITING_RETRY;
             }
         };

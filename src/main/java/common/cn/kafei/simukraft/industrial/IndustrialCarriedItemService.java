@@ -3,18 +3,19 @@ package common.cn.kafei.simukraft.industrial;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import common.cn.kafei.simukraft.SimuKraft;
 import common.cn.kafei.simukraft.material.GenericContainerAccess;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.Tag;
+import net.minecraft.nbt.TagParser;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @SuppressWarnings("null")
 public final class IndustrialCarriedItemService {
@@ -56,17 +57,19 @@ public final class IndustrialCarriedItemService {
         return items(data, registries).size();
     }
 
-    public static void addItems(IndustrialBoxManager manager, IndustrialBoxData data, List<ItemStack> additions, HolderLookup.Provider registries) {
+    public static boolean addItems(IndustrialBoxManager manager, IndustrialBoxData data, List<ItemStack> additions, HolderLookup.Provider registries) {
         if (data == null || additions == null || additions.isEmpty()) {
-            return;
+            return false;
         }
         List<ItemStack> merged = new ArrayList<>(items(data, registries));
+        boolean changed = false;
         for (ItemStack addition : additions) {
             if (addition != null && !addition.isEmpty()) {
                 addStack(merged, addition.copy());
+                changed = true;
             }
         }
-        setItems(manager, data, merged, registries);
+        return changed && setItems(manager, data, merged, registries);
     }
 
     public static boolean consumeFirstMatching(IndustrialBoxManager manager,
@@ -92,8 +95,10 @@ public final class IndustrialCarriedItemService {
             ItemStack extracted = stack.copyWithCount(1);
             stack.shrink(1);
             current.removeIf(ItemStack::isEmpty);
-            setItems(manager, data, current, registries);
-            return java.util.Optional.of(extracted);
+            if (setItems(manager, data, current, registries)) {
+                return java.util.Optional.of(extracted);
+            }
+            return java.util.Optional.empty();
         }
         return java.util.Optional.empty();
     }
@@ -149,10 +154,13 @@ public final class IndustrialCarriedItemService {
         }
     }
 
-    private static void setItems(IndustrialBoxManager manager, IndustrialBoxData data, List<ItemStack> items, HolderLookup.Provider registries) {
+    private static boolean setItems(IndustrialBoxManager manager, IndustrialBoxData data, List<ItemStack> items, HolderLookup.Provider registries) {
         if (items == null || items.isEmpty()) {
             clear(manager, data);
-            return;
+            return true;
+        }
+        if (registries == null) {
+            return false;
         }
         JsonObject root = new JsonObject();
         JsonArray array = new JsonArray();
@@ -160,25 +168,36 @@ public final class IndustrialCarriedItemService {
             if (stack == null || stack.isEmpty()) {
                 continue;
             }
-            array.add(stackToJson(stack, registries));
+            Optional<JsonObject> encoded = stackToJson(stack, registries);
+            if (encoded.isEmpty()) {
+                return false;
+            }
+            array.add(encoded.get());
+        }
+        if (array.isEmpty()) {
+            clear(manager, data);
+            return true;
         }
         root.add(ITEMS_KEY, array);
         data.setWorkState(root.toString());
         if (manager != null) {
             manager.persist(data);
         }
+        return true;
     }
 
-    private static JsonObject stackToJson(ItemStack stack, HolderLookup.Provider registries) {
-        JsonObject object = new JsonObject();
-        if (registries == null) {
-            return object;
+    private static Optional<JsonObject> stackToJson(ItemStack stack, HolderLookup.Provider registries) {
+        if (stack == null || stack.isEmpty() || registries == null) {
+            return Optional.empty();
         }
-        Tag tag = ItemStack.CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), stack)
-                .result()
-                .orElseGet(CompoundTag::new);
-        object.addProperty("nbt", tag.toString());
-        return object;
+        try {
+            JsonObject object = new JsonObject();
+            object.addProperty("nbt", stack.saveOptional(registries).toString());
+            return Optional.of(object);
+        } catch (RuntimeException exception) {
+            SimuKraft.LOGGER.warn("Simukraft: Failed to serialize carried item {}", stack, exception);
+            return Optional.empty();
+        }
     }
 
     private static ItemStack stackFromJson(JsonObject object, HolderLookup.Provider registries) {
@@ -186,10 +205,8 @@ public final class IndustrialCarriedItemService {
             return ItemStack.EMPTY;
         }
         try {
-            CompoundTag tag = net.minecraft.nbt.TagParser.parseTag(object.get("nbt").getAsString());
-            return ItemStack.CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag)
-                    .result()
-                    .orElse(ItemStack.EMPTY);
+            CompoundTag tag = TagParser.parseTag(object.get("nbt").getAsString());
+            return ItemStack.parseOptional(registries, tag);
         } catch (Exception exception) {
             return ItemStack.EMPTY;
         }

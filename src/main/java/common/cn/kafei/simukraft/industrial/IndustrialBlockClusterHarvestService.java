@@ -374,8 +374,8 @@ public final class IndustrialBlockClusterHarvestService {
             removed++;
             drops.addAll(blockDrops);
         }
-        if (!drops.isEmpty()) {
-            IndustrialCarriedItemService.addItems(manager, data, drops, level.registryAccess());
+        if (!drops.isEmpty() && !IndustrialCarriedItemService.addItems(manager, data, drops, level.registryAccess())) {
+            dropFailedCarryItems(level, data, worker, drops);
         }
         HarvestState next = state.withClusterPositions(blocked);
         if (!blocked.isEmpty()) {
@@ -422,6 +422,17 @@ public final class IndustrialBlockClusterHarvestService {
     }
 
     /** harvestOrder: 先移除正在挖的树桩，再移除其它树干，最后处理树叶等附着方块。 */
+    private static void dropFailedCarryItems(ServerLevel level, IndustrialBoxData data, CitizenEntity worker, List<ItemStack> drops) {
+        BlockPos fallback = worker != null ? worker.blockPosition() : data.boxPos();
+        for (ItemStack drop : drops) {
+            if (drop != null && !drop.isEmpty()) {
+                Block.popResource(level, fallback, drop.copy());
+            }
+        }
+        SimuKraft.LOGGER.warn("Simukraft: Failed to save harvested drops for box {}; dropped {} stacks at {}",
+                data.boxPos(), drops.size(), fallback);
+    }
+
     private static List<BlockPos> harvestOrder(ServerLevel level, IndustrialDefinition.StepDefinition step, HarvestState state) {
         List<BlockPos> result = new ArrayList<>();
         Set<BlockPos> seen = new HashSet<>();

@@ -53,6 +53,8 @@ class IndustrialDefinitionLoaderTest {
                           "maxClusterBlocks": 160,
                           "maxBlocksPerTick": 12,
                           "maxCarryStacks": 18,
+                          "timeoutTicks": 200,
+                          "skipOnTimeout": true,
                           "untilAreaEmpty": true
                         }
                       ]
@@ -77,6 +79,8 @@ class IndustrialDefinitionLoaderTest {
         assertEquals(160, step.maxClusterBlocks());
         assertEquals(12, step.maxBlocksPerTick());
         assertEquals(18, step.maxCarryStacks());
+        assertEquals(200, step.timeoutTicks());
+        assertTrue(step.skipOnTimeout());
         assertTrue(step.untilAreaEmpty());
         assertEquals("minecraft:saplings", ((IndustrialDefinition.ItemRequirement) definition.recipes().getFirst().inputs().getFirst()).spec().itemTag());
     }

@@ -732,6 +732,7 @@
     "gui.simukraft.industrial.status.waiting_trees":  "Waiting for trees",
     "gui.simukraft.industrial.status.depositing_carried_items":  "Depositing carried items",
     "gui.simukraft.industrial.status.carry_full":  "Carry limit reached, returning to storage",
+    "gui.simukraft.industrial.status.carried_storage_failed":  "Failed to save carried items; keeping drops for retry",
     "gui.simukraft.industrial.status.waiting_block":  "Waiting for target block",
     "gui.simukraft.industrial.status.block_action_blocked":  "Block action is blocked",
     "gui.simukraft.industrial.status.machine_running":  "Real machine running",

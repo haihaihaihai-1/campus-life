@@ -363,6 +363,7 @@ public final class IndustrialDefinitionLoader {
                 stringAny(object, "extract_to_output", "outputPolicy", "output_policy"),
                 Math.max(1, integer(object, "timeoutTicks", integer(object, "timeout", 12000))),
                 Math.max(1, integer(object, "pollTicks", integer(object, "poll", 20))),
+                bool(object, "skipOnTimeout", bool(object, "skip_on_timeout", false)),
                 integer(object, "slot", -1),
                 Math.max(0, integer(object, "targetCount", integer(object, "target", integer(object, "fillTo", 0)))),
                 integer(object, "thresholdCount", integer(object, "threshold", -1)),

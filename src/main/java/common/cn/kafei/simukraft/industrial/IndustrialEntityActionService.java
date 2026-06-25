@@ -12,6 +12,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.IShearable;
@@ -91,10 +92,6 @@ public final class IndustrialEntityActionService {
     }
 
     public static ActionResult shear(ServerLevel level, PlacedBuildingRecord building, IndustrialDefinition definition, IndustrialDefinition.StepDefinition step, CitizenEntity worker) {
-        List<BlockPos> outputContainers = IndustrialControlBoxService.resolveContainerPositions(building, definition, containerName(step.output(), step.container(), "output"));
-        if (outputContainers.isEmpty()) {
-            return ActionResult.OUTPUT_FULL;
-        }
         List<Animal> targets = animals(level, building, definition, step).stream()
                 .filter(a -> !a.isBaby() && a instanceof IShearable s && s.isShearable(null, ItemStack.EMPTY, level, a.blockPosition()))
                 .sorted(Comparator.comparingDouble(a -> worker != null ? a.distanceToSqr(worker) : 0.0D))
@@ -113,9 +110,8 @@ public final class IndustrialEntityActionService {
             ItemStack heldShears = worker != null ? worker.getMainHandItem() : ItemStack.EMPTY;
             List<ItemStack> drops = ((IShearable) animal).onSheared(null, heldShears, level, animal.blockPosition());
             for (ItemStack drop : drops) {
-                ItemStack remaining = insertIntoContainers(level, outputContainers, drop.copy());
-                if (!remaining.isEmpty()) {
-                    return sheared > 0 ? ActionResult.SUCCESS : ActionResult.OUTPUT_FULL;
+                if (drop != null && !drop.isEmpty()) {
+                    Block.popResource(level, animal.blockPosition(), drop.copy());
                 }
             }
             sheared++;
@@ -129,37 +125,54 @@ public final class IndustrialEntityActionService {
                 .min(Comparator.comparingDouble(a -> worker != null ? a.distanceToSqr(worker) : 0.0));
     }
 
-    public static ActionResult collectDrops(ServerLevel level, PlacedBuildingRecord building, IndustrialDefinition definition, IndustrialDefinition.StepDefinition step, CitizenEntity worker) {
-        List<BlockPos> outputContainers = IndustrialControlBoxService.resolveContainerPositions(building, definition, containerName(step.output(), step.container(), "output"));
-        if (outputContainers.isEmpty()) {
-            return ActionResult.OUTPUT_FULL;
+    public static Optional<ItemEntity> nearestDrop(ServerLevel level,
+                                                   PlacedBuildingRecord building,
+                                                   IndustrialDefinition definition,
+                                                   IndustrialDefinition.StepDefinition step,
+                                                   CitizenEntity worker) {
+        return matchingDrops(level, building, definition, step, worker).stream().findFirst();
+    }
+
+    public static ActionResult collectReachableDrops(ServerLevel level,
+                                                     IndustrialBoxManager manager,
+                                                     IndustrialBoxData data,
+                                                     PlacedBuildingRecord building,
+                                                     IndustrialDefinition definition,
+                                                     IndustrialDefinition.StepDefinition step,
+                                                     CitizenEntity worker) {
+        if (IndustrialCarriedItemService.stackCount(data, level.registryAccess()) >= Math.max(1, step.maxCarryStacks())) {
+            return ActionResult.CARRY_FULL;
         }
-        List<ItemEntity> drops = matchingDrops(level, building, definition, step, worker);
-        if (drops.isEmpty()) {
-            return ActionResult.MISSING_DROPS;
-        }
+        double range = Math.max(1.5D, step.range());
+        List<ItemStack> picked = new ArrayList<>();
+        List<ItemEntity> pickedEntities = new ArrayList<>();
         int limit = step.count() > 0 ? step.count() : Integer.MAX_VALUE;
         int collected = 0;
-        boolean outputFull = false;
-        for (ItemEntity drop : drops) {
+        for (ItemEntity drop : matchingDrops(level, building, definition, step, worker)) {
             if (collected >= limit) {
                 break;
             }
-            ItemStack original = drop.getItem();
-            ItemStack remaining = insertIntoContainers(level, outputContainers, original.copy());
-            if (remaining.getCount() == original.getCount()) {
-                outputFull = true;
+            if (worker != null && drop.position().distanceToSqr(worker.position()) > range * range) {
                 continue;
             }
-            if (remaining.isEmpty()) {
-                drop.discard();
-            } else {
-                drop.setItem(remaining);
-                outputFull = true;
+            ItemStack stack = drop.getItem().copy();
+            if (stack.isEmpty()) {
+                continue;
             }
+            picked.add(stack);
+            pickedEntities.add(drop);
             collected++;
         }
-        return outputFull ? ActionResult.OUTPUT_FULL : ActionResult.SUCCESS;
+        if (picked.isEmpty()) {
+            return ActionResult.MISSING_DROPS;
+        }
+        if (!IndustrialCarriedItemService.addItems(manager, data, picked, level.registryAccess())) {
+            return ActionResult.STORAGE_FAILED;
+        }
+        for (ItemEntity drop : pickedEntities) {
+            drop.discard();
+        }
+        return ActionResult.SUCCESS;
     }
 
     /**
@@ -247,17 +260,6 @@ public final class IndustrialEntityActionService {
         return count;
     }
 
-    private static ItemStack insertIntoContainers(ServerLevel level, List<BlockPos> containers, ItemStack stack) {
-        ItemStack remaining = stack;
-        for (BlockPos container : containers) {
-            if (remaining.isEmpty()) {
-                break;
-            }
-            remaining = GenericContainerAccess.insert(level, container, remaining);
-        }
-        return remaining;
-    }
-
     private static boolean matchesDrop(ServerLevel level, IndustrialDefinition.StepDefinition step, ItemStack stack) {
         if (stack == null || stack.isEmpty()) {
             return false;
@@ -291,6 +293,8 @@ public final class IndustrialEntityActionService {
         MISSING_ENTITIES,
         MISSING_DROPS,
         MISSING_INPUTS,
-        OUTPUT_FULL
+        OUTPUT_FULL,
+        CARRY_FULL,
+        STORAGE_FAILED
     }
 }
