@@ -6,6 +6,7 @@ import client.cn.kafei.simukraft.client.ui.SimuKraftUiTheme;
 import client.cn.kafei.simukraft.client.ui.SimuKraftFlexLayout;
 import com.lowdragmc.lowdraglib2.gui.texture.ColorRectTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.GuiTextureGroup;
+import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.texture.TextTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
@@ -27,6 +28,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -61,11 +63,19 @@ public final class BuildingListScreenOpener {
     private static final int MIN_CARD_WIDTH = 130;
     private static final int PREFERRED_CARD_HEIGHT = 70;
     private static final int MIN_CARD_HEIGHT = 62;
+    private static final int TOOLBAR_GAP = 6;
+    private static final int FAVORITE_BUTTON_SIZE = 18;
+    private static final int FAVORITE_BUTTON_TOP = 8;
+    private static final int FAVORITE_BUTTON_RIGHT_INSET = 4;
+    private static final int FAVORITE_STAR_COLOR = 0xFFFFD700;
     private static int currentPage;
     private static String currentCategory;
     private static BlockPos currentBuildBoxPos;
     private static String selectedBuildingFileName;
     private static String searchText = "";
+    private static boolean showFavoritesOnly;
+    private static boolean sortDescending;
+    private static SortMode sortMode = SortMode.NAME;
     private static PendingPreview pendingPreview;
 
     private BuildingListScreenOpener() {
@@ -77,6 +87,7 @@ public final class BuildingListScreenOpener {
             currentPage = 0;
             selectedBuildingFileName = null;
             searchText = "";
+            showFavoritesOnly = false;
         }
         currentCategory = category;
         currentBuildBoxPos = buildBoxPos;
@@ -171,10 +182,24 @@ public final class BuildingListScreenOpener {
         });
         root.addChild(confirmRegion);
 
-        root.addChild(RecipeBookSearchUi.frameElement(regions.searchRegion().left(), regions.searchRegion().top()));
-        BuildingUiController controller = new BuildingUiController(category, buildings, regions, grid, statusSlot, cardRegion, infoRegion, pagerRegion, confirmRegion);
+        root.addChild(RecipeBookSearchUi.frameElement(regions.searchRegion().left(), regions.searchRegion().top(),
+                regions.searchRegion().width(), regions.searchRegion().height()));
+        UIElement toolbarButtonsRegion = absoluteRegion(regions.toolbarButtonsRegion());
+        toolbarButtonsRegion.layout(layout -> {
+            layout.flexDirection(FlexDirection.ROW);
+            layout.alignItems(AlignItems.CENTER);
+            layout.justifyContent(AlignContent.CENTER);
+            layout.gapAll(TOOLBAR_GAP);
+        });
+        root.addChild(toolbarButtonsRegion);
+
+        BuildingUiController controller = new BuildingUiController(category, buildings, regions, grid, statusSlot, cardRegion,
+                infoRegion, pagerRegion, confirmRegion, toolbarButtonsRegion);
         root.addChild(RecipeBookSearchUi.createField(regions.searchRegion().left() + RecipeBookSearchUi.TEXT_OFFSET_X,
-                regions.searchRegion().top() + RecipeBookSearchUi.TEXT_OFFSET_Y, searchText, controller::onSearchChanged));
+                regions.searchRegion().top() + searchTextOffsetY(regions.searchRegion().height()),
+                Math.max(RecipeBookSearchUi.TEXT_WIDTH, regions.searchRegion().width() - RecipeBookSearchUi.TEXT_OFFSET_X - 4),
+                RecipeBookSearchUi.TEXT_HEIGHT,
+                searchText, controller::onSearchChanged));
         controller.refresh();
         return new ModularUI(SimuKraftUiTheme.createUi(root)).shouldCloseOnEsc(true).shouldCloseOnKeyInventory(false);
     }
@@ -203,8 +228,10 @@ public final class BuildingListScreenOpener {
         });
         card.addClass("simukraft_card_button");
         card.setOnClick(event -> {
-            selectedBuildingFileName = building.structureFileName();
-            refreshAction.run();
+            if (event.button == 0) {
+                selectedBuildingFileName = building.structureFileName();
+                refreshAction.run();
+            }
         });
         card.addChild(SimuKraftUiTheme.createDecorationLayer(6, 7, buttonWidth - 12, buttonHeight - 14, "simukraft_card_content_panel"));
 
@@ -225,6 +252,13 @@ public final class BuildingListScreenOpener {
             layout.top(8);
             layout.width(buttonWidth);
             layout.height(12);
+        }));
+        card.addChild(favoriteButton(building, refreshAction).layout(layout -> {
+            layout.positionType(TaffyPosition.ABSOLUTE);
+            layout.left(Math.max(4, buttonWidth - FAVORITE_BUTTON_SIZE - FAVORITE_BUTTON_RIGHT_INSET));
+            layout.top(FAVORITE_BUTTON_TOP);
+            layout.width(FAVORITE_BUTTON_SIZE);
+            layout.height(FAVORITE_BUTTON_SIZE);
         }));
 
         int infoLeft = 14;
@@ -259,6 +293,41 @@ public final class BuildingListScreenOpener {
         return wrapper;
     }
 
+    /** favoriteButton: 在建筑卡片右上角绘制独立收藏按钮。 */
+    private static UIElement favoriteButton(BuildingCacheService.BuildingMeta building, Runnable refreshAction) {
+        boolean favorite = isFavorite(building);
+        UIElement root = new UIElement();
+        root.addChild(textElement(Component.literal(favorite ? "★" : "☆"), FAVORITE_BUTTON_SIZE, FAVORITE_STAR_COLOR, TextTexture.TextType.NORMAL, false).layout(layout -> {
+            layout.positionType(TaffyPosition.ABSOLUTE);
+            layout.left(0);
+            layout.top(0);
+            layout.width(FAVORITE_BUTTON_SIZE);
+            layout.height(FAVORITE_BUTTON_SIZE);
+        }).setAllowHitTest(false));
+
+        Button hitArea = new Button().noText();
+        hitArea.buttonStyle(style -> style
+                .baseTexture(IGuiTexture.EMPTY)
+                .hoverTexture(IGuiTexture.EMPTY)
+                .pressedTexture(IGuiTexture.EMPTY));
+        hitArea.layout(layout -> {
+            layout.positionType(TaffyPosition.ABSOLUTE);
+            layout.left(0);
+            layout.top(0);
+            layout.width(FAVORITE_BUTTON_SIZE);
+            layout.height(FAVORITE_BUTTON_SIZE);
+        });
+        hitArea.setOnClick(event -> {
+            if (event.button == 0) {
+                toggleFavorite(building);
+                refreshAction.run();
+                event.stopPropagation();
+            }
+        });
+        root.addChild(hitArea);
+        return root;
+    }
+
     private static UIElement infoLine(Component text, int width, int color) {
         UIElement element = new UIElement();
         element.style(style -> style.backgroundTexture(new TextTexture(text.getString())
@@ -287,16 +356,28 @@ public final class BuildingListScreenOpener {
         RegionBox titleRegion = relativeBox(screenWidth, screenHeight, TITLE_LEFT_RATIO, TITLE_TOP_RATIO, TITLE_WIDTH_RATIO, TITLE_HEIGHT_RATIO);
         RegionBox pagerRegion = relativeBox(screenWidth, screenHeight, PAGER_LEFT_RATIO, PAGER_TOP_RATIO, PAGER_WIDTH_RATIO, PAGER_HEIGHT_RATIO);
         RegionBox confirmRegion = relativeBox(screenWidth, screenHeight, CONFIRM_LEFT_RATIO, CONFIRM_TOP_RATIO, CONFIRM_WIDTH_RATIO, CONFIRM_HEIGHT_RATIO);
-        int searchTop = clamp(Math.max(titleRegion.bottom() + 4, Math.round(screenHeight * 0.155F)), 0,
-                Math.max(0, pagerRegion.top() - RecipeBookSearchUi.FRAME_HEIGHT - MIN_CARD_HEIGHT - 12));
+        int toolbarTop = clamp(Math.max(titleRegion.bottom() + 6, Math.round(screenHeight * 0.18F)), 0,
+                Math.max(0, pagerRegion.top() - Math.max(22, RecipeBookSearchUi.FRAME_HEIGHT) - MIN_CARD_HEIGHT - 12));
+        int toolbarLeft = clamp(Math.round(screenWidth * 0.036F), 0, Math.max(0, screenWidth - 1));
+        int toolbarWidth = clamp(Math.round(screenWidth * 0.928F), 1, Math.max(1, screenWidth - toolbarLeft));
+        int toolbarHeight = Math.max(22, RecipeBookSearchUi.FRAME_HEIGHT + 4);
+        int toolbarButtonHeight = Math.max(MIN_BUTTON_HEIGHT, toolbarHeight - 2);
+        int controlsWidth = clamp(Math.round(toolbarWidth * 0.34F), Math.min(220, toolbarWidth), Math.min(430, toolbarWidth));
+        int searchWidth = Math.max(RecipeBookSearchUi.FRAME_WIDTH, toolbarWidth - controlsWidth - TOOLBAR_GAP);
         RegionBox searchRegion = new RegionBox(
-                clamp((screenWidth - RecipeBookSearchUi.FRAME_WIDTH) / 2, 0, Math.max(0, screenWidth - RecipeBookSearchUi.FRAME_WIDTH)),
-                searchTop,
-                Math.min(RecipeBookSearchUi.FRAME_WIDTH, screenWidth),
-                RecipeBookSearchUi.FRAME_HEIGHT
+                toolbarLeft,
+                toolbarTop + Math.max(0, (toolbarHeight - toolbarButtonHeight) / 2),
+                searchWidth,
+                toolbarButtonHeight
+        );
+        RegionBox toolbarButtonsRegion = new RegionBox(
+                searchRegion.right() + TOOLBAR_GAP,
+                toolbarTop,
+                Math.max(1, toolbarLeft + toolbarWidth - searchRegion.right() - TOOLBAR_GAP),
+                toolbarHeight
         );
         RegionBox rawCardRegion = relativeBox(screenWidth, screenHeight, CARD_LEFT_RATIO, CARD_TOP_RATIO, CARD_WIDTH_RATIO, CARD_HEIGHT_RATIO);
-        int cardTop = clamp(Math.max(rawCardRegion.top(), searchRegion.bottom() + 6), 0, Math.max(0, pagerRegion.top() - MIN_CARD_HEIGHT - 4));
+        int cardTop = clamp(Math.max(rawCardRegion.top(), toolbarTop + toolbarHeight + 8), 0, Math.max(0, pagerRegion.top() - MIN_CARD_HEIGHT - 4));
         int cardBottomLimit = Math.max(rawCardRegion.top() + MIN_CARD_HEIGHT, Math.min(rawCardRegion.bottom(), pagerRegion.top() - 4));
         RegionBox cardRegion = new RegionBox(
                 rawCardRegion.left(),
@@ -314,6 +395,7 @@ public final class BuildingListScreenOpener {
         return new RegionMetrics(
                 titleRegion,
                 searchRegion,
+                toolbarButtonsRegion,
                 cardRegion,
                 selectedInfoRegion,
                 pagerRegion,
@@ -323,6 +405,11 @@ public final class BuildingListScreenOpener {
 
     private static int clamp(int value, int min, int max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    /** searchTextOffsetY: 根据搜索框高度计算输入文字的垂直居中偏移。 */
+    private static int searchTextOffsetY(int frameHeight) {
+        return Math.max(1, (frameHeight - RecipeBookSearchUi.TEXT_HEIGHT) / 2);
     }
 
     private static UIElement absoluteRegion(RegionBox region) {
@@ -372,12 +459,24 @@ public final class BuildingListScreenOpener {
 
     private static List<BuildingCacheService.BuildingMeta> filteredBuildings(List<BuildingCacheService.BuildingMeta> buildings, String category) {
         String query = normalizedSearchText();
-        if (query.isBlank()) {
-            return buildings;
-        }
         return buildings.stream()
-                .filter(building -> matchesSearch(building, category, query))
+                .filter(building -> !showFavoritesOnly || isFavorite(building))
+                .filter(building -> query.isBlank() || matchesSearch(building, category, query))
+                .sorted(currentComparator())
                 .toList();
+    }
+
+    /** currentComparator: 根据当前工具栏排序状态生成稳定排序规则。 */
+    private static Comparator<BuildingCacheService.BuildingMeta> currentComparator() {
+        Comparator<BuildingCacheService.BuildingMeta> comparator = switch (sortMode) {
+            case NAME -> Comparator.comparing(BuildingCacheService.BuildingMeta::name, String.CASE_INSENSITIVE_ORDER);
+            case PRICE -> Comparator.comparingDouble(building -> firstNumber(building.amount()));
+            case SIZE -> Comparator.comparingInt(building -> sizeVolume(building.size()));
+            case AUTHOR -> Comparator.comparing(BuildingCacheService.BuildingMeta::author, String.CASE_INSENSITIVE_ORDER);
+        };
+        comparator = comparator.thenComparing(BuildingCacheService.BuildingMeta::name, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(BuildingCacheService.BuildingMeta::structureFileName, String.CASE_INSENSITIVE_ORDER);
+        return sortDescending ? comparator.reversed() : comparator;
     }
 
     private static boolean matchesSearch(BuildingCacheService.BuildingMeta building, String category, String query) {
@@ -398,6 +497,66 @@ public final class BuildingListScreenOpener {
 
     private static String normalizedSearchText() {
         return searchText == null ? "" : searchText.trim().toLowerCase(Locale.ROOT);
+    }
+
+    /** toggleFavorite: 切换建筑收藏并处理仅看收藏时的选中状态。 */
+    private static void toggleFavorite(BuildingCacheService.BuildingMeta building) {
+        BuildingFavoriteStore.toggleFavorite(building);
+        if (selectedBuildingFileName != null && selectedBuildingFileName.equals(building.structureFileName()) && showFavoritesOnly && !isFavorite(building)) {
+            selectedBuildingFileName = null;
+        }
+    }
+
+    /** isFavorite: 查询建筑是否已收藏。 */
+    private static boolean isFavorite(BuildingCacheService.BuildingMeta building) {
+        return BuildingFavoriteStore.isFavorite(building);
+    }
+
+    /** firstNumber: 从造价文本中提取排序用的首个数字。 */
+    private static double firstNumber(String text) {
+        if (text == null || text.isBlank()) {
+            return 0.0D;
+        }
+        StringBuilder builder = new StringBuilder();
+        boolean started = false;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if ((c >= '0' && c <= '9') || c == '.' || c == '-') {
+                builder.append(c);
+                started = true;
+            } else if (started) {
+                break;
+            }
+        }
+        try {
+            return builder.isEmpty() ? 0.0D : Double.parseDouble(builder.toString());
+        } catch (NumberFormatException exception) {
+            return 0.0D;
+        }
+    }
+
+    /** sizeVolume: 从尺寸文本中提取长宽高并计算体积排序值。 */
+    private static int sizeVolume(String size) {
+        if (size == null || size.isBlank()) {
+            return 0;
+        }
+        int[] values = new int[3];
+        int index = 0;
+        StringBuilder current = new StringBuilder();
+        for (int i = 0; i <= size.length() && index < values.length; i++) {
+            char c = i < size.length() ? size.charAt(i) : ' ';
+            if (c >= '0' && c <= '9') {
+                current.append(c);
+            } else if (!current.isEmpty()) {
+                try {
+                    values[index++] = Integer.parseInt(current.toString());
+                } catch (NumberFormatException ignored) {
+                    values[index++] = 0;
+                }
+                current.setLength(0);
+            }
+        }
+        return Math.max(0, values[0]) * Math.max(0, values[1]) * Math.max(0, values[2]);
     }
 
     private static void confirmSelectedBuilding() {
@@ -471,10 +630,11 @@ public final class BuildingListScreenOpener {
         private final UIElement infoRegion;
         private final UIElement pagerRegion;
         private final UIElement confirmRegion;
+        private final UIElement toolbarButtonsRegion;
 
         private BuildingUiController(String category, List<BuildingCacheService.BuildingMeta> buildings, RegionMetrics regions,
                                      GridMetrics grid, UIElement statusSlot, UIElement cardRegion, UIElement infoRegion,
-                                     UIElement pagerRegion, UIElement confirmRegion) {
+                                     UIElement pagerRegion, UIElement confirmRegion, UIElement toolbarButtonsRegion) {
             this.category = category;
             this.buildings = buildings;
             this.regions = regions;
@@ -484,6 +644,7 @@ public final class BuildingListScreenOpener {
             this.infoRegion = infoRegion;
             this.pagerRegion = pagerRegion;
             this.confirmRegion = confirmRegion;
+            this.toolbarButtonsRegion = toolbarButtonsRegion;
         }
 
         /** onSearchChanged: 搜索变化时只刷新建筑列表，保留输入框焦点。 */
@@ -504,6 +665,7 @@ public final class BuildingListScreenOpener {
             refreshSelectedInfo();
             refreshPager(pageCount);
             refreshConfirm();
+            refreshToolbar();
         }
 
         private void refreshStatus(List<BuildingCacheService.BuildingMeta> filteredBuildings) {
@@ -589,6 +751,75 @@ public final class BuildingListScreenOpener {
             }
             confirmRegion.addChild(confirmButton);
         }
+
+        /** refreshToolbar: 重建搜索栏右侧的收藏与排序按钮。 */
+        private void refreshToolbar() {
+            toolbarButtonsRegion.clearAllChildren();
+            int width = Math.max(MIN_BUTTON_WIDTH, (regions.toolbarButtonsRegion().width() - TOOLBAR_GAP * 3) / 4);
+            int height = Math.max(MIN_BUTTON_HEIGHT, regions.toolbarButtonsRegion().height() - 2);
+
+            Button favoriteButton = toolbarButton(Component.translatable(showFavoritesOnly
+                    ? "gui.building_list.favorites_only"
+                    : "gui.building_list.show_favorites"), width, height);
+            favoriteButton.setOnClick(event -> {
+                if (event.button == 0) {
+                    showFavoritesOnly = !showFavoritesOnly;
+                    currentPage = 0;
+                    selectedBuildingFileName = null;
+                    refresh();
+                }
+            });
+
+            Button sortModeButton = toolbarButton(Component.translatable("gui.building_list.sort_button", sortMode.label()), width, height);
+            sortModeButton.setOnClick(event -> {
+                if (event.button == 0) {
+                    sortMode = sortMode.next();
+                    currentPage = 0;
+                    refresh();
+                }
+            });
+
+            Button sortDirectionButton = toolbarButton(Component.translatable(sortDescending
+                    ? "gui.building_list.sort_desc"
+                    : "gui.building_list.sort_asc"), width, height);
+            sortDirectionButton.setOnClick(event -> {
+                if (event.button == 0) {
+                    sortDescending = !sortDescending;
+                    currentPage = 0;
+                    refresh();
+                }
+            });
+
+            Button resetButton = toolbarButton(Component.translatable("gui.building_list.reset_filters"), width, height);
+            resetButton.setOnClick(event -> {
+                if (event.button == 0) {
+                    searchText = "";
+                    showFavoritesOnly = false;
+                    sortDescending = false;
+                    sortMode = SortMode.NAME;
+                    currentPage = 0;
+                    selectedBuildingFileName = null;
+                    open(category, currentBuildBoxPos);
+                }
+            });
+
+            toolbarButtonsRegion.addChild(favoriteButton);
+            toolbarButtonsRegion.addChild(sortModeButton);
+            toolbarButtonsRegion.addChild(sortDirectionButton);
+            toolbarButtonsRegion.addChild(resetButton);
+        }
+
+        /** toolbarButton: 创建建筑列表工具栏的固定尺寸按钮。 */
+        private Button toolbarButton(Component text, int width, int height) {
+            Button button = new Button();
+            button.setText(text);
+            button.layout(layout -> {
+                layout.width(width);
+                layout.height(height);
+                layout.flexShrink(0);
+            });
+            return button;
+        }
     }
 
     private record PendingPreview(BuildingCacheService.BuildingMeta building, BlockPos buildBoxPos, BuildingStructure structure) {
@@ -599,6 +830,7 @@ public final class BuildingListScreenOpener {
 
     private record RegionMetrics(RegionBox titleRegion,
                                  RegionBox searchRegion,
+                                 RegionBox toolbarButtonsRegion,
                                  RegionBox cardRegion,
                                  RegionBox selectedInfoRegion,
                                  RegionBox pagerRegion,
@@ -606,8 +838,34 @@ public final class BuildingListScreenOpener {
     }
 
     private record RegionBox(int left, int top, int width, int height) {
+        private int right() {
+            return left + width;
+        }
+
         private int bottom() {
             return top + height;
+        }
+    }
+
+    private enum SortMode {
+        NAME("gui.building_list.sort.name"),
+        PRICE("gui.building_list.sort.price"),
+        SIZE("gui.building_list.sort.size"),
+        AUTHOR("gui.building_list.sort.author");
+
+        private final String labelKey;
+
+        SortMode(String labelKey) {
+            this.labelKey = labelKey;
+        }
+
+        private Component label() {
+            return Component.translatable(labelKey);
+        }
+
+        private SortMode next() {
+            SortMode[] values = values();
+            return values[(ordinal() + 1) % values.length];
         }
     }
 }

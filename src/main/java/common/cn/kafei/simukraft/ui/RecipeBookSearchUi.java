@@ -56,18 +56,34 @@ public final class RecipeBookSearchUi {
 
     /** frameElement: 创建只负责绘制原版配方书搜索框外框的视觉层。 */
     public static UIElement frameElement(int left, int top) {
-        return new SearchFrameElement(FRAME_WIDTH, FRAME_TEXTURE_WIDTH, FRAME_HEIGHT, TEXT_OFFSET_X, TEXT_OFFSET_Y, TEXT_WIDTH, TEXT_HEIGHT)
+        return frameElement(left, top, FRAME_WIDTH);
+    }
+
+    /** frameElement: 创建可变宽搜索框外观，保留原版放大镜图标。 */
+    public static UIElement frameElement(int left, int top, int width) {
+        return frameElement(left, top, width, FRAME_HEIGHT);
+    }
+
+    /** frameElement: 创建可变宽高搜索框外观，用于和同排按钮保持高度一致。 */
+    public static UIElement frameElement(int left, int top, int width, int height) {
+        int frameWidth = Math.max(FRAME_WIDTH, width);
+        int frameHeight = Math.max(FRAME_HEIGHT, height);
+        int textOffsetY = Math.max(1, (frameHeight - TEXT_HEIGHT) / 2);
+        int textWidth = Math.max(TEXT_WIDTH, frameWidth - TEXT_OFFSET_X - 4);
+        return new SearchFrameElement(frameWidth, Math.min(FRAME_TEXTURE_WIDTH, frameWidth), frameHeight, TEXT_OFFSET_X, textOffsetY, textWidth, TEXT_HEIGHT)
                 .layout(layout -> layout.positionType(TaffyPosition.ABSOLUTE)
                         .left(left)
                         .top(top)
-                        .width(FRAME_WIDTH)
-                        .height(FRAME_HEIGHT));
+                        .width(frameWidth)
+                        .height(frameHeight));
     }
 
     /** renderFrame: 绘制原版配方书搜索框贴图和文本底色。 */
     public static void renderFrame(GUIContext guiContext, int left, int top, int frameWidth, int frameTextureWidth,
                                    int frameHeight, int textOffsetX, int textOffsetY, int textWidth, int textHeight) {
-        guiContext.graphics.blit(RECIPE_BOOK_LOCATION, left, top, 0, 9.0F, 12.0F, frameTextureWidth, frameHeight, 256, 256);
+        int textureTop = top + Math.max(0, (frameHeight - FRAME_HEIGHT) / 2);
+        int textureHeight = Math.min(frameHeight, FRAME_HEIGHT);
+        guiContext.graphics.blit(RECIPE_BOOK_LOCATION, left, textureTop, 0, 9.0F, 12.0F, frameTextureWidth, textureHeight, 256, 256);
         int textBorderRight = Math.min(left + frameWidth - 1, left + textOffsetX + textWidth + 2);
         guiContext.graphics.fill(left + textOffsetX - 1, top + textOffsetY - 1, textBorderRight,
                 top + textOffsetY + textHeight + 1, 0xFF101010);
