@@ -1,3 +1,5 @@
+![icon](https://cdn.modrinth.com/data/cached_images/42fb4c14522d728405429424c54214521d7740d8_0.webp)
+
 # New:Sim-U-Kraft
 
 New:Sim-U-Kraft is a city-building and NPC life simulation mod for Minecraft. It lets you
