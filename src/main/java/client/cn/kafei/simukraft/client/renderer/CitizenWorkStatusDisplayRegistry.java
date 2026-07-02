@@ -35,6 +35,7 @@ public final class CitizenWorkStatusDisplayRegistry {
     private static final String WORK_STATUS_RESTING = "work_status.resting";
     private static final String WORK_STATUS_DEAD = "work_status.dead";
     private static final String SELF_FEEDING_PREFIX = "gui.npc.status.";
+    private static final String FARMLAND_STATUS_PREFIX = "gui.simukraft.farmland.status.";
     private static final String INDUSTRIAL_STATUS_PREFIX = "gui.simukraft.industrial.status.";
     private static final String COMMERCIAL_STATUS_PREFIX = "gui.simukraft.commercial.status.";
 
@@ -173,6 +174,10 @@ public final class CitizenWorkStatusDisplayRegistry {
     }
 
     private static boolean isProblemStatusKey(String label) {
+        String farmland = tail(label, FARMLAND_STATUS_PREFIX);
+        if (!farmland.isEmpty()) {
+            return equalsAny(farmland, "missing_chest", "missing_seed");
+        }
         String industrial = tail(label, INDUSTRIAL_STATUS_PREFIX);
         if (!industrial.isEmpty()) {
             return industrial.startsWith("missing")
@@ -193,12 +198,13 @@ public final class CitizenWorkStatusDisplayRegistry {
     }
 
     private static boolean isKnownStatusKey(String label) {
-        return label.startsWith(INDUSTRIAL_STATUS_PREFIX)
+        return label.startsWith(FARMLAND_STATUS_PREFIX)
+                || label.startsWith(INDUSTRIAL_STATUS_PREFIX)
                 || label.startsWith(COMMERCIAL_STATUS_PREFIX);
     }
 
     private static boolean isProblemStatusText(String label) {
-        return startsWithAny(label, "缺少", "等待仓储箱", "等待种子", "等待方块", "等待目标", "建造暂停中", "生产被阻塞");
+        return startsWithAny(label, "缺少", "等待方块", "等待目标", "建造暂停中", "生产被阻塞");
     }
 
     private static boolean isRestingStatusText(String label) {
@@ -206,8 +212,7 @@ public final class CitizenWorkStatusDisplayRegistry {
     }
 
     private static boolean isActiveWorkText(String label) {
-        return startsWithAny(label, "建造中", "建造准备中", "建造收尾中", "规划中", "挖水槽", "耕地中",
-                "播种中", "收割中", "等待作物成熟", "正在", "前往");
+        return startsWithAny(label, "建造中", "建造准备中", "建造收尾中", "规划中", "正在", "前往");
     }
 
     private static boolean isFinishedStatusText(String label) {

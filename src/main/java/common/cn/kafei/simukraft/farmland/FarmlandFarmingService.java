@@ -16,6 +16,7 @@ import common.cn.kafei.simukraft.registry.ModBlocks;
 import common.cn.kafei.simukraft.util.SaveScopedCacheKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
@@ -43,6 +44,9 @@ public final class FarmlandFarmingService {
     private static final ConcurrentMap<String, LevelRuntime> RUNTIMES = new ConcurrentHashMap<>();
     private static final long IDLE_INTERVAL_TICKS = 40L;
     private static final long MOVE_INTERVAL_TICKS = 8L;
+    private static final String STATUS_MISSING_CHEST = "gui.simukraft.farmland.status.missing_chest";
+    private static final String STATUS_MISSING_SEED = "gui.simukraft.farmland.status.missing_seed";
+    private static final String STATUS_WAITING_GROWTH = "gui.simukraft.farmland.status.waiting_growth";
 
     private FarmlandFarmingService() {
     }
@@ -119,7 +123,7 @@ public final class FarmlandFarmingService {
         List<BlockPos> chestPositions = FarmlandBoxService.resolveAdjacentChests(level, boxPos);
         if (chestPositions.isEmpty()) {
             clearActiveTarget(boxRuntime);
-            setFarmerStatus(level, farmer, boxRuntime, "等待仓储箱: " + cropLabel(data.crop()), CitizenWorkStatus.WORKING, "missing_chest");
+            setFarmerStatus(level, farmer, boxRuntime, farmerStatusLabel(level, STATUS_MISSING_CHEST, data.crop()), CitizenWorkStatus.WORKING, "missing_chest");
             boxRuntime.setVisual(ItemStack.EMPTY, false);
             idle(boxRuntime, gameTime);
             return;
@@ -128,16 +132,14 @@ public final class FarmlandFarmingService {
         FarmlandWorkTarget target = resolveTarget(level, data, chestPositions, boxRuntime);
         if (target == null) {
             String phaseKey = hasSeedlessPlantingWork(level, data, chestPositions) ? "missing_seed" : "waiting_growth";
-            String label = "missing_seed".equals(phaseKey)
-                    ? "等待种子: " + cropLabel(data.crop())
-                    : "等待作物成熟: " + cropLabel(data.crop());
+            String label = farmerStatusLabel(level, "missing_seed".equals(phaseKey) ? STATUS_MISSING_SEED : STATUS_WAITING_GROWTH, data.crop());
             setFarmerStatus(level, farmer, boxRuntime, label, CitizenWorkStatus.WORKING, phaseKey);
             boxRuntime.setVisual(ItemStack.EMPTY, false);
             idle(boxRuntime, gameTime);
             return;
         }
 
-        setFarmerStatus(level, farmer, boxRuntime, target.phase().label() + ": " + cropLabel(data.crop()), CitizenWorkStatus.WORKING, target.phase().id());
+        setFarmerStatus(level, farmer, boxRuntime, farmerStatusLabel(level, target.phase().translationKey(), data.crop()), CitizenWorkStatus.WORKING, target.phase().id());
         boxRuntime.setVisual(FarmlandFarmerVisualService.toolFor(data.crop(), target.phase()), false);
         FarmlandFarmerVisualService.apply(farmerEntity, boxRuntime.visualTool, boxRuntime.visualActive);
         if (!isCloseEnoughToWork(level, boxPos, farmer, farmerEntity, target)) {
@@ -152,7 +154,7 @@ public final class FarmlandFarmingService {
             boxRuntime.nextActionTick = gameTime + Math.max(1, ServerConfig.farmWorkIntervalTicks());
         } else if (result == FarmlandWorkResult.WAITING_SEED) {
             clearActiveTarget(boxRuntime);
-            setFarmerStatus(level, farmer, boxRuntime, "等待种子: " + cropLabel(data.crop()), CitizenWorkStatus.WORKING, "missing_seed");
+            setFarmerStatus(level, farmer, boxRuntime, farmerStatusLabel(level, STATUS_MISSING_SEED, data.crop()), CitizenWorkStatus.WORKING, "missing_seed");
             boxRuntime.nextActionTick = gameTime + IDLE_INTERVAL_TICKS;
         } else {
             clearActiveTarget(boxRuntime);
@@ -462,6 +464,14 @@ public final class FarmlandFarmingService {
         CitizenService.save(level, farmer.uuid());
     }
 
+    // farmerStatusLabel：把服务端农民状态保存为可翻译组件 JSON，由客户端语言文件决定显示文本。
+    private static String farmerStatusLabel(ServerLevel level, String translationKey, FarmCrop crop) {
+        Component cropName = crop != null
+                ? Component.translatable(crop.translationKey())
+                : Component.translatable("gui.simukraft.farmland_box.none");
+        return Component.Serializer.toJson(Component.translatable(translationKey, cropName), level.registryAccess());
+    }
+
     private static boolean isCropCellFree(BlockState state) {
         return state.isAir() || state.canBeReplaced();
     }
@@ -489,10 +499,6 @@ public final class FarmlandFarmingService {
             return true;
         }
         return GenericContainerAccess.isContainer(level, pos);
-    }
-
-    private static String cropLabel(FarmCrop crop) {
-        return crop != null ? crop.id() : "unknown";
     }
 
     private static void idle(BoxRuntime boxRuntime, long gameTime) {
