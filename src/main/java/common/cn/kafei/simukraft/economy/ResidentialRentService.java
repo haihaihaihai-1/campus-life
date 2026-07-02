@@ -35,7 +35,6 @@ import java.util.concurrent.ConcurrentMap;
 @SuppressWarnings("null")
 public final class ResidentialRentService {
     private static final long TICKS_PER_DAY = 24_000L;
-    private static final long RENT_COLLECTION_WINDOW_TICKS = 1_200L;
     private static final ConcurrentMap<String, Long> LAST_COLLECTED_RENT_DAY = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, Long> LAST_PROCESSED_LEVEL_RENT_DAY = new ConcurrentHashMap<>();
 
@@ -46,19 +45,49 @@ public final class ResidentialRentService {
         if (level == null || level.isClientSide()) {
             return;
         }
-        if (!isRentCollectionWindow(level)) {
-            return;
-        }
         long rentDay = rentDay(level);
-        String levelKey = SaveScopedCacheKey.levelKey(level) + "|residential_rent_day";
-        Long previous = LAST_PROCESSED_LEVEL_RENT_DAY.putIfAbsent(levelKey, rentDay);
-        if (previous != null && previous >= rentDay) {
-            return;
-        }
-        if (previous != null && !LAST_PROCESSED_LEVEL_RENT_DAY.replace(levelKey, previous, rentDay)) {
+        if (!markLevelRentDay(level, rentDay)) {
             return;
         }
         collectRentForDay(level, rentDay);
+    }
+
+    /** markLevelRentDay: 按 MC 日号推进结算游标，并处理 /time set 导致的日号回退。 */
+    private static boolean markLevelRentDay(ServerLevel level, long rentDay) {
+        String levelKey = SaveScopedCacheKey.levelKey(level) + "|residential_rent_day";
+        while (true) {
+            Long previous = LAST_PROCESSED_LEVEL_RENT_DAY.get(levelKey);
+            if (previous == null) {
+                if (LAST_PROCESSED_LEVEL_RENT_DAY.putIfAbsent(levelKey, rentDay) == null) {
+                    return true;
+                }
+                continue;
+            }
+            if (previous == rentDay) {
+                return false;
+            }
+            if (previous > rentDay) {
+                if (LAST_PROCESSED_LEVEL_RENT_DAY.replace(levelKey, previous, rentDay)) {
+                    resetCityRentDaysAfterTimeRollback(level, rentDay);
+                    SimuKraft.LOGGER.debug("Simukraft: Reset residential rent day cursor from {} to {}", previous, rentDay);
+                    return false;
+                }
+                continue;
+            }
+            if (LAST_PROCESSED_LEVEL_RENT_DAY.replace(levelKey, previous, rentDay)) {
+                return true;
+            }
+        }
+    }
+
+    /** resetCityRentDaysAfterTimeRollback: 时间回退时同步重置城市收租游标。 */
+    private static void resetCityRentDaysAfterTimeRollback(ServerLevel level, long rentDay) {
+        String cityKeyPrefix = SaveScopedCacheKey.levelKey(level) + "|rent_city=";
+        LAST_COLLECTED_RENT_DAY.forEach((key, value) -> {
+            if (key.startsWith(cityKeyPrefix) && value != null && value > rentDay) {
+                LAST_COLLECTED_RENT_DAY.replace(key, value, rentDay);
+            }
+        });
     }
 
     private static void collectRentForDay(ServerLevel level, long rentDay) {
@@ -119,7 +148,7 @@ public final class ResidentialRentService {
     private static void collectCityRent(ServerLevel level, UUID cityId, long rentDay, double amount) {
         String cityKey = SaveScopedCacheKey.levelKey(level) + "|rent_city=" + cityId;
         Long previous = LAST_COLLECTED_RENT_DAY.putIfAbsent(cityKey, rentDay);
-        if (previous != null && previous >= rentDay) {
+        if (previous != null && previous == rentDay) {
             return;
         }
         if (previous != null && !LAST_COLLECTED_RENT_DAY.replace(cityKey, previous, rentDay)) {
@@ -138,7 +167,7 @@ public final class ResidentialRentService {
         HudSyncService.syncToCityGroup(level, cityId, true);
     }
 
-    /** notifyPlayerIncome: 收租窗口触发后立即通知玩家，不再使用延迟计时器。 */
+    /** notifyPlayerIncome: 每日结算触发后立即通知玩家，不再使用延迟计时器。 */
     private static void notifyPlayerIncome(ServerLevel level, Map<UUID, Double> rentByCity, Map<UUID, Double> taxByCity) {
         for (ServerPlayer player : level.players()) {
             UUID cityId = CityService.findPlayerCity(level, player.getUUID())
@@ -162,13 +191,7 @@ public final class ResidentialRentService {
         );
     }
 
-    /** isRentCollectionWindow: 只读取原版 dayTime 判断是否处于每日收租窗口。 */
-    private static boolean isRentCollectionWindow(ServerLevel level) {
-        long time = Math.floorMod(level.getDayTime(), TICKS_PER_DAY);
-        return time < RENT_COLLECTION_WINDOW_TICKS;
-    }
-
-    /** rentDay: 使用原版 dayTime 推导自然日编号，避免另起运行计时器。 */
+    /** rentDay: 使用原版 dayTime 推导自然日编号，日号变化才会触发收租。 */
     private static long rentDay(ServerLevel level) {
         return Math.max(1L, level.getDayTime() / TICKS_PER_DAY + 1L);
     }

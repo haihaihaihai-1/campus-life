@@ -3,7 +3,9 @@ package common.cn.kafei.simukraft.citizen;
 import common.cn.kafei.simukraft.city.poi.CityPoiData;
 import common.cn.kafei.simukraft.city.poi.CityPoiManager;
 import common.cn.kafei.simukraft.city.poi.CityPoiType;
+import common.cn.kafei.simukraft.city.group.CityGroupMessageService;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 
@@ -61,10 +63,19 @@ public final class CitizenHousingService {
             CitizenData data = CitizenService.ensureCitizen(level, citizen.get());
             if (data != null) {
                 CitizenService.setHome(level, data.uuid(), home.poiId());
+                notifyNewResident(level, cityId, data);
                 spawned++;
             }
         }
         return spawned;
+    }
+
+    /** notifyNewResident: 新市民成功入住后通知城市在线成员。 */
+    private static void notifyNewResident(ServerLevel level, UUID cityId, CitizenData data) {
+        if (data == null) {
+            return;
+        }
+        CityGroupMessageService.successToCity(level, cityId, Component.translatable("message.simukraft.citizen.joined_city", data.name()));
     }
 
     public static int vacantHomeCount(ServerLevel level, UUID cityId) {

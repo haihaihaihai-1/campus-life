@@ -485,6 +485,7 @@
     "gui.residential_control_box.spawn_new":  "新增NPC",
     "message.simukraft.residential_control_box.assigned_existing":  "已安排 %s 名 NPC 入住房屋。",
     "message.simukraft.residential_control_box.spawned_new":  "已向城市新增 %s 名 NPC。",
+    "message.simukraft.citizen.joined_city":  "新市民 %s 已加入城市。",
     "config.simukraft.construction.builderBlocksPerSecond":  "建筑师基础每秒方块数",
     "config.simukraft.npc_leveling.maxLevel":  "NPC最高等级",
     "config.simukraft.npc_leveling.builderEnableXpGain":  "建筑师获得经验",

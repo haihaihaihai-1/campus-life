@@ -485,6 +485,7 @@
     "gui.residential_control_box.spawn_new":  "Add New NPC",
     "message.simukraft.residential_control_box.assigned_existing":  "Assigned %s NPC(s) to vacant beds.",
     "message.simukraft.residential_control_box.spawned_new":  "Added %s new NPC(s) to the city.",
+    "message.simukraft.citizen.joined_city":  "New citizen %s has joined the city.",
     "config.simukraft.construction.builderBlocksPerSecond":  "Builder Base Blocks Per Second",
     "config.simukraft.npc_leveling.maxLevel":  "NPC Max Level",
     "config.simukraft.npc_leveling.builderEnableXpGain":  "Builder XP Gain",
