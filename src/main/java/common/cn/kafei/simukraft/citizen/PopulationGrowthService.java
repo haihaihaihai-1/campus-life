@@ -1,7 +1,7 @@
 package common.cn.kafei.simukraft.citizen;
 
 import common.cn.kafei.simukraft.city.CityData;
-import common.cn.kafei.simukraft.city.CityManager;
+import common.cn.kafei.simukraft.city.CityService;
 import common.cn.kafei.simukraft.config.ServerConfig;
 import net.minecraft.server.level.ServerLevel;
 
@@ -11,7 +11,7 @@ public final class PopulationGrowthService {
     }
 
     public static int tick(ServerLevel level) {
-        if (level == null || level.getServer() == null || !level.equals(level.getServer().overworld())) {
+        if (level == null || level.getServer() == null) {
             return 0;
         }
         int interval = ServerConfig.populationGrowthIntervalTicks();
@@ -20,7 +20,7 @@ public final class PopulationGrowthService {
             return 0;
         }
         int spawned = 0;
-        for (CityData city : CityManager.get(level).allCities()) {
+        for (CityData city : CityService.allCities(level)) {
             if (spawned >= maxPerInterval) {
                 break;
             }

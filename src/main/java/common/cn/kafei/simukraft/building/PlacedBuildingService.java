@@ -191,7 +191,7 @@ public final class PlacedBuildingService {
                 }
             }
             for (BuildingPoiInstance poi : poiInstances) {
-                manager.registerPoi(stablePoiId(poi), record.cityId(), poi.worldPos(), poi.poiType(), poi.capacity());
+                manager.registerPoi(stablePoiId(poi, record.dimensionId()), record.cityId(), poi.worldPos(), poi.poiType(), poi.capacity());
             }
         }
         repairedCities.forEach(cityId -> CitizenHousingService.fillVacantHomes(level, cityId));
@@ -236,12 +236,13 @@ public final class PlacedBuildingService {
         return List.copyOf(merged.values());
     }
 
-    private static UUID stablePoiId(BuildingPoiInstance poi) {
+    private static UUID stablePoiId(BuildingPoiInstance poi, String dimensionId) {
         // 优先使用建筑记录中的稳定 UUID，非 UUID key 再退回到类型和坐标生成。
         try {
             return UUID.fromString(poi.key());
         } catch (IllegalArgumentException exception) {
-            return UUID.nameUUIDFromBytes((poi.poiType().name() + "@" + poi.worldPos().toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String scope = dimensionId == null || dimensionId.isBlank() ? "minecraft:overworld" : dimensionId;
+            return UUID.nameUUIDFromBytes((scope + ":" + poi.poiType().name() + "@" + poi.worldPos().toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
     }
 }

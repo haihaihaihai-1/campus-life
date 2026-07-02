@@ -17,10 +17,13 @@ public final class CitySqliteRepository {
         this.database = database;
     }
 
-    public synchronized void saveAll(CompoundTag tag) {
+    public synchronized void saveAll(CompoundTag tag, String dimensionId) {
         try (Connection connection = database.openConnection()) {
             connection.setAutoCommit(false);
-            SqliteNbtHelper.clearTables(connection, "finance_transactions", "city_members", "cities");
+            try (PreparedStatement delete = connection.prepareStatement("DELETE FROM cities WHERE dimension_id = ?")) {
+                delete.setString(1, normalizeDimensionId(dimensionId));
+                delete.executeUpdate();
+            }
             try {
                 ListTag cityTags = tag.getList("Cities", CompoundTag.TAG_COMPOUND);
                 for (int i = 0; i < cityTags.size(); i++) {
@@ -70,7 +73,7 @@ public final class CitySqliteRepository {
         }
     }
 
-    public synchronized CompoundTag loadAll() {
+    public synchronized CompoundTag loadAll(String dimensionId) {
         CompoundTag tag = new CompoundTag();
         ListTag cities = new ListTag();
         try (Connection connection = database.openConnection()) {
@@ -102,13 +105,15 @@ public final class CitySqliteRepository {
                     financesByCity.computeIfAbsent(rs.getString("city_id"), k -> new ListTag()).add(finance);
                 }
             }
-            try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM cities ORDER BY city_id");
-                 ResultSet resultSet = statement.executeQuery()) {
+            try (PreparedStatement statement = connection.prepareStatement("SELECT * FROM cities WHERE dimension_id = ? ORDER BY city_id")) {
+                statement.setString(1, normalizeDimensionId(dimensionId));
+                try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
                     String cityId = resultSet.getString("city_id");
                     CompoundTag cityTag = new CompoundTag();
                     cityTag.putUUID("CityId", java.util.UUID.fromString(cityId));
                     cityTag.putString("CityName", resultSet.getString("city_name"));
+                    cityTag.putString("DimensionId", normalizeDimensionId(resultSet.getString("dimension_id")));
                     cityTag.putInt("CoreX", resultSet.getInt("core_x"));
                     cityTag.putInt("CoreY", resultSet.getInt("core_y"));
                     cityTag.putInt("CoreZ", resultSet.getInt("core_z"));
@@ -117,6 +122,7 @@ public final class CitySqliteRepository {
                     cityTag.put("Members", membersByCity.getOrDefault(cityId, new ListTag()));
                     cityTag.put("FinanceTransactions", financesByCity.getOrDefault(cityId, new ListTag()));
                     cities.add(cityTag);
+                }
                 }
             }
             tag.put("Cities", cities);
@@ -129,18 +135,19 @@ public final class CitySqliteRepository {
 
     private void saveCity(Connection connection, CompoundTag cityTag) throws SQLException {
         String cityId = cityTag.getUUID("CityId").toString();
-        try (PreparedStatement cityStatement = connection.prepareStatement("INSERT INTO cities(city_id, city_name, core_x, core_y, core_z, funds, city_level) VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(city_id) DO UPDATE SET city_name = excluded.city_name, core_x = excluded.core_x, core_y = excluded.core_y, core_z = excluded.core_z, funds = excluded.funds, city_level = excluded.city_level");
+        try (PreparedStatement cityStatement = connection.prepareStatement("INSERT INTO cities(city_id, city_name, dimension_id, core_x, core_y, core_z, funds, city_level) VALUES(?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(city_id) DO UPDATE SET city_name = excluded.city_name, dimension_id = excluded.dimension_id, core_x = excluded.core_x, core_y = excluded.core_y, core_z = excluded.core_z, funds = excluded.funds, city_level = excluded.city_level");
              PreparedStatement deleteMembers = connection.prepareStatement("DELETE FROM city_members WHERE city_id = ?");
              PreparedStatement deleteFinances = connection.prepareStatement("DELETE FROM finance_transactions WHERE city_id = ?");
              PreparedStatement memberStatement = connection.prepareStatement("INSERT INTO city_members(city_id, player_id, player_name, permission_level) VALUES(?, ?, ?, ?)");
              PreparedStatement financeStatement = connection.prepareStatement("INSERT INTO finance_transactions(city_id, sort_index, time, actor_id, actor_name, amount, balance_after, type, reason) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
             cityStatement.setString(1, cityId);
             cityStatement.setString(2, cityTag.getString("CityName"));
-            cityStatement.setInt(3, cityTag.getInt("CoreX"));
-            cityStatement.setInt(4, cityTag.getInt("CoreY"));
-            cityStatement.setInt(5, cityTag.getInt("CoreZ"));
-            cityStatement.setDouble(6, cityTag.getDouble("Funds"));
-            cityStatement.setInt(7, cityTag.getInt("CityLevel"));
+            cityStatement.setString(3, normalizeDimensionId(cityTag.getString("DimensionId")));
+            cityStatement.setInt(4, cityTag.getInt("CoreX"));
+            cityStatement.setInt(5, cityTag.getInt("CoreY"));
+            cityStatement.setInt(6, cityTag.getInt("CoreZ"));
+            cityStatement.setDouble(7, cityTag.getDouble("Funds"));
+            cityStatement.setInt(8, cityTag.getInt("CityLevel"));
             cityStatement.executeUpdate();
             deleteMembers.setString(1, cityId);
             deleteMembers.executeUpdate();
@@ -172,6 +179,10 @@ public final class CitySqliteRepository {
             memberStatement.executeBatch();
             financeStatement.executeBatch();
         }
+    }
+
+    private static String normalizeDimensionId(String dimensionId) {
+        return dimensionId == null || dimensionId.isBlank() ? "minecraft:overworld" : dimensionId;
     }
 
 }

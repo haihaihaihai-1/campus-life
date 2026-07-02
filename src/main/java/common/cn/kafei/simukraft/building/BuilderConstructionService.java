@@ -27,6 +27,7 @@ import common.cn.kafei.simukraft.util.NpcWorkChunkLoadService;
 import common.cn.kafei.simukraft.util.SaveScopedCacheKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -210,7 +211,8 @@ public final class BuilderConstructionService {
             return;
         }
         if (shouldRest(level)) {
-            pauseTask(level, citizen, taskRuntime, BuildingTaskStatus.PAUSED_RESTING, "夜间休息中: " + task.displayName());
+            pauseTask(level, citizen, taskRuntime, BuildingTaskStatus.PAUSED_RESTING,
+                    translatedStatusLabel(level, "status.simukraft.builder.resting_night", task.displayName()));
             return;
         }
         if (BuildingTaskStatus.from(task.status()).isPaused()) {
@@ -609,23 +611,28 @@ public final class BuilderConstructionService {
             workNeedDetail = "build:" + task.taskId() + ":missing=" + materialId;
         } else if (status.isPaused()) {
             phaseKey = status.id();
-            statusLabel = status == BuildingTaskStatus.PAUSED_RESTING ? "夜间休息中: " + task.displayName() : "建造暂停中: " + task.displayName();
+            statusLabel = translatedStatusLabel(level,
+                    status == BuildingTaskStatus.PAUSED_RESTING
+                            ? "status.simukraft.builder.resting_night"
+                            : "status.simukraft.builder.paused",
+                    task.displayName());
             workNeedDetail = "build:" + task.taskId() + ":" + status.id();
         } else if (cached == null) {
             phaseKey = "loading";
-            statusLabel = "建造准备中: " + task.displayName();
+            statusLabel = translatedStatusLabel(level, "status.simukraft.builder.preparing", task.displayName());
             workNeedDetail = "build:" + task.taskId() + ":loading";
         } else {
             LayerRange layerRange = resolveCurrentLayerRange(cached, task.currentBlockIndex());
             if (layerRange == null) {
                 phaseKey = "finalizing";
-                statusLabel = "建造收尾中: " + task.displayName();
+                statusLabel = translatedStatusLabel(level, "status.simukraft.builder.finishing", task.displayName());
                 workNeedDetail = "build:" + task.taskId() + ":finalizing";
             } else {
                 int layerNumber = layerRange.layerIndex() + 1;
                 int totalLayers = cached.layerRanges().size();
                 phaseKey = "layer:" + layerNumber + "/" + totalLayers;
-                statusLabel = "建造中: " + task.displayName() + " 第" + layerNumber + "/" + totalLayers + "层";
+                statusLabel = translatedStatusLabel(level, "status.simukraft.builder.building_layer",
+                        task.displayName(), layerNumber, totalLayers);
                 workNeedDetail = "build:" + task.taskId() + ":layer=" + layerNumber + "/" + totalLayers;
             }
         }
@@ -641,6 +648,11 @@ public final class BuilderConstructionService {
         citizen.setWorkNeedDetail(workNeedDetail);
         taskRuntime.lastPhaseKey = phaseKey;
         CitizenService.save(level, citizen.uuid());
+    }
+
+    // translatedStatusLabel: 服务端只保存翻译组件 JSON，客户端按当前语言渲染。
+    private static String translatedStatusLabel(ServerLevel level, String translationKey, Object... args) {
+        return Component.Serializer.toJson(Component.translatable(translationKey, args), level.registryAccess());
     }
 
     private static void markWaitingForMaterials(ServerLevel level, CitizenData citizen, TaskRuntime taskRuntime, BuildingTaskData task, WorkMaterialResult materialResult) {
@@ -715,14 +727,14 @@ public final class BuilderConstructionService {
         List<BuildingPoiDefinition> pois = task.poiDefinitions();
         List<BuildingPoiInstance> rewritten = new java.util.ArrayList<>();
         if (shouldRegisterResidentialBeds(task.category(), pois)) {
-            rewritten.addAll(resolveResidentialBedInstances(placedBlocks));
+            rewritten.addAll(resolveResidentialBedInstances(placedBlocks, task.dimensionId()));
         }
         for (BuildingPoiDefinition poi : pois) {
             if (poi.poiType() == CityPoiType.RESIDENTIAL) {
                 continue;
             }
             BlockPos pos = resolvePoiPosition(sourceBlocks, poi, task.origin(), task.rotationDegrees());
-            String key = UUID.nameUUIDFromBytes((poi.id() + "@" + pos.toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
+            String key = UUID.nameUUIDFromBytes((task.dimensionId() + ":" + poi.id() + "@" + pos.toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString();
             rewritten.add(new BuildingPoiInstance(key, poi.poiType(), poi.capacity(), pos));
         }
         return List.copyOf(rewritten);
@@ -733,13 +745,14 @@ public final class BuilderConstructionService {
                 || pois.stream().anyMatch(poi -> poi.poiType() == CityPoiType.RESIDENTIAL);
     }
 
-    private static List<BuildingPoiInstance> resolveResidentialBedInstances(List<BuildingBlockData> placedBlocks) {
+    private static List<BuildingPoiInstance> resolveResidentialBedInstances(List<BuildingBlockData> placedBlocks, String dimensionId) {
+        String scope = dimensionId == null || dimensionId.isBlank() ? "minecraft:overworld" : dimensionId;
         return placedBlocks.stream()
                 .filter(block -> CitizenHomeRestService.isResidentialBedHead(block.state()))
                 .map(block -> block.relativePos().immutable())
                 .distinct()
                 .map(pos -> new BuildingPoiInstance(
-                        UUID.nameUUIDFromBytes(("bed:" + pos.toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString(),
+                        UUID.nameUUIDFromBytes((scope + ":bed:" + pos.toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8)).toString(),
                         CityPoiType.RESIDENTIAL,
                         1,
                         pos
@@ -751,7 +764,7 @@ public final class BuilderConstructionService {
         if (building == null || !isResidentialCategory(building.category())) {
             return List.of();
         }
-        return resolveResidentialBedInstances(building.blocks());
+        return resolveResidentialBedInstances(building.blocks(), building.dimensionId());
     }
 
     private static boolean isResidentialCategory(String category) {

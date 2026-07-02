@@ -2,7 +2,7 @@ package common.cn.kafei.simukraft.event;
 
 import common.cn.kafei.simukraft.city.CityChunkManager;
 import common.cn.kafei.simukraft.city.CityData;
-import common.cn.kafei.simukraft.city.CityManager;
+import common.cn.kafei.simukraft.city.CityService;
 import common.cn.kafei.simukraft.city.poi.CityPoiService;
 import common.cn.kafei.simukraft.city.poi.CityPoiType;
 import common.cn.kafei.simukraft.building.ResidentialBedPoiService;
@@ -141,7 +141,7 @@ public final class CityPlacementRestrictionHandler {
     }
 
     private static Optional<CityData> getPlacementCity(ServerLevel serverLevel, BlockPos targetPos, Player player) {
-        Optional<CityData> playerCity = CityManager.get(serverLevel).getPlayerCity(player.getUUID());
+        Optional<CityData> playerCity = CityService.findPlayerCity(serverLevel, player.getUUID());
         if (playerCity.isEmpty()) {
             sendDeniedMessage(player);
             return Optional.empty();

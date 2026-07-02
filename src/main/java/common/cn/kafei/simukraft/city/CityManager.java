@@ -27,32 +27,28 @@ public final class CityManager extends SavedData {
 
     private final ConcurrentMap<UUID, CityData> cities = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID, UUID> playerCityIndex = new ConcurrentHashMap<>();
-    private final ConcurrentMap<BlockPos, UUID> corePosIndex = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, UUID> corePosIndex = new ConcurrentHashMap<>();
     private volatile boolean sqliteLoaded;
     private volatile ServerLevel level;
 
     public static CityManager get(ServerLevel level) {
-        ServerLevel storageLevel = storageLevel(level);
-        CityManager manager = storageLevel.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
-        manager.level = storageLevel;
-        manager.loadFromSqlite(storageLevel);
+        CityManager manager = level.getDataStorage().computeIfAbsent(FACTORY, DATA_NAME);
+        manager.level = level;
+        manager.loadFromSqlite(level);
         return manager;
     }
 
-    /**
+    /*
      * storageLevel: 城市数据是服务器全局数据，统一挂在主世界，避免多维度副本互相覆盖 SQLite。
      */
-    private static ServerLevel storageLevel(ServerLevel level) {
-        return level.getServer().overworld();
-    }
-
+    // load：恢复当前维度的城市索引，城市数据不再挂到主世界统一副本。
     private static CityManager load(CompoundTag tag, HolderLookup.Provider registries) {
         CityManager manager = new CityManager();
         ListTag cityTags = tag.getList("Cities", CompoundTag.TAG_COMPOUND);
         for (int i = 0; i < cityTags.size(); i++) {
             CityData city = CityData.fromTag(cityTags.getCompound(i));
             manager.cities.put(city.cityId(), city);
-            manager.corePosIndex.put(city.cityCorePos().immutable(), city.cityId());
+            manager.corePosIndex.put(coreKey(city.dimensionId(), city.cityCorePos()), city.cityId());
             city.members().forEach(member -> manager.playerCityIndex.put(member.playerId(), city.cityId()));
         }
         return manager;
@@ -78,7 +74,7 @@ public final class CityManager extends SavedData {
         playerCityIndex.clear();
         corePosIndex.clear();
         sqliteLoaded = false;
-        loadFromSqlite(storageLevel(level));
+        loadFromSqlite(level);
     }
 
     private synchronized void loadFromSqlite(ServerLevel level) {
@@ -116,12 +112,13 @@ public final class CityManager extends SavedData {
         }
     }
 
-    public CityData createCity(String cityName, UUID mayorId, String mayorName, BlockPos cityCorePos) {
+    public CityData createCity(String cityName, UUID mayorId, String mayorName, BlockPos cityCorePos, String dimensionId) {
         UUID cityId = UUID.randomUUID();
         CityData city = new CityData(cityId, cityName, mayorId, mayorName, cityCorePos);
+        city.setDimensionId(dimensionId);
         cities.put(cityId, city);
         playerCityIndex.put(mayorId, cityId);
-        corePosIndex.put(city.cityCorePos().immutable(), cityId);
+        corePosIndex.put(coreKey(city.dimensionId(), city.cityCorePos()), cityId);
         saveCityIncremental(city);
         setDirty();
         return city;
@@ -171,16 +168,16 @@ public final class CityManager extends SavedData {
         return Optional.empty();
     }
 
-    public Optional<CityData> getCityByCorePos(BlockPos cityCorePos) {
-        if (cityCorePos == null) {
+    public Optional<CityData> getCityByCorePos(String dimensionId, BlockPos cityCorePos) {
+        if (cityCorePos == null || dimensionId == null || dimensionId.isBlank()) {
             return Optional.empty();
         }
-        UUID cityId = corePosIndex.get(cityCorePos.immutable());
+        UUID cityId = corePosIndex.get(coreKey(dimensionId, cityCorePos));
         return cityId != null ? getCity(cityId) : Optional.empty();
     }
 
-    public boolean hasCityAtCorePos(BlockPos cityCorePos) {
-        return cityCorePos != null && corePosIndex.containsKey(cityCorePos.immutable());
+    public boolean hasCityAtCorePos(String dimensionId, BlockPos cityCorePos) {
+        return cityCorePos != null && dimensionId != null && !dimensionId.isBlank() && corePosIndex.containsKey(coreKey(dimensionId, cityCorePos));
     }
 
     public boolean hasCityNamed(String cityName) {
@@ -219,7 +216,7 @@ public final class CityManager extends SavedData {
             return false;
         }
         cities.remove(cityId);
-        corePosIndex.remove(city.cityCorePos().immutable());
+        corePosIndex.remove(coreKey(city.dimensionId(), city.cityCorePos()));
         city.members().forEach(member -> playerCityIndex.remove(member.playerId(), cityId));
         if (chunkManager != null) {
             chunkManager.releaseCity(cityId);
@@ -372,5 +369,9 @@ public final class CityManager extends SavedData {
         saveCityIncremental(city);
         setDirty();
         return true;
+    }
+
+    private static String coreKey(String dimensionId, BlockPos pos) {
+        return dimensionId + "@" + pos.asLong();
     }
 }

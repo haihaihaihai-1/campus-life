@@ -54,6 +54,8 @@ public class CitizenEntity extends PathfinderMob {
     private static final EntityDataAccessor<Boolean> DATA_IS_CHILD = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> DATA_HAS_ACTIVE_TASK = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_WORK_SWING_PULSE = SynchedEntityData.defineId(CitizenEntity.class, EntityDataSerializers.INT);
+    private static final String LEGACY_ENGLISH_CITIZEN_PREFIX = "Citizen ";
+    private static final String LEGACY_CHINESE_CITIZEN_PREFIX = "市民 ";
     private static final String TAG_HUNGER = "Hunger";
     private static final int WORK_SWING_DURATION_TICKS = 6;
     private static final int WALL_RESCUE_INTERVAL_TICKS = 20;
@@ -233,8 +235,7 @@ public class CitizenEntity extends PathfinderMob {
 
     @Override
     public Component getDisplayName() {
-        String citizenName = getCitizenName();
-        return citizenName.isEmpty() ? Component.translatable("entity.simukraft.citizen") : Component.literal(citizenName);
+        return citizenDisplayName(getCitizenName());
     }
 
     @Override
@@ -274,12 +275,33 @@ public class CitizenEntity extends PathfinderMob {
     public void setCitizenName(String citizenName) {
         String safeName = citizenName != null ? citizenName : "";
         this.entityData.set(DATA_CITIZEN_NAME, safeName);
-        if (!safeName.isBlank()) {
-            this.setCustomName(Component.literal(safeName));
-        } else {
-            this.setCustomName(Component.translatable("entity.simukraft.citizen"));
-        }
+        this.setCustomName(citizenDisplayName(safeName));
         this.setCustomNameVisible(true);
+    }
+
+    // citizenDisplayName: 旧存档里可能把“Citizen xxx”写进名字，只在显示层翻译前缀，不改原始数据。
+    private static Component citizenDisplayName(String citizenName) {
+        if (citizenName == null || citizenName.isBlank()) {
+            return Component.translatable("entity.simukraft.citizen");
+        }
+        String trimmedName = citizenName.trim();
+        if (LEGACY_ENGLISH_CITIZEN_PREFIX.trim().equals(trimmedName) || LEGACY_CHINESE_CITIZEN_PREFIX.trim().equals(trimmedName)) {
+            return Component.translatable("entity.simukraft.citizen");
+        }
+        String suffix = legacyCitizenNameSuffix(trimmedName);
+        return suffix.isBlank()
+                ? Component.literal(trimmedName)
+                : Component.translatable("entity.simukraft.citizen.named", suffix);
+    }
+
+    private static String legacyCitizenNameSuffix(String name) {
+        if (name.startsWith(LEGACY_ENGLISH_CITIZEN_PREFIX)) {
+            return name.substring(LEGACY_ENGLISH_CITIZEN_PREFIX.length()).trim();
+        }
+        if (name.startsWith(LEGACY_CHINESE_CITIZEN_PREFIX)) {
+            return name.substring(LEGACY_CHINESE_CITIZEN_PREFIX.length()).trim();
+        }
+        return "";
     }
 
     public String getJob() {

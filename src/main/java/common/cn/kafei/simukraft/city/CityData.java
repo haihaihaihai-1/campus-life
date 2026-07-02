@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentMap;
 public final class CityData {
     private final UUID cityId;
     private String cityName;
+    private String dimensionId = "minecraft:overworld";
     private BlockPos cityCorePos;
     private double funds;
     private int cityLevel;
@@ -41,6 +42,7 @@ public final class CityData {
     public static CityData fromTag(CompoundTag tag) {
         CityData data = new CityData(tag.getUUID("CityId"));
         data.cityName = tag.getString("CityName");
+        data.dimensionId = normalizeDimensionId(tag.getString("DimensionId"));
         data.cityCorePos = new BlockPos(tag.getInt("CoreX"), tag.getInt("CoreY"), tag.getInt("CoreZ"));
         data.funds = tag.getDouble("Funds");
         data.cityLevel = tag.getInt("CityLevel");
@@ -60,6 +62,7 @@ public final class CityData {
         CompoundTag tag = new CompoundTag();
         tag.putUUID("CityId", cityId);
         tag.putString("CityName", cityName);
+        tag.putString("DimensionId", dimensionId);
         tag.putInt("CoreX", cityCorePos.getX());
         tag.putInt("CoreY", cityCorePos.getY());
         tag.putInt("CoreZ", cityCorePos.getZ());
@@ -80,6 +83,15 @@ public final class CityData {
 
     public String cityName() {
         return cityName;
+    }
+
+    public String dimensionId() {
+        return dimensionId;
+    }
+
+    /** setDimensionId：绑定城市所在维度，旧存档缺失时回退主世界。 */
+    public void setDimensionId(String dimensionId) {
+        this.dimensionId = normalizeDimensionId(dimensionId);
     }
 
     public void setCityName(String cityName) {
@@ -213,5 +225,9 @@ public final class CityData {
             return 0.0D;
         }
         return BigDecimal.valueOf(Math.max(0.0D, value)).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private static String normalizeDimensionId(String dimensionId) {
+        return dimensionId == null || dimensionId.isBlank() ? "minecraft:overworld" : dimensionId;
     }
 }

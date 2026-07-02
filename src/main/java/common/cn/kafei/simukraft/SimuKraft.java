@@ -15,6 +15,7 @@ import common.cn.kafei.simukraft.city.CityManager;
 import common.cn.kafei.simukraft.city.CityPermissionInviteService;
 import common.cn.kafei.simukraft.city.poi.CityPoiManager;
 import common.cn.kafei.simukraft.building.BuildingCatalog;
+import common.cn.kafei.simukraft.building.BuildingPackageCatalog;
 import common.cn.kafei.simukraft.building.BuilderConstructionService;
 import common.cn.kafei.simukraft.building.BuildingIntegrityService;
 import common.cn.kafei.simukraft.building.PlacedBuildingService;
@@ -65,6 +66,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.fml.ModContainer;
@@ -104,6 +106,7 @@ public final class SimuKraft {
         NeoForge.EVENT_BUS.addListener(this::onBlockBreak);
         NeoForge.EVENT_BUS.addListener(this::onBlockPlace);
         NeoForge.EVENT_BUS.addListener(this::onFarmlandTrample);
+        NeoForge.EVENT_BUS.addListener(this::onServerStarted);
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         NeoForge.EVENT_BUS.addListener(this::onPlayerInteractBed);
@@ -159,6 +162,11 @@ public final class SimuKraft {
         if (event.getEntity() instanceof common.cn.kafei.simukraft.entity.CitizenEntity) {
             event.setCanceled(true);
         }
+    }
+
+    /** onServerStarted: 服务端启动后立即准备官方建筑包目录。 */
+    private void onServerStarted(ServerStartedEvent event) {
+        BuildingPackageCatalog.ensurePrepared();
     }
 
     private void onPlayerInteractBed(PlayerInteractEvent.RightClickBlock event) {
@@ -239,6 +247,7 @@ public final class SimuKraft {
     }
 
     private void saveDimensionSqlite(ServerLevel level) {
+        CityManager.get(level).saveToSqlite(level);
         CityChunkManager.get(level).saveToSqlite(level);
         CityPoiManager.get(level).saveToSqlite(level);
         FarmlandBoxManager.get(level).saveToSqlite(level);
@@ -250,7 +259,6 @@ public final class SimuKraft {
 
     private void saveGlobalSqlite(MinecraftServer server) {
         ServerLevel storageLevel = server.overworld();
-        CityManager.get(storageLevel).saveToSqlite(storageLevel);
         CitizenManager.get(storageLevel).saveToSqlite(storageLevel);
     }
 }

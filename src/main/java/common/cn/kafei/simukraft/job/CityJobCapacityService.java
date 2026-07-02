@@ -1,8 +1,8 @@
 package common.cn.kafei.simukraft.job;
 
+import common.cn.kafei.simukraft.city.CityPopulationStats;
 import common.cn.kafei.simukraft.city.poi.CityPoiManager;
 import common.cn.kafei.simukraft.city.poi.CityPoiType;
-import common.cn.kafei.simukraft.citizen.CitizenManager;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ public final class CityJobCapacityService {
         }
         CityPoiManager poiManager = CityPoiManager.get(level);
         List<JobCapacity> capacities = new ArrayList<>();
-        addIfPresent(capacities, CityJobType.RESIDENT, 0, Math.toIntExact(Math.min(Integer.MAX_VALUE, CitizenManager.get(level).getCityPopulation(cityId))));
+        addIfPresent(capacities, CityJobType.RESIDENT, 0, CityPopulationStats.population(level, cityId));
         addIfPresent(capacities, CityJobType.COMMERCIAL_WORKER, poiManager.getCityPois(cityId, CityPoiType.COMMERCIAL).size(), poiManager.getActiveCapacity(cityId, CityPoiType.COMMERCIAL));
         addIfPresent(capacities, CityJobType.INDUSTRIAL_WORKER, poiManager.getCityPois(cityId, CityPoiType.INDUSTRIAL).size(), poiManager.getActiveCapacity(cityId, CityPoiType.INDUSTRIAL));
         addIfPresent(capacities, CityJobType.FARMER, poiManager.getCityPois(cityId, CityPoiType.FARMLAND).size(), poiManager.getActiveCapacity(cityId, CityPoiType.FARMLAND));

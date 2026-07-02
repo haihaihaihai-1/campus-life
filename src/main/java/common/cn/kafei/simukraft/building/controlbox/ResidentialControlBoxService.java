@@ -113,7 +113,7 @@ public final class ResidentialControlBoxService {
             return List.of();
         }
         List<CityPoiData> repaired = bedPoiInstances.stream()
-                .map(instance -> manager.registerPoi(stablePoiId(instance), building.cityId(), instance.worldPos(), CityPoiType.RESIDENTIAL, instance.capacity()))
+                .map(instance -> manager.registerPoi(stablePoiId(instance, building.dimensionId()), building.cityId(), instance.worldPos(), CityPoiType.RESIDENTIAL, instance.capacity()))
                 .toList();
         PlacedBuildingService.register(level, new PlacedBuildingRecord(
                 building.buildingId(),
@@ -144,11 +144,12 @@ public final class ResidentialControlBoxService {
         return List.copyOf(merged.values());
     }
 
-    private static UUID stablePoiId(BuildingPoiInstance instance) {
+    private static UUID stablePoiId(BuildingPoiInstance instance, String dimensionId) {
         try {
             return UUID.fromString(instance.key());
         } catch (IllegalArgumentException exception) {
-            return UUID.nameUUIDFromBytes((instance.poiType().name() + "@" + instance.worldPos().toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            String scope = dimensionId == null || dimensionId.isBlank() ? "minecraft:overworld" : dimensionId;
+            return UUID.nameUUIDFromBytes((scope + ":" + instance.poiType().name() + "@" + instance.worldPos().toShortString()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         }
     }
 

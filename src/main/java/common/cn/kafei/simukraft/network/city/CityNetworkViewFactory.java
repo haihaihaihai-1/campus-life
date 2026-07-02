@@ -4,10 +4,9 @@ import common.cn.kafei.simukraft.city.CityChunkManager;
 import common.cn.kafei.simukraft.city.CityData;
 import common.cn.kafei.simukraft.city.CityMemberData;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
+import common.cn.kafei.simukraft.city.CityPopulationStats;
 import common.cn.kafei.simukraft.city.CityService;
-import common.cn.kafei.simukraft.city.poi.CityPoiManager;
-import common.cn.kafei.simukraft.city.poi.CityPoiType;
-import common.cn.kafei.simukraft.citizen.CitizenManager;
+import common.cn.kafei.simukraft.building.PlacedBuildingService;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenResponsePacket;
 import common.cn.kafei.simukraft.network.city.map.CityCoreMapResponsePacket;
 import common.cn.kafei.simukraft.network.city.member.CityCoreMembersResponsePacket;
@@ -41,12 +40,14 @@ public final class CityNetworkViewFactory {
             return new CityCoreOpenResponsePacket(pos, false, CityCoreOpenResponsePacket.EMPTY_CITY_ID, "", 0.0D, 0, 0, 0, 0, permissionLevel, canCreateCity, canManageCity, List.of(), List.of(), List.of());
         }
         CityData data = city.get();
+        if (level != null) {
+            PlacedBuildingService.ensureCityPoisRegistered(level);
+        }
         List<CityCoreOpenResponsePacket.FinanceEntry> financeEntries = data.financeTransactions().stream().limit(12).map(CityCoreOpenResponsePacket.FinanceEntry::from).toList();
         List<CityCoreOpenResponsePacket.PoiStat> poiStats = level == null ? List.of() : CityCoreOpenResponsePacket.PoiStat.from(level, data.cityId());
         List<CityCoreOpenResponsePacket.JobStat> jobStats = level == null ? List.of() : CityCoreOpenResponsePacket.JobStat.from(level, data.cityId());
-        int cityPopulation = level == null ? 0 : Math.toIntExact(Math.min(Integer.MAX_VALUE, CitizenManager.get(level).getCityPopulation(data.cityId())));
-        int housingCapacity = level == null ? 0 : CityPoiManager.get(level).getActiveCapacity(data.cityId(), CityPoiType.RESIDENTIAL);
-        return new CityCoreOpenResponsePacket(pos, true, data.cityId(), data.cityName(), data.funds(), data.cityLevel(), data.members().size(), cityPopulation, housingCapacity, permissionLevel, canCreateCity, canManageCity, financeEntries, poiStats, jobStats);
+        CityPopulationStats.Snapshot stats = level == null ? new CityPopulationStats.Snapshot(0, 0) : CityPopulationStats.snapshot(level, data.cityId());
+        return new CityCoreOpenResponsePacket(pos, true, data.cityId(), data.cityName(), data.funds(), data.cityLevel(), data.members().size(), stats.population(), stats.housingCapacity(), permissionLevel, canCreateCity, canManageCity, financeEntries, poiStats, jobStats);
     }
 
     public static CityCoreOpenResponsePacket buildCreatedCityResponse(ServerLevel level, BlockPos pos, CityData city, UUID viewerId) {

@@ -133,10 +133,13 @@ public record BuildBoxStartConstructionPacket(BlockPos buildBoxPos,
                 structure.poiDefinitions()
         );
         BuilderConstructionService.startTask(level, task);
-        CitizenEmploymentService.assign(level, citizen.uuid(), CityJobType.BUILDER, CitizenEmploymentService.workplaceId("build_box", "builder", packet.buildBoxPos()), packet.buildBoxPos(), CitizenWorkStatus.WORKING, structure.displayName());
+        String statusLabel = Component.Serializer.toJson(
+                Component.translatable("status.simukraft.builder.building", structure.displayName()),
+                level.registryAccess());
+        CitizenEmploymentService.assign(level, citizen.uuid(), CityJobType.BUILDER, CitizenEmploymentService.workplaceId("build_box", "builder", packet.buildBoxPos()), packet.buildBoxPos(), CitizenWorkStatus.WORKING, statusLabel);
         BuilderConstructionMobilityService.prepareForConstruction(level, citizen.uuid(), packet.buildBoxPos());
         citizen.setWorkNeedDetail("build:" + task.taskId());
-        citizen.setStatusLabel("建造中: " + structure.displayName());
+        citizen.setStatusLabel(statusLabel);
         CitizenService.save(level, citizen.uuid());
         CityGroupMessageService.successToCity(level, cityId, Component.translatable("message.simukraft.build_box.construction_started", structure.displayName()));
     }

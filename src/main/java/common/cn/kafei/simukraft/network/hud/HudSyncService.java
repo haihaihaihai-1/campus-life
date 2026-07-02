@@ -2,6 +2,7 @@ package common.cn.kafei.simukraft.network.hud;
 
 import common.cn.kafei.simukraft.city.CityData;
 import common.cn.kafei.simukraft.city.CityPermissionLevel;
+import common.cn.kafei.simukraft.city.CityPopulationStats;
 import common.cn.kafei.simukraft.city.CityService;
 import common.cn.kafei.simukraft.city.group.CityUserGroup;
 import common.cn.kafei.simukraft.city.group.CityUserGroupService;
@@ -58,7 +59,7 @@ public final class HudSyncService {
                     worldPopulation,
                     cityData.cityName(),
                     cityData.funds(),
-                    Math.toIntExact(Math.min(Integer.MAX_VALUE, CitizenManager.get(level).getCityPopulation(cityData.cityId()))),
+                    CityPopulationStats.population(level, cityData.cityId()),
                     permissionLevel,
                     creativeMode
             );

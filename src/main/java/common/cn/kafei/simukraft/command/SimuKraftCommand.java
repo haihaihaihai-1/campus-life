@@ -221,9 +221,9 @@ public final class SimuKraftCommand {
 
     private static int reloadDatabase(CommandSourceStack source) {
         ServerLevel overworld = source.getServer().overworld();
-        CityManager.get(overworld).saveToSqlite(overworld);
         CitizenManager.get(overworld).saveToSqlite(overworld);
         for (ServerLevel level : source.getServer().getAllLevels()) {
+            CityManager.get(level).saveToSqlite(level);
             CityChunkManager.get(level).saveToSqlite(level);
             CityPoiManager.get(level).saveToSqlite(level);
             CommercialBoxManager.get(level).saveToSqlite(level);
@@ -232,9 +232,9 @@ public final class SimuKraftCommand {
             FarmlandBoxManager.get(level).saveToSqlite(level);
             LogisticsManager.get(level).saveToSqlite(level);
         }
-        CityManager.get(overworld).reloadFromSqlite(overworld);
         CitizenManager.get(overworld).reloadFromSqlite(overworld);
         for (ServerLevel level : source.getServer().getAllLevels()) {
+            CityManager.get(level).reloadFromSqlite(level);
             CityChunkManager.get(level).reloadFromSqlite(level);
             CityPoiManager.get(level).reloadFromSqlite(level);
             CommercialBoxManager.get(level).reloadFromSqlite(level);

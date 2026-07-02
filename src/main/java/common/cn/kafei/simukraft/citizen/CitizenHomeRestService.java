@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentMap;
 @SuppressWarnings("null")
 public final class CitizenHomeRestService {
     public static final String HOME_REST_MARKER = "home_rest";
+    public static final String HOME_REST_STATUS_KEY = "gui.simukraft.citizen.status.home_rest";
     private static final int HOME_TARGET_SEARCH_RADIUS = 4;
     private static final int HOME_ANCHOR_SEARCH_RADIUS = 8;
     private static final int REST_START_TIME = 13000;
@@ -102,7 +103,7 @@ public final class CitizenHomeRestService {
             }
             if (moveOrTeleportHome(level, citizen, homeTarget)) {
                 citizen.setWorkStatus(CitizenWorkStatus.RESTING);
-                citizen.setStatusLabel("夜间回家休息");
+                citizen.setStatusLabel(HOME_REST_STATUS_KEY);
                 citizen.setWorkNeedDetail(HOME_REST_MARKER);
                 manager.saveCitizenNow(citizen.uuid());
                 restedCitizens.add(citizen.uuid());

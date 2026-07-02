@@ -17,23 +17,27 @@ public final class CityPoiSqliteRepository {
         this.database = database;
     }
 
-    public synchronized void saveAll(CompoundTag tag) {
+    public synchronized void saveAll(CompoundTag tag, String dimensionId) {
         try (Connection connection = database.openConnection()) {
             connection.setAutoCommit(false);
-            SqliteNbtHelper.clearTables(connection, "city_pois");
+            try (PreparedStatement delete = connection.prepareStatement("DELETE FROM city_pois WHERE dimension_id = ?")) {
+                delete.setString(1, normalizeDimensionId(dimensionId));
+                delete.executeUpdate();
+            }
             try {
                 ListTag pois = tag.getList("Pois", CompoundTag.TAG_COMPOUND);
                 if (!pois.isEmpty()) {
                     try (PreparedStatement statement = connection.prepareStatement(
-                            "INSERT INTO city_pois(poi_id, city_id, pos_long, type, capacity, active) VALUES(?, ?, ?, ?, ?, ?) ON CONFLICT(poi_id) DO UPDATE SET city_id = excluded.city_id, pos_long = excluded.pos_long, type = excluded.type, capacity = excluded.capacity, active = excluded.active")) {
+                            "INSERT INTO city_pois(poi_id, dimension_id, city_id, pos_long, type, capacity, active) VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(poi_id) DO UPDATE SET dimension_id = excluded.dimension_id, city_id = excluded.city_id, pos_long = excluded.pos_long, type = excluded.type, capacity = excluded.capacity, active = excluded.active")) {
                         for (int i = 0; i < pois.size(); i++) {
                             CompoundTag poi = pois.getCompound(i);
                             statement.setString(1, poi.getUUID("PoiId").toString());
-                            statement.setString(2, poi.getUUID("CityId").toString());
-                            statement.setLong(3, poi.getLong("Pos"));
-                            statement.setString(4, poi.getString("Type"));
-                            statement.setInt(5, poi.getInt("Capacity"));
-                            statement.setInt(6, poi.getBoolean("Active") ? 1 : 0);
+                            statement.setString(2, normalizeDimensionId(dimensionId));
+                            statement.setString(3, poi.getUUID("CityId").toString());
+                            statement.setLong(4, poi.getLong("Pos"));
+                            statement.setString(5, poi.getString("Type"));
+                            statement.setInt(6, poi.getInt("Capacity"));
+                            statement.setInt(7, poi.getBoolean("Active") ? 1 : 0);
                             statement.addBatch();
                         }
                         statement.executeBatch();
@@ -49,9 +53,9 @@ public final class CityPoiSqliteRepository {
         }
     }
 
-    public synchronized void upsert(CompoundTag poiTag) {
+    public synchronized void upsert(CompoundTag poiTag, String dimensionId) {
         try (Connection connection = database.openConnection()) {
-            savePoi(connection, poiTag);
+            savePoi(connection, poiTag, normalizeDimensionId(dimensionId));
         } catch (SQLException exception) {
             SimuKraft.LOGGER.error("Failed to save city POI to SQLite", exception);
         }
@@ -70,12 +74,13 @@ public final class CityPoiSqliteRepository {
         }
     }
 
-    public synchronized CompoundTag loadAll() {
+    public synchronized CompoundTag loadAll(String dimensionId) {
         CompoundTag tag = new CompoundTag();
         ListTag pois = new ListTag();
         try (Connection connection = database.openConnection();
-             PreparedStatement statement = connection.prepareStatement("SELECT * FROM city_pois ORDER BY poi_id");
-             ResultSet resultSet = statement.executeQuery()) {
+             PreparedStatement statement = connection.prepareStatement("SELECT * FROM city_pois WHERE dimension_id = ? ORDER BY poi_id")) {
+            statement.setString(1, normalizeDimensionId(dimensionId));
+            try (ResultSet resultSet = statement.executeQuery()) {
             while (resultSet.next()) {
                 CompoundTag poi = new CompoundTag();
                 poi.putUUID("PoiId", java.util.UUID.fromString(resultSet.getString("poi_id")));
@@ -86,6 +91,7 @@ public final class CityPoiSqliteRepository {
                 poi.putBoolean("Active", resultSet.getInt("active") != 0);
                 pois.add(poi);
             }
+            }
             tag.put("Pois", pois);
             return pois.isEmpty() ? null : tag;
         } catch (SQLException | IllegalArgumentException exception) {
@@ -94,15 +100,20 @@ public final class CityPoiSqliteRepository {
         }
     }
 
-    private void savePoi(Connection connection, CompoundTag poi) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO city_pois(poi_id, city_id, pos_long, type, capacity, active) VALUES(?, ?, ?, ?, ?, ?) ON CONFLICT(poi_id) DO UPDATE SET city_id = excluded.city_id, pos_long = excluded.pos_long, type = excluded.type, capacity = excluded.capacity, active = excluded.active")) {
+    private void savePoi(Connection connection, CompoundTag poi, String dimensionId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("INSERT INTO city_pois(poi_id, dimension_id, city_id, pos_long, type, capacity, active) VALUES(?, ?, ?, ?, ?, ?, ?) ON CONFLICT(poi_id) DO UPDATE SET dimension_id = excluded.dimension_id, city_id = excluded.city_id, pos_long = excluded.pos_long, type = excluded.type, capacity = excluded.capacity, active = excluded.active")) {
             statement.setString(1, poi.getUUID("PoiId").toString());
-            statement.setString(2, poi.getUUID("CityId").toString());
-            statement.setLong(3, poi.getLong("Pos"));
-            statement.setString(4, poi.getString("Type"));
-            statement.setInt(5, poi.getInt("Capacity"));
-            statement.setInt(6, poi.getBoolean("Active") ? 1 : 0);
+            statement.setString(2, dimensionId);
+            statement.setString(3, poi.getUUID("CityId").toString());
+            statement.setLong(4, poi.getLong("Pos"));
+            statement.setString(5, poi.getString("Type"));
+            statement.setInt(6, poi.getInt("Capacity"));
+            statement.setInt(7, poi.getBoolean("Active") ? 1 : 0);
             statement.executeUpdate();
         }
+    }
+
+    private static String normalizeDimensionId(String dimensionId) {
+        return dimensionId == null || dimensionId.isBlank() ? "minecraft:overworld" : dimensionId;
     }
 }

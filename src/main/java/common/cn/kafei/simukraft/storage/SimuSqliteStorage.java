@@ -66,13 +66,13 @@ public final class SimuSqliteStorage {
 
     public static CompoundTag loadCities(ServerLevel level) {
         SimuSqliteStorage storage = openSafely(level);
-        return storage != null ? storage.cities.loadAll() : null;
+        return storage != null ? storage.cities.loadAll(dimensionId(level)) : null;
     }
 
     public static void saveCities(ServerLevel level, CompoundTag tag) {
         SimuSqliteStorage storage = openSafely(level);
         if (storage != null && tag != null) {
-            storage.cities.saveAll(tag);
+            storage.cities.saveAll(tag, dimensionId(level));
         }
     }
 
@@ -125,20 +125,20 @@ public final class SimuSqliteStorage {
 
     public static CompoundTag loadCityPois(ServerLevel level) {
         SimuSqliteStorage storage = openSafely(level);
-        return storage != null ? storage.cityPois.loadAll() : null;
+        return storage != null ? storage.cityPois.loadAll(dimensionId(level)) : null;
     }
 
     public static void saveCityPois(ServerLevel level, CompoundTag tag) {
         SimuSqliteStorage storage = openSafely(level);
         if (storage != null && tag != null) {
-            storage.cityPois.saveAll(tag);
+            storage.cityPois.saveAll(tag, dimensionId(level));
         }
     }
 
     public static void saveCityPoi(ServerLevel level, CompoundTag poiTag) {
         SimuSqliteStorage storage = openSafely(level);
         if (storage != null && poiTag != null) {
-            storage.cityPois.upsert(poiTag);
+            storage.cityPois.upsert(poiTag, dimensionId(level));
         }
     }
 

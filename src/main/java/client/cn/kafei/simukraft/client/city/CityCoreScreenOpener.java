@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
@@ -77,12 +78,14 @@ public final class CityCoreScreenOpener {
     private static final int BACK_BUTTON_HEIGHT = 20;
     private static volatile CityChunkMapElement activeMapElement;
     private static volatile CityCoreWindow activeWindow;
+    private static volatile CityCoreOpenResponsePacket lastSummaryPacket;
 
     private CityCoreScreenOpener() {
     }
 
     public static void open(CityCoreOpenResponsePacket packet) {
         Minecraft minecraft = Minecraft.getInstance();
+        rememberSummary(packet);
         minecraft.execute(() -> minecraft.setScreen(new com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen(createUi(packet), Component.empty())));
     }
 
@@ -135,6 +138,29 @@ public final class CityCoreScreenOpener {
         return new ModularUI(SimuKraftUiTheme.createUi(root))
                 .shouldCloseOnEsc(true)
                 .shouldCloseOnKeyInventory(false);
+    }
+
+    /** rememberSummary：缓存完整城市核心包，供地图/成员页重建窗口时保留人口和住房容量。 */
+    private static void rememberSummary(CityCoreOpenResponsePacket packet) {
+        if (packet != null && packet.hasCity()) {
+            lastSummaryPacket = packet;
+        } else if (packet != null) {
+            lastSummaryPacket = null;
+        }
+    }
+
+    /** cachedSummary：按城市和核心坐标读取最近一次完整统计包。 */
+    private static CityCoreOpenResponsePacket cachedSummary(UUID cityId, BlockPos pos) {
+        CityCoreWindow window = activeWindow;
+        if (window != null && sameSummary(window.packet, cityId, pos)) {
+            return window.packet;
+        }
+        CityCoreOpenResponsePacket cached = lastSummaryPacket;
+        return sameSummary(cached, cityId, pos) ? cached : null;
+    }
+
+    private static boolean sameSummary(CityCoreOpenResponsePacket packet, UUID cityId, BlockPos pos) {
+        return packet != null && packet.hasCity() && packet.cityId().equals(cityId) && packet.pos().equals(pos);
     }
 
     private static UIElement createWindowRoot(CityCoreWindow window) {
@@ -588,32 +614,6 @@ public final class CityCoreScreenOpener {
                 line(Component.translatable("screen.simukraft.city_core.permission", Component.translatable("permission.simukraft." + packet.permissionLevel().name().toLowerCase(Locale.ROOT)).getString())),
                 line(Component.translatable("screen.simukraft.city_core.core_pos", packet.pos().getX(), packet.pos().getY(), packet.pos().getZ()))
         );
-        addJobSummary(root, packet);
-    }
-
-    private static void addJobSummary(UIElement root, CityCoreOpenResponsePacket packet) {
-        root.addChild(contentSpacerSmall());
-        root.addChild(line(Component.translatable("screen.simukraft.city_core.job.title")));
-        if (packet.jobStats().isEmpty()) {
-            root.addChild(line(Component.translatable("screen.simukraft.city_core.job.empty")));
-            return;
-        }
-        for (CityCoreOpenResponsePacket.JobStat stat : packet.jobStats()) {
-            root.addChild(line(Component.translatable(
-                    "screen.simukraft.city_core.job.row",
-                    Component.translatable(stat.type().translationKey()).getString(),
-                    stat.pointCount(),
-                    stat.assigned(),
-                    stat.capacity()
-            )));
-        }
-    }
-
-    private static UIElement contentSpacerSmall() {
-        return new UIElement().layout(layout -> {
-            layout.widthPercent(100);
-            layout.height(6);
-        });
     }
 
     private static void close() {
@@ -723,11 +723,11 @@ public final class CityCoreScreenOpener {
         }
 
         private CityCoreWindow(CityCoreMembersResponsePacket membersPacket) {
-            this(new CityCoreOpenResponsePacket(membersPacket.pos(), true, membersPacket.cityId(), membersPacket.cityName(), membersPacket.funds(), membersPacket.cityLevel(), membersPacket.members().size(), 0, 0, membersPacket.viewerPermission(), false, membersPacket.canManageCity(), List.of(), List.of(), List.of()), membersPacket, null);
+            this(summaryPacket(membersPacket), membersPacket, null);
         }
 
         private CityCoreWindow(CityCoreMapResponsePacket mapPacket) {
-            this(new CityCoreOpenResponsePacket(mapPacket.pos(), true, mapPacket.cityId(), mapPacket.cityName(), mapPacket.funds(), mapPacket.cityLevel(), mapPacket.memberCount(), 0, 0, mapPacket.permissionLevel(), false, mapPacket.canManageCity(), List.of(), List.of(), List.of()), null, mapPacket);
+            this(summaryPacket(mapPacket), null, mapPacket);
         }
 
         private CityCoreWindow(CityCoreOpenResponsePacket packet, CityCoreMembersResponsePacket membersPacket, CityCoreMapResponsePacket mapPacket) {
@@ -742,6 +742,28 @@ public final class CityCoreScreenOpener {
             });
             rebuildSidebar();
             openDefaultTabs();
+        }
+
+        /** summaryPacket：成员页响应不带统计字段时，复用最近一次城市核心统计。 */
+        private static CityCoreOpenResponsePacket summaryPacket(CityCoreMembersResponsePacket packet) {
+            CityCoreOpenResponsePacket cached = cachedSummary(packet.cityId(), packet.pos());
+            int population = cached != null ? cached.cityPopulation() : 0;
+            int housingCapacity = cached != null ? cached.housingCapacity() : 0;
+            List<CityCoreOpenResponsePacket.FinanceEntry> finances = cached != null ? cached.financeEntries() : List.of();
+            List<CityCoreOpenResponsePacket.PoiStat> poiStats = cached != null ? cached.poiStats() : List.of();
+            List<CityCoreOpenResponsePacket.JobStat> jobStats = cached != null ? cached.jobStats() : List.of();
+            return new CityCoreOpenResponsePacket(packet.pos(), true, packet.cityId(), packet.cityName(), packet.funds(), packet.cityLevel(), packet.members().size(), population, housingCapacity, packet.viewerPermission(), false, packet.canManageCity(), finances, poiStats, jobStats);
+        }
+
+        /** summaryPacket：地图响应不带统计字段时，复用最近一次城市核心统计。 */
+        private static CityCoreOpenResponsePacket summaryPacket(CityCoreMapResponsePacket packet) {
+            CityCoreOpenResponsePacket cached = cachedSummary(packet.cityId(), packet.pos());
+            int population = cached != null ? cached.cityPopulation() : 0;
+            int housingCapacity = cached != null ? cached.housingCapacity() : 0;
+            List<CityCoreOpenResponsePacket.FinanceEntry> finances = cached != null ? cached.financeEntries() : List.of();
+            List<CityCoreOpenResponsePacket.PoiStat> poiStats = cached != null ? cached.poiStats() : List.of();
+            List<CityCoreOpenResponsePacket.JobStat> jobStats = cached != null ? cached.jobStats() : List.of();
+            return new CityCoreOpenResponsePacket(packet.pos(), true, packet.cityId(), packet.cityName(), packet.funds(), packet.cityLevel(), packet.memberCount(), population, housingCapacity, packet.permissionLevel(), false, packet.canManageCity(), finances, poiStats, jobStats);
         }
 
         private void rebuildSidebar() {

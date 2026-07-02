@@ -1,7 +1,7 @@
 package common.cn.kafei.simukraft.block;
 
 import common.cn.kafei.simukraft.city.CityData;
-import common.cn.kafei.simukraft.city.CityManager;
+import common.cn.kafei.simukraft.city.CityService;
 import common.cn.kafei.simukraft.network.city.core.CityCoreOpenRequestPacket;
 import common.cn.kafei.simukraft.network.toast.InfoToastService;
 import common.cn.kafei.simukraft.registry.ModBlocks;
@@ -38,7 +38,7 @@ public final class CityCoreBlock extends Block {
     @Override
     protected List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
         Vec3 origin = params.getOptionalParameter(LootContextParams.ORIGIN);
-        if (origin != null && CityManager.get(params.getLevel()).getCityByCorePos(BlockPos.containing(origin)).isPresent()) {
+        if (origin != null && CityService.findCityByCorePos(params.getLevel(), BlockPos.containing(origin)).isPresent()) {
             return List.of();
         }
         return super.getDrops(state, params);
@@ -67,8 +67,7 @@ public final class CityCoreBlock extends Block {
         if (!(level instanceof ServerLevel serverLevel) || newState.is(state.getBlock())) {
             return;
         }
-        CityManager manager = CityManager.get(serverLevel);
-        CityData city = manager.getCityByCorePos(pos).orElse(null);
+        CityData city = CityService.findCityByCorePos(serverLevel, pos).orElse(null);
         if (city == null) {
             return;
         }

@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("null")
 @OnlyIn(Dist.CLIENT)
@@ -38,6 +40,14 @@ public final class CitizenWorkStatusDisplayRegistry {
     private static final String FARMLAND_STATUS_PREFIX = "gui.simukraft.farmland.status.";
     private static final String INDUSTRIAL_STATUS_PREFIX = "gui.simukraft.industrial.status.";
     private static final String COMMERCIAL_STATUS_PREFIX = "gui.simukraft.commercial.status.";
+    private static final String HOME_REST_STATUS = "gui.simukraft.citizen.status.home_rest";
+    private static final String LEGACY_HOME_REST_STATUS = "夜间回家休息";
+    private static final String LEGACY_BUILDER_RESTING_PREFIX = "夜间休息中:";
+    private static final String LEGACY_BUILDER_PAUSED_PREFIX = "建造暂停中:";
+    private static final String LEGACY_BUILDER_PREPARING_PREFIX = "建造准备中:";
+    private static final String LEGACY_BUILDER_FINISHING_PREFIX = "建造收尾中:";
+    private static final String LEGACY_BUILDER_BUILDING_PREFIX = "建造中:";
+    private static final Pattern LEGACY_BUILDER_LAYER_STATUS = Pattern.compile("^建造中:\\s*(.+)\\s+第(\\d+)/(\\d+)层$");
 
     private static final CopyOnWriteArrayList<Entry> ENTRIES = new CopyOnWriteArrayList<>();
 
@@ -147,7 +157,45 @@ public final class CitizenWorkStatusDisplayRegistry {
                 if (c != null) return c;
             } catch (Exception ignored) {}
         }
+        Optional<Component> legacyStatus = legacyLocalizedStatus(value);
+        if (legacyStatus.isPresent()) {
+            return legacyStatus.get();
+        }
         return I18n.exists(value) ? Component.translatable(value) : Component.literal(value);
+    }
+
+    // legacyLocalizedStatus: 旧存档可能保存了中文 literal，这里只做显示兼容，不改写存档数据。
+    private static Optional<Component> legacyLocalizedStatus(String value) {
+        String normalized = normalizeLegacyStatus(value);
+        if (LEGACY_HOME_REST_STATUS.equals(normalized)) {
+            return Optional.of(Component.translatable(HOME_REST_STATUS));
+        }
+        Matcher layerMatcher = LEGACY_BUILDER_LAYER_STATUS.matcher(normalized);
+        if (layerMatcher.matches()) {
+            return Optional.of(Component.translatable("status.simukraft.builder.building_layer",
+                    layerMatcher.group(1), layerMatcher.group(2), layerMatcher.group(3)));
+        }
+        Optional<Component> prefixed = legacyPrefixedStatus(normalized, LEGACY_BUILDER_RESTING_PREFIX, "status.simukraft.builder.resting_night");
+        if (prefixed.isPresent()) return prefixed;
+        prefixed = legacyPrefixedStatus(normalized, LEGACY_BUILDER_PAUSED_PREFIX, "status.simukraft.builder.paused");
+        if (prefixed.isPresent()) return prefixed;
+        prefixed = legacyPrefixedStatus(normalized, LEGACY_BUILDER_PREPARING_PREFIX, "status.simukraft.builder.preparing");
+        if (prefixed.isPresent()) return prefixed;
+        prefixed = legacyPrefixedStatus(normalized, LEGACY_BUILDER_FINISHING_PREFIX, "status.simukraft.builder.finishing");
+        if (prefixed.isPresent()) return prefixed;
+        return legacyPrefixedStatus(normalized, LEGACY_BUILDER_BUILDING_PREFIX, "status.simukraft.builder.building");
+    }
+
+    private static Optional<Component> legacyPrefixedStatus(String value, String prefix, String translationKey) {
+        if (!value.startsWith(prefix)) {
+            return Optional.empty();
+        }
+        String detail = value.substring(prefix.length()).trim();
+        return Optional.of(Component.translatable(translationKey, detail));
+    }
+
+    private static String normalizeLegacyStatus(String value) {
+        return value == null ? "" : value.replace('：', ':').trim();
     }
 
     /** missingMaterialStatus: 客户端按本地语言显示缺少的材料名。 */
@@ -194,13 +242,15 @@ public final class CitizenWorkStatusDisplayRegistry {
 
     private static boolean isRestingStatusKey(String label) {
         return label.equals(INDUSTRIAL_STATUS_PREFIX + "resting")
-                || label.equals(COMMERCIAL_STATUS_PREFIX + "resting");
+                || label.equals(COMMERCIAL_STATUS_PREFIX + "resting")
+                || label.equals(HOME_REST_STATUS);
     }
 
     private static boolean isKnownStatusKey(String label) {
         return label.startsWith(FARMLAND_STATUS_PREFIX)
                 || label.startsWith(INDUSTRIAL_STATUS_PREFIX)
-                || label.startsWith(COMMERCIAL_STATUS_PREFIX);
+                || label.startsWith(COMMERCIAL_STATUS_PREFIX)
+                || label.equals(HOME_REST_STATUS);
     }
 
     private static boolean isProblemStatusText(String label) {

@@ -17,7 +17,7 @@ public final class CityService {
         if (level == null || mayorId == null || cityCorePos == null) {
             return null;
         }
-        return CityManager.get(level).createCity(cityName, mayorId, mayorName, cityCorePos);
+        return CityManager.get(level).createCity(cityName, mayorId, mayorName, cityCorePos, dimensionId(level));
     }
 
     public static boolean renameCity(ServerLevel level, UUID cityId, UUID operatorId, String cityName) {
@@ -38,14 +38,14 @@ public final class CityService {
         if (level == null || cityId == null) {
             return Optional.empty();
         }
-        return CityManager.get(level).getCity(cityId);
+        return CityManager.get(level).getCity(cityId).filter(city -> belongsToLevel(level, city));
     }
 
     public static Optional<CityData> findPlayerCity(ServerLevel level, UUID playerId) {
         if (level == null || playerId == null) {
             return Optional.empty();
         }
-        return CityManager.get(level).getPlayerCity(playerId);
+        return CityManager.get(level).getPlayerCity(playerId).filter(city -> belongsToLevel(level, city));
     }
 
     // 查找玩家拥有官员以上权限的城市，对齐旧版便携式城市核心的市长/官员限制。
@@ -53,14 +53,14 @@ public final class CityService {
         if (level == null || playerId == null) {
             return Optional.empty();
         }
-        return CityManager.get(level).getManagedPlayerCity(playerId);
+        return CityManager.get(level).getManagedPlayerCity(playerId).filter(city -> belongsToLevel(level, city));
     }
 
     public static Optional<CityData> findCityByCorePos(ServerLevel level, BlockPos cityCorePos) {
         if (level == null || cityCorePos == null) {
             return Optional.empty();
         }
-        return CityManager.get(level).getCityByCorePos(cityCorePos);
+        return CityManager.get(level).getCityByCorePos(dimensionId(level), cityCorePos);
     }
 
     public static Optional<CityData> findCityByCorePosForPlayer(ServerLevel level, BlockPos cityCorePos, UUID playerId) {
@@ -71,11 +71,11 @@ public final class CityService {
     }
 
     public static boolean hasCityAtCorePos(ServerLevel level, BlockPos cityCorePos) {
-        return level != null && cityCorePos != null && CityManager.get(level).hasCityAtCorePos(cityCorePos);
+        return level != null && cityCorePos != null && CityManager.get(level).hasCityAtCorePos(dimensionId(level), cityCorePos);
     }
 
     public static boolean hasCityNamed(ServerLevel level, String cityName) {
-        return level != null && cityName != null && CityManager.get(level).hasCityNamed(cityName);
+        return level != null && cityName != null && allCities(level).stream().anyMatch(city -> city.cityName().equalsIgnoreCase(cityName.trim()));
     }
 
     public static String normalizeCityName(String rawCityName) {
@@ -94,7 +94,7 @@ public final class CityService {
         if (level == null) {
             return Set.of();
         }
-        return CityManager.get(level).allCities();
+        return CityManager.get(level).allCities().stream().filter(city -> belongsToLevel(level, city)).toList();
     }
 
     public static boolean addPlayer(ServerLevel level, UUID cityId, UUID operatorId, UUID targetId, String targetName, CityPermissionLevel permissionLevel) {
@@ -195,5 +195,13 @@ public final class CityService {
             return false;
         }
         return CityManager.get(level).addFinanceTransaction(cityId, transaction, maxRecords);
+    }
+
+    public static boolean belongsToLevel(ServerLevel level, CityData city) {
+        return level != null && city != null && dimensionId(level).equals(city.dimensionId());
+    }
+
+    public static String dimensionId(ServerLevel level) {
+        return level.dimension().location().toString();
     }
 }

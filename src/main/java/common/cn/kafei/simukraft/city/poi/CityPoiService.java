@@ -1,6 +1,6 @@
 package common.cn.kafei.simukraft.city.poi;
 
-import common.cn.kafei.simukraft.city.CityManager;
+import common.cn.kafei.simukraft.city.CityService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
@@ -16,7 +16,7 @@ public final class CityPoiService {
         if (level == null || cityCorePos == null || poiPos == null) {
             return Optional.empty();
         }
-        return CityManager.get(level).getCityByCorePos(cityCorePos)
+        return CityService.findCityByCorePos(level, cityCorePos)
                 .map(city -> registerPoi(level, city.cityId(), poiPos, type, capacity));
     }
 

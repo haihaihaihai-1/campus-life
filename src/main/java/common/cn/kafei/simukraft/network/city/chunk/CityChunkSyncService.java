@@ -2,7 +2,7 @@ package common.cn.kafei.simukraft.network.city.chunk;
 
 import common.cn.kafei.simukraft.city.CityChunkManager;
 import common.cn.kafei.simukraft.city.CityData;
-import common.cn.kafei.simukraft.city.CityManager;
+import common.cn.kafei.simukraft.city.CityService;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -45,12 +45,11 @@ public final class CityChunkSyncService {
     }
 
     private static CityChunkSyncPacket buildPacket(ServerLevel level, UUID playerId) {
-        CityManager cityManager = CityManager.get(level);
         CityChunkManager chunkManager = CityChunkManager.get(level);
-        UUID currentCityId = cityManager.getPlayerCity(playerId).map(CityData::cityId).orElse(null);
+        UUID currentCityId = CityService.findPlayerCity(level, playerId).map(CityData::cityId).orElse(null);
         Map<UUID, Set<Long>> chunks = new ConcurrentHashMap<>();
         Map<UUID, CityChunkSyncPacket.CityCoreEntry> cores = new ConcurrentHashMap<>();
-        for (CityData city : cityManager.allCities()) {
+        for (CityData city : CityService.allCities(level)) {
             chunks.put(city.cityId(), Set.copyOf(chunkManager.getCityChunks(city.cityId())));
             cores.put(city.cityId(), new CityChunkSyncPacket.CityCoreEntry(city.cityCorePos(), city.cityName()));
         }
