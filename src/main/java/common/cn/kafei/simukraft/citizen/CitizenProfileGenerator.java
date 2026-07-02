@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.citizen;
 
+import common.cn.kafei.simukraft.config.ServerConfig;
 import net.minecraft.util.RandomSource;
 
 import java.util.UUID;
@@ -60,6 +61,18 @@ public final class CitizenProfileGenerator {
             "秀娟", "丽华", "玉洁", "思雨", "思琪", "思彤", "如月", "如玉", "晓燕", "晓红",
             "书涵"
     };
+    private static final String[] ENGLISH_MALE_GIVEN_NAMES = {
+            "Arthur", "Edward", "George", "Henry", "James", "William", "Charles", "Thomas",
+            "Albert", "Alfred", "Frederick", "Harold", "Louis", "Oliver", "Richard", "Robert"
+    };
+    private static final String[] ENGLISH_FEMALE_GIVEN_NAMES = {
+            "Alice", "Charlotte", "Elizabeth", "Victoria", "Mary", "Anne", "Eleanor", "Florence",
+            "Beatrice", "Catherine", "Edith", "Grace", "Isabel", "Jane", "Margaret", "Rose"
+    };
+    private static final String[] ENGLISH_FAMILY_NAMES = {
+            "Smith", "Jones", "Taylor", "Brown", "Williams", "Wilson", "Davies", "Evans",
+            "Thomas", "Johnson", "Roberts", "Walker", "Wright", "Thompson", "White", "Hughes"
+    };
     private static final int MALE_SKIN_COUNT = 60;
     private static final int FEMALE_SKIN_COUNT = 60;
 
@@ -92,9 +105,25 @@ public final class CitizenProfileGenerator {
     }
 
     private static String createName(String gender, RandomSource random) {
+        if (ServerConfig.npcNameStyle() == CitizenNameStyle.ENGLISH) {
+            return createEnglishName(gender, random);
+        }
+        return createChineseName(gender, random);
+    }
+
+    /** createChineseName: 按原有中式姓氏加名的规则生成 NPC 名字。 */
+    private static String createChineseName(String gender, RandomSource random) {
         String familyName = FAMILY_NAMES[random.nextInt(FAMILY_NAMES.length)];
         String[] givenNames = "female".equals(gender) ? FEMALE_GIVEN_NAMES : MALE_GIVEN_NAMES;
         return familyName + givenNames[random.nextInt(givenNames.length)];
+    }
+
+    /** createEnglishName: 按英式名在前、姓在后的规则生成 NPC 名字。 */
+    private static String createEnglishName(String gender, RandomSource random) {
+        String[] givenNames = "female".equals(gender) ? ENGLISH_FEMALE_GIVEN_NAMES : ENGLISH_MALE_GIVEN_NAMES;
+        String givenName = givenNames[random.nextInt(givenNames.length)];
+        String familyName = ENGLISH_FAMILY_NAMES[random.nextInt(ENGLISH_FAMILY_NAMES.length)];
+        return givenName + " " + familyName;
     }
 
     private static String createSkinPath(String gender, UUID uuid) {

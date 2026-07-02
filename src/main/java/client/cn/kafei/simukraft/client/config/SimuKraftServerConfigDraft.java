@@ -1,5 +1,6 @@
 package client.cn.kafei.simukraft.client.config;
 
+import common.cn.kafei.simukraft.citizen.CitizenNameStyle;
 import common.cn.kafei.simukraft.config.MaterialConfigDefaults;
 import common.cn.kafei.simukraft.config.ServerConfig;
 import common.cn.kafei.simukraft.network.config.ServerConfigSavePacket;
@@ -16,6 +17,7 @@ final class SimuKraftServerConfigDraft {
     boolean claimProtection;
     int populationGrowthIntervalTicks;
     int populationGrowthMaxPerInterval;
+    CitizenNameStyle npcNameStyle;
     int farmAreaRadius;
     int farmWorkIntervalTicks;
     int farmActionsPerCycle;
@@ -80,6 +82,7 @@ final class SimuKraftServerConfigDraft {
         claimProtection = ServerConfig.ENABLE_CLAIM_PROTECTION.get();
         populationGrowthIntervalTicks = ServerConfig.POPULATION_GROWTH_INTERVAL_TICKS.get();
         populationGrowthMaxPerInterval = ServerConfig.POPULATION_GROWTH_MAX_PER_INTERVAL.get();
+        npcNameStyle = ServerConfig.NPC_NAME_STYLE.get();
         farmAreaRadius = ServerConfig.FARM_AREA_RADIUS.get();
         farmWorkIntervalTicks = ServerConfig.FARM_WORK_INTERVAL_TICKS.get();
         farmActionsPerCycle = ServerConfig.FARM_ACTIONS_PER_CYCLE.get();
@@ -135,6 +138,7 @@ final class SimuKraftServerConfigDraft {
         claimProtection = true;
         populationGrowthIntervalTicks = 24_000;
         populationGrowthMaxPerInterval = 1;
+        npcNameStyle = CitizenNameStyle.CHINESE;
         farmAreaRadius = 3;
         farmWorkIntervalTicks = 20;
         farmActionsPerCycle = 4;
@@ -186,7 +190,7 @@ final class SimuKraftServerConfigDraft {
     void saveToLive() {
         PacketDistributor.sendToServer(new ServerConfigSavePacket(
                 cityChunkPrice, blacklistProtection, logBlacklistSkippedBlocks, claimProtection,
-                populationGrowthIntervalTicks, populationGrowthMaxPerInterval,
+                populationGrowthIntervalTicks, populationGrowthMaxPerInterval, npcNameStyle,
                 farmAreaRadius, farmWorkIntervalTicks, farmActionsPerCycle,
                 pathMaxLoadedCitizenEntities, pathMaxActiveCitizens, pathMaxNewRequestsPerTick,
                 pathWorkerThreads, pathLocalRadiusBlocks, pathFarMovementTeleportDistance,

@@ -1,5 +1,6 @@
 package common.cn.kafei.simukraft.config;
 
+import common.cn.kafei.simukraft.citizen.CitizenNameStyle;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
@@ -10,6 +11,7 @@ public final class ServerConfig {
     public static final ModConfigSpec.DoubleValue CITY_CHUNK_PRICE;
     public static final ModConfigSpec.IntValue POPULATION_GROWTH_INTERVAL_TICKS;
     public static final ModConfigSpec.IntValue POPULATION_GROWTH_MAX_PER_INTERVAL;
+    public static final ModConfigSpec.EnumValue<CitizenNameStyle> NPC_NAME_STYLE;
     public static final ModConfigSpec.BooleanValue ENABLE_BLACKLIST_PROTECTION;
     public static final ModConfigSpec.BooleanValue ENABLE_CLAIM_PROTECTION;
     public static final ModConfigSpec.BooleanValue LOG_BLACKLIST_SKIPPED_BLOCKS;
@@ -86,6 +88,10 @@ public final class ServerConfig {
         builder.push("population");
         POPULATION_GROWTH_INTERVAL_TICKS = builder.defineInRange("growthIntervalTicks", 24_000, 20, 2_400_000);
         POPULATION_GROWTH_MAX_PER_INTERVAL = builder.defineInRange("growthMaxPerInterval", 1, 0, 100);
+        NPC_NAME_STYLE = builder
+                .comment("NPC name style used when generating new citizens.")
+                .translation("config.simukraft.npc.nameStyle")
+                .defineEnum("npcNameStyle", CitizenNameStyle.CHINESE);
         builder.pop();
         builder.push("construction");
         BUILDER_BLOCKS_PER_SECOND = builder
@@ -346,6 +352,11 @@ public final class ServerConfig {
 
     public static int populationGrowthMaxPerInterval() {
         return POPULATION_GROWTH_MAX_PER_INTERVAL.get();
+    }
+
+    /** npcNameStyle: 返回新生成 NPC 名字使用的风格。 */
+    public static CitizenNameStyle npcNameStyle() {
+        return NPC_NAME_STYLE.get();
     }
 
     public static boolean blacklistProtectionEnabled() {

@@ -6,6 +6,7 @@ import com.lowdragmc.lowdraglib2.gui.ui.data.Horizontal;
 import com.lowdragmc.lowdraglib2.gui.ui.data.TextWrap;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Tab;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.TabView;
+import common.cn.kafei.simukraft.citizen.CitizenNameStyle;
 import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.FlexDirection;
 import net.minecraft.client.Minecraft;
@@ -171,6 +172,12 @@ public final class SimuKraftServerConfigScreen {
 
     private static UIElement npcPage(SimuKraftServerConfigDraft draft) {
         UIElement page = pageColumn();
+        page.addChild(SimuKraftConfigWidgets.section(Component.translatable("gui.simukraft.config.section.npc_profile")));
+        page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.npc.nameStyle"),
+                SimuKraftConfigWidgets.selector(List.of(CitizenNameStyle.values()), draft.npcNameStyle,
+                        style -> Component.translatable(style.translationKey()),
+                        value -> draft.npcNameStyle = value)));
+
         page.addChild(SimuKraftConfigWidgets.section(Component.translatable("gui.simukraft.config.section.npc_level")));
         page.addChild(SimuKraftConfigWidgets.row(Component.translatable("config.simukraft.npc_leveling.maxLevel"),
                 SimuKraftConfigWidgets.intField(draft.npcMaxLevel, 1, 20, value -> draft.npcMaxLevel = value)));

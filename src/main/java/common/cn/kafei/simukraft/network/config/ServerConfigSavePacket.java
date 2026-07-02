@@ -1,6 +1,7 @@
 package common.cn.kafei.simukraft.network.config;
 
 import common.cn.kafei.simukraft.SimuKraft;
+import common.cn.kafei.simukraft.citizen.CitizenNameStyle;
 import common.cn.kafei.simukraft.config.ServerConfig;
 import common.cn.kafei.simukraft.material.WorkMaterialPolicy;
 import common.cn.kafei.simukraft.protection.NpcBlockProtectionPolicy;
@@ -22,6 +23,7 @@ public record ServerConfigSavePacket(
         boolean claimProtection,
         int populationGrowthIntervalTicks,
         int populationGrowthMaxPerInterval,
+        CitizenNameStyle npcNameStyle,
         int farmAreaRadius,
         int farmWorkIntervalTicks,
         int farmActionsPerCycle,
@@ -84,6 +86,7 @@ public record ServerConfigSavePacket(
         buf.writeBoolean(p.claimProtection);
         buf.writeVarInt(p.populationGrowthIntervalTicks);
         buf.writeVarInt(p.populationGrowthMaxPerInterval);
+        buf.writeUtf(safeNameStyle(p.npcNameStyle).name(), 16);
         buf.writeVarInt(p.farmAreaRadius);
         buf.writeVarInt(p.farmWorkIntervalTicks);
         buf.writeVarInt(p.farmActionsPerCycle);
@@ -135,7 +138,8 @@ public record ServerConfigSavePacket(
     public static ServerConfigSavePacket decode(RegistryFriendlyByteBuf buf) {
         return new ServerConfigSavePacket(
                 buf.readDouble(), buf.readBoolean(), buf.readBoolean(), buf.readBoolean(),
-                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
+                buf.readVarInt(), buf.readVarInt(), CitizenNameStyle.fromName(buf.readUtf(16)),
+                buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(),
                 buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), buf.readBoolean(),
                 buf.readVarInt(), buf.readVarInt(), buf.readDouble(),
@@ -159,6 +163,7 @@ public record ServerConfigSavePacket(
         ServerConfig.ENABLE_CLAIM_PROTECTION.set(p.claimProtection);
         ServerConfig.POPULATION_GROWTH_INTERVAL_TICKS.set(p.populationGrowthIntervalTicks);
         ServerConfig.POPULATION_GROWTH_MAX_PER_INTERVAL.set(p.populationGrowthMaxPerInterval);
+        ServerConfig.NPC_NAME_STYLE.set(safeNameStyle(p.npcNameStyle));
         ServerConfig.FARM_AREA_RADIUS.set(p.farmAreaRadius);
         ServerConfig.FARM_WORK_INTERVAL_TICKS.set(p.farmWorkIntervalTicks);
         ServerConfig.FARM_ACTIONS_PER_CYCLE.set(p.farmActionsPerCycle);
@@ -208,6 +213,11 @@ public record ServerConfigSavePacket(
         ServerConfig.SPEC.save();
         WorkMaterialPolicy.clearCache();
         NpcBlockProtectionPolicy.clearCache();
+    }
+
+    /** safeNameStyle: 防御空网络字段，避免保存配置时写入非法枚举。 */
+    private static CitizenNameStyle safeNameStyle(CitizenNameStyle style) {
+        return style == null ? CitizenNameStyle.CHINESE : style;
     }
 
     private static void writeStrings(RegistryFriendlyByteBuf buf, List<String> list) {
