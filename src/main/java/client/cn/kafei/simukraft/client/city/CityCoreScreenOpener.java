@@ -484,23 +484,6 @@ public final class CityCoreScreenOpener {
         return wrapper;
     }
 
-    private static UIElement candidateRow(CityCoreMembersResponsePacket packet, CityCoreMembersResponsePacket.CandidateEntry candidate) {
-        UIElement row = addRow();
-        Label name = line(Component.literal(candidate.playerName()));
-        name.layout(layout -> {
-            layout.flex(1);
-            layout.height(13);
-        });
-        row.addChild(name);
-        if (packet.viewerPermission() == CityPermissionLevel.MAYOR) {
-            row.addChild(memberActionButton("screen.simukraft.city_core.members.add_official", 72,
-                    () -> sendAddMember(packet.pos(), candidate.playerId(), candidate.playerName(), CityPermissionLevel.OFFICIAL)));
-            row.addChild(memberActionButton("screen.simukraft.city_core.members.add_mayor", 72,
-                    () -> sendAddMember(packet.pos(), candidate.playerId(), candidate.playerName(), CityPermissionLevel.MAYOR)));
-        }
-        return row;
-    }
-
     private static void addMemberGroup(UIElement panel, List<CityCoreMembersResponsePacket.MemberEntry> members, CityPermissionLevel groupPermission, String titleKey, CityPermissionLevel viewerPermission, BlockPos pos) {
         List<CityCoreMembersResponsePacket.MemberEntry> groupMembers = members.stream()
                 .filter(member -> member.permissionLevel() == groupPermission)
