@@ -5,6 +5,7 @@ import common.cn.kafei.simukraft.city.poi.CityPoiManager;
 import common.cn.kafei.simukraft.city.poi.CityPoiType;
 import common.cn.kafei.simukraft.city.group.CityGroupMessageService;
 import common.cn.kafei.simukraft.building.PlacedBuildingService;
+import common.cn.kafei.simukraft.building.PlacedBuildingRecord;
 import common.cn.kafei.simukraft.building.BuildingUnitInstance;
 import common.cn.kafei.simukraft.citizen.family.FamilyManager;
 import net.minecraft.core.BlockPos;
@@ -36,8 +37,12 @@ public final class CitizenHousingService {
         // 阶段一：家庭整体分配到同一住宅户
         int familyAssigned = fillFamilyUnits(level, cityId, poiManager, assigned);
 
-        // 阶段二：单身 NPC 按原有逻辑分配剩余空床
-        List<CityPoiData> vacantHomes = vacantHomes(level, cityId, assigned);
+        // 阶段二：Phase 1 已更新内存中 homeId，重新计算 occupied 包含 Phase 1 分配结果，避免双重分配
+        Set<UUID> occupied = occupiedPoiIds(CitizenManager.get(level), cityId, poiManager);
+        Set<UUID> blockedByOccupied = vacantPoiIdsInPartiallyOccupied(level, cityId, poiManager, occupied);
+        List<CityPoiData> vacantHomes = vacantHomes(level, cityId, java.util.Collections.emptySet()).stream()
+                .filter(poi -> !blockedByOccupied.contains(poi.poiId()))
+                .toList();
         if (vacantHomes.isEmpty()) return familyAssigned;
 
         List<CitizenData> homelessCitizens = CitizenManager.get(level).allCitizens().stream()
@@ -47,7 +52,7 @@ public final class CitizenHousingService {
                 .sorted(Comparator.comparing(CitizenData::name, String.CASE_INSENSITIVE_ORDER))
                 .toList();
 
-        int limit = Math.min(Math.min(vacantHomes.size(), homelessCitizens.size()), maxAssignments - familyAssigned);
+        int limit = Math.min(Math.min(vacantHomes.size(), homelessCitizens.size()), Math.max(0, maxAssignments - familyAssigned));
         for (int i = 0; i < limit; i++) {
             CitizenService.setHome(level, homelessCitizens.get(i).uuid(), vacantHomes.get(i).poiId());
         }
@@ -58,7 +63,12 @@ public final class CitizenHousingService {
         if (level == null || cityId == null || spawnPos == null || maxSpawns <= 0) {
             return 0;
         }
-        java.util.List<CityPoiData> vacantHomes = new java.util.ArrayList<>(vacantHomes(level, cityId));
+        CityPoiManager spawnPoiManager = CityPoiManager.get(level);
+        Set<UUID> spawnOccupied = occupiedPoiIds(CitizenManager.get(level), cityId, spawnPoiManager);
+        Set<UUID> spawnBlocked = vacantPoiIdsInPartiallyOccupied(level, cityId, spawnPoiManager, spawnOccupied);
+        java.util.List<CityPoiData> vacantHomes = new java.util.ArrayList<>(vacantHomes(level, cityId).stream()
+                .filter(poi -> !spawnBlocked.contains(poi.poiId()))
+                .toList());
         int spawned = 0;
         while (spawned < maxSpawns && !vacantHomes.isEmpty()) {
             CityPoiData home = vacantHomes.remove(0);
@@ -94,8 +104,12 @@ public final class CitizenHousingService {
             }
             if (homeless.isEmpty()) continue;
 
-            // 找到空余床位足够的住宅户（有unit:用unit，无unit:用散户空床）
-            List<UUID> vacantPoiIds = findPoiIdsForFamily(level, cityId, poiManager, occupiedPoiIds, homeless.size());
+            // 优先：把无家成员安置到家庭现有住所（如父母已住，孩子加入同一栋）
+            List<UUID> vacantPoiIds = findVacantBedsInFamilyHome(level, family, citizenManager, poiManager, occupiedPoiIds);
+            if (vacantPoiIds.isEmpty()) {
+                // 退路：找完全空置的建筑/户型
+                vacantPoiIds = findPoiIdsForFamily(level, cityId, poiManager, occupiedPoiIds, homeless.size());
+            }
             if (vacantPoiIds.isEmpty()) continue;
 
             // 分配
@@ -122,38 +136,110 @@ public final class CitizenHousingService {
         if (!hasValidHome(poiManager, cityId, c.homeId())) result.add(citizenId);
     }
 
+    /** findVacantBedsInFamilyHome: 查找家庭现有住所内的空床，供无家成员（如新生儿）加入。 */
+    private static List<UUID> findVacantBedsInFamilyHome(ServerLevel level, common.cn.kafei.simukraft.citizen.family.FamilyData family,
+            CitizenManager citizenManager, CityPoiManager poiManager, Set<UUID> occupiedPoiIds) {
+        // 找任意已有家的家庭成员
+        UUID housedHomeId = null;
+        for (UUID memberId : membersOf(family)) {
+            CitizenData c = citizenManager.getCitizen(memberId).orElse(null);
+            if (c != null && !c.dead() && c.homeId() != null && occupiedPoiIds.contains(c.homeId())) {
+                housedHomeId = c.homeId();
+                break;
+            }
+        }
+        if (housedHomeId == null) return List.of();
+
+        PlacedBuildingRecord building = PlacedBuildingService.findByPoi(level, housedHomeId);
+        if (building == null) return List.of();
+
+        // 若建筑有户型定义，限定在 housedHomeId 所在的同一户型内收集空床
+        List<UUID> vacant = new java.util.ArrayList<>();
+        if (!building.unitInstances().isEmpty()) {
+            for (BuildingUnitInstance unit : building.unitInstances()) {
+                if (!unit.poiIds().contains(housedHomeId)) continue;
+                for (UUID poiId : unit.poiIds()) {
+                    if (!occupiedPoiIds.contains(poiId)) vacant.add(poiId);
+                }
+                break;
+            }
+        } else {
+            for (var inst : building.poiInstances()) {
+                if (inst.poiType() != CityPoiType.RESIDENTIAL) continue;
+                var poi = poiManager.getPoiAt(inst.worldPos());
+                if (poi == null || !poi.active()) continue;
+                if (!occupiedPoiIds.contains(poi.poiId())) vacant.add(poi.poiId());
+            }
+        }
+        return vacant;
+    }
+
+    private static List<UUID> membersOf(common.cn.kafei.simukraft.citizen.family.FamilyData family) {
+        List<UUID> members = new java.util.ArrayList<>();
+        if (family.husbandId() != null) members.add(family.husbandId());
+        if (family.wifeId() != null) members.add(family.wifeId());
+        members.addAll(family.childIds());
+        return members;
+    }
+
     // 返回目标户的 POI 列表：优先找 BuildingUnitInstance，无则整栋楼视为一户
     // 有正式户或默认整楼：必须完全空置才允许新家庭入住（一户一家庭）
     private static List<UUID> findPoiIdsForFamily(ServerLevel level, UUID cityId,
             CityPoiManager poiManager, Set<UUID> occupiedPoiIds, int needed) {
+        // 收集所有合法候选，按床位数降序，优先把大房子分给家庭
+        record Candidate(List<UUID> poiIds) {}
+        List<Candidate> candidates = new java.util.ArrayList<>();
+
         for (var building : PlacedBuildingService.getBuildings(level)) {
             if (!cityId.equals(building.cityId())) continue;
-            // 优先：有正式户定义——户内必须完全空置
-            for (BuildingUnitInstance unit : building.unitInstances()) {
-                boolean anyOccupied = unit.poiIds().stream().anyMatch(occupiedPoiIds::contains);
-                if (anyOccupied) continue;
-                List<UUID> available = unit.poiIds();
-                if (available.size() >= needed) return available;
-            }
-            // 退回：无户定义，整栋建筑视为一户——有任意床位被占则跳过
-            if (building.unitInstances().isEmpty()) {
-                List<UUID> allResidential = new java.util.ArrayList<>();
-                for (var inst : building.poiInstances()) {
-                    if (inst.poiType() != CityPoiType.RESIDENTIAL) continue;
-                    var poi = poiManager.getPoiAt(inst.worldPos());
-                    if (poi == null || !poi.active()) continue;
-                    allResidential.add(poi.poiId());
+            if (!building.unitInstances().isEmpty()) {
+                for (BuildingUnitInstance unit : building.unitInstances()) {
+                    if (unit.poiIds().stream().anyMatch(occupiedPoiIds::contains)) continue;
+                    if (unit.poiIds().size() >= needed) candidates.add(new Candidate(unit.poiIds()));
                 }
-                // 整楼有任意已占床位 → 该楼已有住户，跳过
-                boolean anyOccupied = allResidential.stream().anyMatch(occupiedPoiIds::contains);
-                if (anyOccupied) continue;
+            } else {
+                List<UUID> allResidential = buildingResidentialPoiIds(building, poiManager);
+                if (allResidential.stream().anyMatch(occupiedPoiIds::contains)) continue;
                 List<UUID> vacant = allResidential.stream()
-                        .filter(id -> !occupiedPoiIds.contains(id))
-                        .toList();
-                if (vacant.size() >= needed) return vacant;
+                        .filter(id -> !occupiedPoiIds.contains(id)).toList();
+                if (vacant.size() >= needed) candidates.add(new Candidate(vacant));
             }
         }
-        return List.of();
+        if (candidates.isEmpty()) return List.of();
+        candidates.sort(Comparator.comparingInt((Candidate c) -> c.poiIds().size()).reversed());
+        return candidates.get(0).poiIds();
+    }
+
+    /** vacantPoiIdsInPartiallyOccupied: 返回所有"已有住户的建筑/户型中剩余空床"的 POI ID 集合，用于阻止陌生人入住。 */
+    private static Set<UUID> vacantPoiIdsInPartiallyOccupied(ServerLevel level, UUID cityId,
+            CityPoiManager poiManager, Set<UUID> occupiedPoiIds) {
+        Set<UUID> blocked = new java.util.HashSet<>();
+        for (var building : common.cn.kafei.simukraft.building.PlacedBuildingService.getBuildings(level)) {
+            if (!cityId.equals(building.cityId())) continue;
+            if (!building.unitInstances().isEmpty()) {
+                for (common.cn.kafei.simukraft.building.BuildingUnitInstance unit : building.unitInstances()) {
+                    if (unit.poiIds().stream().anyMatch(occupiedPoiIds::contains)) {
+                        blocked.addAll(unit.poiIds());
+                    }
+                }
+            } else {
+                List<UUID> residentialIds = buildingResidentialPoiIds(building, poiManager);
+                if (residentialIds.stream().anyMatch(occupiedPoiIds::contains)) {
+                    blocked.addAll(residentialIds);
+                }
+            }
+        }
+        return blocked;
+    }
+
+    private static List<UUID> buildingResidentialPoiIds(common.cn.kafei.simukraft.building.PlacedBuildingRecord building, CityPoiManager poiManager) {
+        List<UUID> result = new java.util.ArrayList<>();
+        for (var inst : building.poiInstances()) {
+            if (inst.poiType() != CityPoiType.RESIDENTIAL) continue;
+            var poi = poiManager.getPoiAt(inst.worldPos());
+            if (poi != null && poi.active()) result.add(poi.poiId());
+        }
+        return result;
     }
 
     private static Set<UUID> occupiedPoiIds(CitizenManager manager, UUID cityId, CityPoiManager poiManager) {

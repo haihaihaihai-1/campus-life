@@ -18,6 +18,10 @@ public final class FamilyRelocationService {
     }
 
     public static boolean tryRelocate(ServerLevel level, FamilyData family) {
+        return tryRelocate(level, family, false);
+    }
+
+    public static boolean tryRelocate(ServerLevel level, FamilyData family, boolean forceNew) {
         if (family == null || family.cityId() == null) return false;
         CitizenManager citizenManager = CitizenManager.get(level);
         CityPoiManager poiManager = CityPoiManager.get(level);
@@ -27,13 +31,13 @@ public final class FamilyRelocationService {
 
         // 找当前家庭的建筑
         PlacedBuildingRecord currentBuilding = findCurrentBuilding(level, family, citizenManager, poiManager);
-        double currentScore = currentBuilding != null
+        double currentScore = (!forceNew && currentBuilding != null)
                 ? HabitationIndexCalculator.preferenceScore(level, currentBuilding, poiManager, occupiedPoiIds, expectedBeds)
                 : 0.0;
 
         // 遍历同城建筑，找倾向分更高且空余足够的目标
         PlacedBuildingRecord bestBuilding = null;
-        double bestScore = currentScore;
+        double bestScore = forceNew ? -1.0 : currentScore;
 
         for (PlacedBuildingRecord building : PlacedBuildingService.getBuildings(level)) {
             if (!family.cityId().equals(building.cityId())) continue;

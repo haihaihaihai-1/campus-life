@@ -51,6 +51,12 @@ public final class NpcPregnancyService {
         CitizenData wife = manager.getCitizen(family.wifeId()).orElse(null);
         if (wife == null || wife.dead() || wife.child() || wife.pregnant()) return;
 
+        // 夫妻任意一方仍与原生家庭成员同住时不允许怀孕（等搬出再生育）
+        CitizenData husband = family.husbandId() != null
+                ? manager.getCitizen(family.husbandId()).orElse(null) : null;
+        if (NpcMarriageService.isLivingWithOriginFamily(level, manager, wife)) return;
+        if (husband != null && !husband.dead() && NpcMarriageService.isLivingWithOriginFamily(level, manager, husband)) return;
+
         // 家庭当前成员数 + 孩子已有数，需要还有空余床位才允许怀孕
         if (!hasVacantBedForBaby(level, manager, family, wife)) return;
 

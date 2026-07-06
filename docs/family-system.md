@@ -1,7 +1,6 @@
 # NPC 家庭系统设计与实现文档
 
 > 本文记录家庭系统（婚姻、生育、成长、搬迁、住宅户划分、居住指数）的完整实现状态。
-> 参考原始设计文档：[family.md](family.md)、[ancient-creek.md](e-project-new-simukraft-1-21-1-1-docs-m-ancient-creek.md)、[stateless-hatching-octopus.md](stateless-hatching-octopus.md)、[居住指数设计.md](居住指数设计.md)
 
 ---
 
