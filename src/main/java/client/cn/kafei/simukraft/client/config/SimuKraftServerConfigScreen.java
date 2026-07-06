@@ -25,7 +25,7 @@ public final class SimuKraftServerConfigScreen {
     private static final int FOOTER_HEIGHT = 42;
     private static final int WRAPPED_FOOTER_HEIGHT = 70;
     private static final int TAB_HEADER_HEIGHT = 24;
-    private static final int TAB_COUNT = 6;
+    private static final int TAB_COUNT = 7;
 
     private SimuKraftServerConfigScreen() {
     }
