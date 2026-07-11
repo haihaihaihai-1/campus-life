@@ -1,0 +1,31 @@
+{
+  "parent": "campuslife:story/first_dream",
+  "display": {
+    "icon": {
+      "id": "campuslife:build_box"
+    },
+    "title": {
+      "translate": "advancement.campuslife.build_box.title"
+    },
+    "description": {
+      "translate": "advancement.campuslife.build_box.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "craft_build_box": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "campuslife:build_box"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "craft_build_box"
+    ]
+  ]
+}

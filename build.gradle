@@ -86,6 +86,11 @@ neoForge {
 
             // Comma-separated list of namespaces to load gametests from. Empty = all namespaces.
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+            // Proxy for LLM API access
+            jvmArgument '-Dhttp.proxyHost=127.0.0.1'
+            jvmArgument '-Dhttp.proxyPort=9674'
+            jvmArgument '-Dhttps.proxyHost=127.0.0.1'
+            jvmArgument '-Dhttps.proxyPort=9674'
         }
 
         server {
@@ -160,9 +165,9 @@ dependencies {
     implementation "dev.vfyjxf:taffy:1.1.4"
     compileOnly "org.appliedenergistics.yoga:yoga:1.0.0"
     implementation "org.xerial:sqlite-jdbc:3.46.1.0"
-    implementation "curse.maven:sodium-394468:6382651"
-    implementation "curse.maven:irisshaders-455508:6661598"
-    compileOnly "curse.maven:xaeros-world-map-317780:8042208"
+    // implementation "curse.maven:sodium-394468:6382651"
+    // implementation "curse.maven:irisshaders-455508:6661598"
+    // compileOnly "curse.maven:xaeros-world-map-317780:8042208"
     localRuntime "org.xerial:sqlite-jdbc:3.46.1.0"
     implementation "curse.maven:spark-361579:6225208"
     jarJar "org.xerial:sqlite-jdbc:3.46.1.0"

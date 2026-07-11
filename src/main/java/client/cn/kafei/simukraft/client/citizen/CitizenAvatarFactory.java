@@ -17,7 +17,7 @@ import net.minecraft.resources.ResourceLocation;
 public final class CitizenAvatarFactory {
     private static final int FRAME_BACKGROUND = 0xFF7A8085;
     private static final int FRAME_INNER = 0xFF646A6F;
-    private static final String MOD_ID = "simukraft";
+    private static final String MOD_ID = "campuslife";
 
     private CitizenAvatarFactory() {
     }

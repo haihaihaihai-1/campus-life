@@ -1,0 +1,46 @@
+.campuslife_panel {
+  background: sdf(#dd2c2c34, 5, 1, #7f8084);
+  padding-all: 10;
+}
+
+.campuslife_shell_panel {
+  background: rect(#80000000);
+}
+
+.campuslife_badge {
+  background: sdf(#55565b, 3);
+}
+
+.campuslife_grid_panel {
+  background: sdf(#aa2c2c34, 5, 1, #7f8084);
+  padding-all: 8;
+}
+
+.campuslife_card_shadow {
+  background: rect(#88000000);
+}
+
+.campuslife_card_content_panel {
+  background: sdf(#1affffff, 4, 1, #55ffffff);
+}
+
+.campuslife_card_slot {
+  background: sdf(#55565b, 3, 1, #dddddd);
+}
+
+button.campuslife_large_button:host {
+  base-background: sdf(#52525a, 5, 1, #aaa);
+  hover-background: sdf(#55565b, 5, 1, #fff);
+  pressed-background: sdf(#71a4f4, 5, 1, #9ec4f8);
+  padding-all: 6;
+}
+
+button.campuslife_large_button:disabled:host {
+  base-background: sdf(#33343a, 5, 1, #666);
+}
+
+button.campuslife_card_button:host {
+  base-background: sdf(#55565b, 5, 1, #fff);
+  hover-background: sdf(#55565b, 5, 1, #fff);
+  pressed-background: sdf(#71a4f4, 5, 1, #9ec4f8);
+}

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "campuslife:block/city_core"
+    }
+  }
+}

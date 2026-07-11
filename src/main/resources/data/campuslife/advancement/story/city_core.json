@@ -1,0 +1,31 @@
+{
+  "parent": "campuslife:story/build_box",
+  "display": {
+    "icon": {
+      "id": "campuslife:city_core"
+    },
+    "title": {
+      "translate": "advancement.campuslife.city_core.title"
+    },
+    "description": {
+      "translate": "advancement.campuslife.city_core.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "craft_city_core": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "campuslife:city_core"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "craft_city_core"
+    ]
+  ]
+}

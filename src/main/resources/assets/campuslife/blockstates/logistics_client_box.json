@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "campuslife:block/logistics_client_box"
+    }
+  }
+}

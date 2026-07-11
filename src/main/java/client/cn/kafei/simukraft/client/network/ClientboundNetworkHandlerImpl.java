@@ -10,7 +10,6 @@ import client.cn.kafei.simukraft.client.citizen.CityCitizenManageScreen;
 import client.cn.kafei.simukraft.client.city.ClientCityChunkCache;
 import client.cn.kafei.simukraft.client.city.CityCoreScreenOpener;
 import client.cn.kafei.simukraft.client.commercial.CommercialControlBoxScreenOpener;
-import client.cn.kafei.simukraft.client.compat.ClientCompatHooks;
 import common.cn.kafei.simukraft.commercial.CommercialTradeUiRoot;
 import client.cn.kafei.simukraft.client.controlbox.ResidentialControlBoxScreenOpener;
 import client.cn.kafei.simukraft.client.farmland.FarmlandBoxScreenOpener;
@@ -102,7 +101,7 @@ public final class ClientboundNetworkHandlerImpl implements ClientboundNetworkHa
         packet.cityCores().forEach((cityId, core) -> cores.put(cityId, new ClientCityChunkCache.CityCoreEntry(core.pos(), core.cityName())));
         cache.updateAllCityChunks(packet.currentCityId(), packet.cityChunks());
         cache.updateAllCityCores(cores);
-        ClientCompatHooks.refreshXaeroCityHighlights();
+        // ClientCompatHooks.refreshXaeroCityHighlights(); // Removed: Xaero compat disabled
     }
 
     @Override

@@ -42,13 +42,11 @@ logoFile="icon.png" #optional
 #credits="" #optional
 
 # The authors of the mod, displayed in the mod UI (optional)
-authors="NSUK Studio"
+authors="Campus Life Team"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-New: Sim-U-Kraft is a city-building and NPC life simulation mod for Minecraft. It lets you
-found a city, claim land, place buildings, hire citizens, and turn a simple settlement into
-a working town with construction, farming, commerce, industry, and logistics.
+Campus Life Startup Simulator - A campus entrepreneurship simulation mod with LLM-driven NPC ecosystem.
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.

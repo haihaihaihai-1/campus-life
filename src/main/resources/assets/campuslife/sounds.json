@@ -1,0 +1,62 @@
+{
+  "block.build_box.place": {
+    "subtitle": "campuslife.subtitle.build_box.place",
+    "sounds": [
+      "campuslife:block/build_box_place"
+    ]
+  },
+  "block.build_box.break": {
+    "subtitle": "campuslife.subtitle.build_box.break",
+    "sounds": [
+      "campuslife:block/build_box_break"
+    ]
+  },
+  "ui.build_box.open": {
+    "subtitle": "campuslife.subtitle.build_box.open",
+    "sounds": [
+      "campuslife:ui/build_box_open"
+    ]
+  },
+  "ui.city_core.open": {
+    "subtitle": "campuslife.subtitle.city_core.open",
+    "sounds": [
+      "campuslife:ui/city_core_open"
+    ]
+  },
+  "block.farmland_box.place": {
+    "subtitle": "campuslife.subtitle.farmland_box.place",
+    "sounds": [
+      "campuslife:block/farmland_box_place"
+    ]
+  },
+  "block.farmland_box.break": {
+    "subtitle": "campuslife.subtitle.farmland_box.break",
+    "sounds": [
+      "campuslife:block/build_box_break"
+    ]
+  },
+  "player.wake_up": {
+    "subtitle": "campuslife.subtitle.player.wake_up",
+    "sounds": [
+      "campuslife:player/wake_up"
+    ]
+  },
+  "music.first_dream": {
+    "subtitle": "campuslife.subtitle.music.first_dream",
+    "sounds": [
+      "campuslife:music/first_dream"
+    ]
+  },
+  "money.collect": {
+    "subtitle": "campuslife.subtitle.money.collect",
+    "sounds": [
+      "campuslife:money/collect"
+    ]
+  },
+  "construction.complete": {
+    "subtitle": "campuslife.subtitle.construction.complete",
+    "sounds": [
+      "campuslife:construction/complete"
+    ]
+  }
+}

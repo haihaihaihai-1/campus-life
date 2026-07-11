@@ -9,7 +9,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 @SuppressWarnings("null")
 public record BuildingCacheReloadPacket() implements CustomPacketPayload {
-    public static final Type<BuildingCacheReloadPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("simukraft", "building_cache_reload"));
+    public static final Type<BuildingCacheReloadPacket> TYPE = new Type<>(ResourceLocation.fromNamespaceAndPath("campuslife", "building_cache_reload"));
     public static final StreamCodec<RegistryFriendlyByteBuf, BuildingCacheReloadPacket> STREAM_CODEC = StreamCodec.unit(new BuildingCacheReloadPacket());
 
     @Override

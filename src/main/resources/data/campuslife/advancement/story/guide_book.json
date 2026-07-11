@@ -1,0 +1,31 @@
+{
+  "parent": "campuslife:story/first_dream",
+  "display": {
+    "icon": {
+      "id": "campuslife:manifest"
+    },
+    "title": {
+      "translate": "advancement.campuslife.guide_book.title"
+    },
+    "description": {
+      "translate": "advancement.campuslife.guide_book.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "craft_manifest": {
+      "trigger": "minecraft:recipe_crafted",
+      "conditions": {
+        "recipe_id": "campuslife:manifest"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "craft_manifest"
+    ]
+  ]
+}

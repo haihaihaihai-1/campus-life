@@ -59,7 +59,7 @@ public final class SimuKraftCommand {
     }
 
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-        var root = Commands.literal("simukraft");
+        var root = Commands.literal("campuslife");
         root.then(Commands.literal("reload")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> reload(context.getSource()))

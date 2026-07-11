@@ -80,7 +80,7 @@ import org.slf4j.Logger;
 @SuppressWarnings("null")
 @Mod(SimuKraft.MOD_ID)
 public final class SimuKraft {
-    public static final String MOD_ID = "simukraft";
+    public static final String MOD_ID = "campuslife";
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public SimuKraft(IEventBus modEventBus, ModContainer modContainer) {
@@ -110,7 +110,8 @@ public final class SimuKraft {
         NeoForge.EVENT_BUS.addListener(this::onServerTick);
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         NeoForge.EVENT_BUS.addListener(this::onPlayerInteractBed);
-        LOGGER.info("\nWelcome to\n========================================================================\n███████╗██╗███╗   ███╗██╗   ██╗██╗  ██╗██████╗  █████╗ ███████╗████████╗\n██╔════╝██║████╗ ████║██║   ██║██║ ██╔╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝\n███████╗██║██╔████╔██║██║   ██║█████╔╝ ██████╔╝███████║█████╗     ██║   \n╚════██║██║██║╚██╔╝██║██║   ██║██╔═██╗ ██╔══██╗██╔══██║██╔══╝     ██║   \n███████║██║██║ ╚═╝ ██║╚██████╔╝██║  ██╗██║  ██║██║  ██║██║        ██║   \n╚══════╝╚═╝╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝  \n========================================================================\n");
+        common.campuslife.core.GodAIService.register();
+        LOGGER.info("Campus Life Startup Simulator v0.1.0-alpha - GodAI Economic Physics Engine registered");
     }
 
     private void onRegisterCommands(RegisterCommandsEvent event) {
