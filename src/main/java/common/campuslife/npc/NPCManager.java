@@ -103,10 +103,12 @@ public final class NPCManager {
             );
             
             // 使用simukraft的API创建CitizenEntity
+            // CitizenService.spawnCitizen 要求 cityId 非 null，否则返回 Optional.empty()
+            // 传入一个随机 UUID 作为"虚拟城市"ID，让 NPC 能实际生成
             var citizenOpt = common.cn.kafei.simukraft.citizen.CitizenService.spawnCitizen(
-                level, 
+                level,
                 new Vec3(spawnPos.getX(), spawnPos.getY() + 1, spawnPos.getZ()),
-                null,
+                UUID.randomUUID(),
                 true
             );
             

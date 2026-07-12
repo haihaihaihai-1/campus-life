@@ -20,6 +20,8 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.Containers;
 
 /**
  * 创业核心方块。
@@ -77,5 +79,20 @@ public final class StartupCoreBlock extends Block implements EntityBlock {
         if (!level.isClientSide() && !state.is(oldState.getBlock())) {
             level.playSound(null, pos, SoundEvents.METAL_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
+    }
+
+    /**
+     * 方块被破坏时，先掉落容器内所有物品，再移除BlockEntity。
+     */
+    @Override
+    protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof StartupCoreBlockEntity coreEntity) {
+                // 掉落容器内所有物品
+                Containers.dropContents(level, pos, coreEntity);
+            }
+        }
+        super.onRemove(state, level, pos, newState, movedByPiston);
     }
 }

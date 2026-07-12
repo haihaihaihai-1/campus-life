@@ -207,4 +207,14 @@ public final class WorldStateBoard {
     public static boolean isInitialized() {
         return initialized;
     }
+
+    /**
+     * 重置状态（服务器关闭时调用，防止切换存档时数据泄漏）。
+     */
+    public static void reset() {
+        CURRENT_VALUES.clear();
+        LAST_DELTAS.clear();
+        initialized = false;
+        SimuKraft.LOGGER.info("WorldStateBoard reset");
+    }
 }

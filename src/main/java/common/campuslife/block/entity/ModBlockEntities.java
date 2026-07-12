@@ -1,13 +1,12 @@
 package common.campuslife.block.entity;
 
 import common.cn.kafei.simukraft.SimuKraft;
+import common.cn.kafei.simukraft.registry.ModBlocks;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
-
-import common.campuslife.block.StartupCoreBlock;
 
 /**
  * BlockEntity类型注册。
@@ -20,7 +19,7 @@ public final class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StartupCoreBlockEntity>> STARTUP_CORE =
         BLOCK_ENTITIES.register("startup_core", () ->
             BlockEntityType.Builder.of(StartupCoreBlockEntity::new,
-                new net.minecraft.world.level.block.Block[]{new common.campuslife.block.StartupCoreBlock()})
+                ModBlocks.STARTUP_CORE.get())
                 .build(null));
 
     private ModBlockEntities() {}

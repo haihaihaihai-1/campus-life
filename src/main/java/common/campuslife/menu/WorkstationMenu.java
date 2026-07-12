@@ -68,9 +68,16 @@ public class WorkstationMenu extends AbstractContainerMenu {
 
     /**
      * 客户端构造函数（从网络包创建）。
+     * 加 null 检查防止区块未加载时 NPE。
      */
     public static WorkstationMenu fromNetwork(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
-        return new WorkstationMenu(containerId, playerInventory, (StartupCoreBlockEntity) playerInventory.player.level().getBlockEntity(extraData.readBlockPos()));
+        var pos = extraData.readBlockPos();
+        var be = playerInventory.player.level().getBlockEntity(pos);
+        if (be instanceof StartupCoreBlockEntity coreEntity) {
+            return new WorkstationMenu(containerId, playerInventory, coreEntity);
+        }
+        // BlockEntity 不存在时返回一个空菜单，防止崩溃
+        return new WorkstationMenu(containerId, playerInventory, new StartupCoreBlockEntity(pos, playerInventory.player.level().getBlockState(pos)));
     }
 
     /**

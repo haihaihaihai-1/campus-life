@@ -38,7 +38,23 @@ public final class GodAIService {
 
     public static void register() {
         NeoForge.EVENT_BUS.addListener(GodAIService::onServerTick);
+        NeoForge.EVENT_BUS.addListener(GodAIService::onServerStopping);
         SimuKraft.LOGGER.info("GodAIService registered");
+    }
+
+    /**
+     * 服务器关闭时重置static状态，防止切换存档时DB连接泄漏。
+     */
+    private static void onServerStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        SimuKraft.LOGGER.info("GodAIService: Server stopping, resetting state");
+        if (dbConnection != null) {
+            try { dbConnection.close(); } catch (Exception ignored) {}
+            dbConnection = null;
+        }
+        dbInitialized = false;
+        pendingLLMResponse = false;
+        tickCounter.set(0);
+        WorldStateBoard.reset();
     }
 
     private static void onServerTick(ServerTickEvent.Post event) {

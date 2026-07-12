@@ -138,7 +138,13 @@ public class StartupCoreBlockEntity extends BlockEntity implements Container, Me
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        return ItemStack.EMPTY; // TODO: 实现
+        if (slot < 0 || slot >= 27 || items[slot].isEmpty()) return ItemStack.EMPTY;
+        ItemStack split = items[slot].split(amount);
+        if (items[slot].isEmpty()) {
+            items[slot] = ItemStack.EMPTY;
+        }
+        setChanged();
+        return split;
     }
 
     @Override
