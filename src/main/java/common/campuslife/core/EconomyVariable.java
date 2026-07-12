@@ -44,6 +44,8 @@ public enum EconomyVariable {
     INFLATION_RATE("inflation_rate", 0.02, -0.1, 5.0),
     MONEY_SUPPLY("money_supply", 50000.0, 0.0, 10000000.0),
     CREDIT_AVAILABILITY("credit_availability", 0.8, 0.0, 1.0),
+    EMPLOYEE_INCOME("employee_income", 0.0, -100000.0, 1000000.0),
+    EMPLOYEE_SALARY_COST("employee_salary_cost", 0.0, 0.0, 1000000.0),
 
     // === 社交变量 (6个) ===
     NPC_RELATIONSHIP_DENSITY("npc_relationship_density", 0.3, 0.0, 1.0),

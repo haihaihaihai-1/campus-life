@@ -111,6 +111,9 @@ public final class SimuKraft {
         NeoForge.EVENT_BUS.addListener(this::onServerStopping);
         NeoForge.EVENT_BUS.addListener(this::onPlayerInteractBed);
         common.campuslife.core.GodAIService.register();
+        common.campuslife.npc.NPCManager.register();
+        common.campuslife.npc.EmployeeManager.register();
+        common.campuslife.npc.InvestorManager.register();
         LOGGER.info("Campus Life Startup Simulator v0.1.0-alpha - GodAI Economic Physics Engine registered");
     }
 
