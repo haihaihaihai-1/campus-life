@@ -114,6 +114,8 @@ public final class SimuKraft {
         common.campuslife.npc.NPCManager.register();
         common.campuslife.npc.EmployeeManager.register();
         common.campuslife.npc.InvestorManager.register();
+        common.campuslife.startup.BusinessStageManager.register();
+        common.campuslife.startup.StartupCoreManager.register();
         LOGGER.info("Campus Life Startup Simulator v0.1.0-alpha - GodAI Economic Physics Engine registered");
     }
 
