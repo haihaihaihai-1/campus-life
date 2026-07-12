@@ -152,5 +152,7 @@ public final class ModNetwork {
         registrar.playToClient(PlannerMaterialScanResponsePacket.TYPE, PlannerMaterialScanResponsePacket.STREAM_CODEC, PlannerMaterialScanResponsePacket::handle);
         registrar.playToClient(NpcPathDebugSyncPacket.TYPE, NpcPathDebugSyncPacket.STREAM_CODEC, NpcPathDebugSyncPacket::handle);
         registrar.playToClient(InfoToastPacket.TYPE, InfoToastPacket.STREAM_CODEC, InfoToastPacket::handle);
+        // Campus Life
+        registrar.playToServer(common.campuslife.network.CraftRequestPayload.TYPE, common.campuslife.network.CraftRequestPayload.STREAM_CODEC, common.campuslife.network.CraftRequestPayload::handle);
     }
 }
