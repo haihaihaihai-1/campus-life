@@ -1,5 +1,6 @@
 package common.campuslife.product;
 
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -14,6 +15,8 @@ import net.minecraft.world.item.ItemStack;
  * - satisfaction: 基础满意度(0-100)
  * - innovation: 创新度(研发提升)
  * - brandBonus: 品牌加成
+ * - resultItem: 产出物品
+ * - resultCount: 产出数量
  */
 public final class Product {
 
@@ -28,10 +31,13 @@ public final class Product {
     private final float satisfaction;
     private final float innovation;
     private final float brandBonus;
+    private final Item resultItem;
+    private final int resultCount;
 
     public Product(String id, String name, Category category, int tier, float cost,
                    int craftTime, ItemStack[] ingredients, int shelfLife, 
-                   float satisfaction, float innovation, float brandBonus) {
+                   float satisfaction, float innovation, float brandBonus,
+                   Item resultItem, int resultCount) {
         this.id = id;
         this.name = name;
         this.category = category;
@@ -43,6 +49,8 @@ public final class Product {
         this.satisfaction = satisfaction;
         this.innovation = innovation;
         this.brandBonus = brandBonus;
+        this.resultItem = resultItem;
+        this.resultCount = resultCount;
     }
 
     // === Getters ===
@@ -58,6 +66,8 @@ public final class Product {
     public float getSatisfaction() { return satisfaction; }
     public float getInnovation() { return innovation; }
     public float getBrandBonus() { return brandBonus; }
+    public Item getResultItem() { return resultItem; }
+    public int getResultCount() { return resultCount; }
 
     /**
      * 产品分类。

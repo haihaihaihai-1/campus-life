@@ -102,10 +102,8 @@ public class StartupCoreBlockEntity extends BlockEntity implements Container, Me
             return;
         }
 
-        // 创建产出物品（纸+自定义名称，代表产品）
-        ItemStack result = new ItemStack(net.minecraft.world.item.Items.PAPER);
-        result.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-            Component.literal(product.getName()));
+        // 创建产出物品
+        ItemStack result = new ItemStack(product.getResultItem(), product.getResultCount());
 
         // 添加到容器
         for (int i = 0; i < 27; i++) {
