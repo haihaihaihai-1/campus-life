@@ -127,6 +127,9 @@ public final class ModNetwork {
         registrar.playToServer(NpcPathDebugRequestPacket.TYPE, NpcPathDebugRequestPacket.STREAM_CODEC, NpcPathDebugRequestPacket::handle);
         registrar.playToServer(ManifestTogglePacket.TYPE, ManifestTogglePacket.STREAM_CODEC, ManifestTogglePacket::handle);
         registrar.playToServer(ServerConfigSavePacket.TYPE, ServerConfigSavePacket.STREAM_CODEC, ServerConfigSavePacket::handle);
+        // Campus Life
+        registrar.playToServer(common.campuslife.network.CraftRequestPayload.TYPE, common.campuslife.network.CraftRequestPayload.STREAM_CODEC, common.campuslife.network.CraftRequestPayload::handle);
+        registrar.playToServer(common.campuslife.network.SalesStallPricePayload.TYPE, common.campuslife.network.SalesStallPricePayload.STREAM_CODEC, common.campuslife.network.SalesStallPricePayload::handle);
         registrar.playToClient(CityCoreOpenResponsePacket.TYPE, CityCoreOpenResponsePacket.STREAM_CODEC, CityCoreOpenResponsePacket::handle);
         registrar.playToClient(CityCoreMembersResponsePacket.TYPE, CityCoreMembersResponsePacket.STREAM_CODEC, CityCoreMembersResponsePacket::handle);
         registrar.playToClient(CityCitizenManageResponsePacket.TYPE, CityCitizenManageResponsePacket.STREAM_CODEC, CityCitizenManageResponsePacket::handle);
