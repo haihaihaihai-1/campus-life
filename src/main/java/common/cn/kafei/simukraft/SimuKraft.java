@@ -94,6 +94,9 @@ public final class SimuKraft {
         ModEntities.register(modEventBus);
         ModEntityAttributes.register(modEventBus);
         ModSoundEvents.register(modEventBus);
+        // Campus Life registrations
+        common.campuslife.block.entity.ModBlockEntities.register(modEventBus);
+        common.campuslife.menu.WorkstationMenu.register(modEventBus);
         modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC);
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC);
         modEventBus.register(ModNetwork.class);
