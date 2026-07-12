@@ -70,12 +70,18 @@ public class StartupCoreBlockEntity extends BlockEntity implements Container, Me
      * 开始生产一个产品。
      */
     public boolean startCraft(String productId, Player player) {
+        // 正在生产中，不允许再次开始
+        if (this.craftProgress > 0) {
+            player.displayClientMessage(Component.literal("§e正在生产中，请等待完成"), true);
+            return false;
+        }
+
         Product product = ProductRegistry.get(productId);
         if (product == null) return false;
 
         // 检查原料
         if (!common.campuslife.product.CraftProductionService.hasIngredients(this, product)) {
-            player.displayClientMessage(Component.literal("c原料不足！"), true);
+            player.displayClientMessage(Component.literal("§c原料不足！需要: " + formatIngredients(product)), true);
             return false;
         }
 
@@ -88,8 +94,21 @@ public class StartupCoreBlockEntity extends BlockEntity implements Container, Me
         this.craftTotalTime = product.getCraftTime() * 20;
         this.setChanged();
 
-        player.displayClientMessage(Component.literal("a正在生产: " + product.getName()), true);
+        player.displayClientMessage(Component.literal("§a正在生产: " + product.getName() + " (" + product.getCraftTime() + "秒)"), true);
         return true;
+    }
+
+    /**
+     * 格式化原料需求文本。
+     */
+    private static String formatIngredients(Product product) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < product.getIngredients().length; i++) {
+            var ing = product.getIngredients()[i];
+            if (i > 0) sb.append("+");
+            sb.append(ing.getCount()).append(" ").append(ing.getHoverName().getString());
+        }
+        return sb.toString();
     }
 
     /**
@@ -105,17 +124,26 @@ public class StartupCoreBlockEntity extends BlockEntity implements Container, Me
         // 创建产出物品
         ItemStack result = new ItemStack(product.getResultItem(), product.getResultCount());
 
-        // 添加到容器
+        // 尝试添加到容器
+        boolean added = false;
         for (int i = 0; i < 27; i++) {
             if (items[i].isEmpty()) {
-                items[i] = result;
+                items[i] = result.copy();
+                added = true;
                 break;
             }
+        }
+
+        // 容器满了，掉落在地方
+        if (!added && level != null && !level.isClientSide()) {
+            net.minecraft.world.Containers.dropItemStack(level,
+                getBlockPos().getX(), getBlockPos().getY() + 1, getBlockPos().getZ(), result);
         }
 
         totalCrafted++;
         currentProductId = "";
         craftTotalTime = 0;
+        setChanged();
     }
 
     // === Container接口 ===

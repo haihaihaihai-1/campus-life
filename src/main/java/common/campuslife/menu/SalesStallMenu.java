@@ -59,7 +59,11 @@ public class SalesStallMenu extends AbstractContainerMenu {
         if (be instanceof SalesStallBlockEntity stall) {
             return new SalesStallMenu(containerId, playerInventory, stall);
         }
-        return null;
+        // BlockEntity不存在时创建临时实例防止NPE崩溃
+        var level = playerInventory.player.level();
+        var state = level.getBlockState(pos);
+        var fallback = new SalesStallBlockEntity(pos, state);
+        return new SalesStallMenu(containerId, playerInventory, fallback);
     }
 
     @Override

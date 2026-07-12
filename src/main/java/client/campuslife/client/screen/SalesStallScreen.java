@@ -13,23 +13,21 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * 销售摊位客户端Screen。
  *
- * 布局：
- * - 左侧：1格产品槽 + 玩家背包
- * - 右侧：价格显示 + 4个价格按钮（+1/-1/+5/-5）
- * - 底部：销售统计
+ * 布局（使用generic_54.png箱子纹理）：
+ * - 上半部分：左侧1格产品槽 + 右侧价格信息&按钮
+ * - 下半部分：玩家背包（3行+快捷栏）
+ *
+ * 按钮放在GUI内部 x=130~170 区域，不超出窗口。
  */
 public class SalesStallScreen extends AbstractContainerScreen<SalesStallMenu> {
 
     private static final ResourceLocation CONTAINER_BACKGROUND =
-        ResourceLocation.parse("textures/gui/container/dispenser.png");
-
-    private Button btnPlus1, btnMinus1, btnPlus5, btnMinus5;
-    private int displayedPrice = -1;
+        ResourceLocation.parse("textures/gui/container/generic_54.png");
 
     public SalesStallScreen(SalesStallMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 166;
+        this.imageHeight = 168;
         this.inventoryLabelY = this.imageHeight - 94;
     }
 
@@ -39,33 +37,28 @@ public class SalesStallScreen extends AbstractContainerScreen<SalesStallMenu> {
         this.titleLabelX = 8;
         this.titleLabelY = 6;
 
-        int buttonX = this.leftPos + this.imageWidth + 4;
-        int buttonY = this.topPos + 30;
+        // 4个价格按钮放在GUI内部右侧
+        // 产品槽在 x=80, y=20（见SalesStallMenu）
+        // 按钮放在 x=118~158 区域
+        int btnX1 = this.leftPos + 118; // +1/-1 左列
+        int btnX2 = this.leftPos + 140; // +5/-5 右列
+        int btnY1 = this.topPos + 20;   // 上行
+        int btnY2 = this.topPos + 42;   // 下行
 
-        // +1 按钮
-        this.btnPlus1 = Button.builder(Component.literal("+1"), b -> changePrice(1))
-            .pos(buttonX, buttonY).size(20, 20).build();
-        // -1 按钮
-        this.btnMinus1 = Button.builder(Component.literal("-1"), b -> changePrice(-1))
-            .pos(buttonX + 22, buttonY).size(20, 20).build();
-        // +5 按钮
-        this.btnPlus5 = Button.builder(Component.literal("+5"), b -> changePrice(5))
-            .pos(buttonX, buttonY + 22).size(20, 20).build();
-        // -5 按钮
-        this.btnMinus5 = Button.builder(Component.literal("-5"), b -> changePrice(-5))
-            .pos(buttonX + 22, buttonY + 22).size(20, 20).build();
-
-        this.addRenderableWidget(this.btnPlus1);
-        this.addRenderableWidget(this.btnMinus1);
-        this.addRenderableWidget(this.btnPlus5);
-        this.addRenderableWidget(this.btnMinus5);
+        this.addRenderableWidget(Button.builder(Component.literal("+1"), b -> changePrice(1))
+            .pos(btnX1, btnY1).size(20, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("-1"), b -> changePrice(-1))
+            .pos(btnX1, btnY2).size(20, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("+5"), b -> changePrice(5))
+            .pos(btnX2, btnY1).size(20, 18).build());
+        this.addRenderableWidget(Button.builder(Component.literal("-5"), b -> changePrice(-5))
+            .pos(btnX2, btnY2).size(20, 18).build());
     }
 
     private void changePrice(int delta) {
         var be = this.getMenu().getBlockEntity();
         int newPrice = be.getPrice() + delta;
         newPrice = Math.max(1, Math.min(999, newPrice));
-        // 发送网络包
         PacketDistributor.sendToServer(new SalesStallPricePayload(be.getBlockPos(), newPrice));
     }
 
@@ -73,7 +66,10 @@ public class SalesStallScreen extends AbstractContainerScreen<SalesStallMenu> {
     protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
         int x = this.leftPos;
         int y = this.topPos;
-        graphics.blit(CONTAINER_BACKGROUND, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        // 顶部容器区域（3行=72px）
+        graphics.blit(CONTAINER_BACKGROUND, x, y, 0, 0, this.imageWidth, 72);
+        // 玩家背包区域
+        graphics.blit(CONTAINER_BACKGROUND, x, y + 72, 0, 126, this.imageWidth, 96);
     }
 
     @Override
@@ -90,15 +86,16 @@ public class SalesStallScreen extends AbstractContainerScreen<SalesStallMenu> {
 
         var be = this.getMenu().getBlockEntity();
 
-        // 价格显示
-        graphics.drawString(this.font, "§e价格: " + be.getPrice() + " 硬币", 8, 30, 0x404040, false);
+        // 价格显示在按钮左侧
+        graphics.drawString(this.font, "§e价格", 118, 8, 0x404040, false);
+        graphics.drawString(this.font, "§e" + be.getPrice(), 118, 64, 0x404040, false);
 
-        // 销售统计
-        graphics.drawString(this.font, "已售: " + be.getTotalSales() + " 个", 8, 45, 0x606060, false);
-        graphics.drawString(this.font, "总收入: " + be.getTotalRevenue() + " 硬币", 8, 57, 0x606060, false);
+        // 销售统计在底部
+        graphics.drawString(this.font, "已售: " + be.getTotalSales(), 8, 42, 0x606060, false);
+        graphics.drawString(this.font, "收入: " + be.getTotalRevenue(), 8, 54, 0x606060, false);
 
         if (be.getPendingCoins() > 0) {
-            graphics.drawString(this.font, "§7待领取: " + be.getPendingCoins() + " 硬币", 8, 69, 0x808080, false);
+            graphics.drawString(this.font, "§7待领: " + be.getPendingCoins(), 8, 66, 0x808080, false);
         }
     }
 }

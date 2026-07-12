@@ -48,32 +48,38 @@ public class SalesStallBlockEntity extends BlockEntity implements Container, Men
     // === Ticker and Selling ===
 
     /**
-     * 每100tick尝试卖出。
+     * 每100tick（5秒）尝试卖出。
+     * 只在产品槽不为空、且有owner时才尝试。
      */
     public static void tick(ServerLevel level, BlockPos pos, BlockState state, SalesStallBlockEntity entity) {
         if (entity.productSlot.isEmpty()) return;
+        if (entity.ownerUUID == null) return; // 无人摊位不卖
         if (level.getGameTime() % SELL_INTERVAL != 0) return;
 
-        // 尝试卖出
-        if (level.random.nextFloat() < SELL_CHANCE) {
+        // 价格影响卖出概率：价格越低卖得越快
+        // 基础概率30%，价格每增加1降低1%，最低5%
+        float chance = Math.max(0.05f, SELL_CHANCE - entity.price * 0.01f);
+
+        if (level.random.nextFloat() < chance) {
             ItemStack sold = entity.productSlot.copy();
             entity.productSlot.shrink(1);
+            if (entity.productSlot.isEmpty()) entity.productSlot = ItemStack.EMPTY;
             entity.totalSales++;
             entity.totalRevenue += entity.price;
-            entity.pendingCoins += entity.price;
-            entity.setChanged();
 
-            // 尝试给在线owner硬币
-            if (entity.ownerUUID != null) {
-                Player owner = level.getServer().getPlayerList().getPlayer(entity.ownerUUID);
-                if (owner != null) {
-                    PaymentSystem.giveCoins(owner, entity.price);
-                    owner.displayClientMessage(Component.literal(
-                        "§a卖出: " + sold.getHoverName().getString() +
-                        " | +" + entity.price + " 硬币" +
-                        " | 总收入: " + entity.totalRevenue), true);
-                }
+            // 给在线owner硬币
+            Player owner = level.getServer().getPlayerList().getPlayer(entity.ownerUUID);
+            if (owner != null) {
+                PaymentSystem.giveCoins(owner, entity.price);
+                owner.displayClientMessage(Component.literal(
+                    "§a卖出: " + sold.getHoverName().getString() +
+                    " §7x1 | §e+" + entity.price + " 硬币" +
+                    " §7| §a总收入: " + entity.totalRevenue), true);
+            } else {
+                // owner离线，累积待发
+                entity.pendingCoins += entity.price;
             }
+            entity.setChanged();
         }
     }
 
