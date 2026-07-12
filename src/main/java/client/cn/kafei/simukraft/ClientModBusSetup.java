@@ -74,5 +74,7 @@ public final class ClientModBusSetup {
     public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenuTypes.COMMERCIAL_TRADE.get(), ModularUIContainerScreen::new);
         event.register(ModMenuTypes.LOGISTICS_WAREHOUSE_GRID.get(), LogisticsWarehouseGridScreen::new);
+        // Campus Life
+        event.register(common.campuslife.menu.WorkstationMenu.WORKSTATION.get(), client.campuslife.client.screen.WorkstationScreen::new);
     }
 }
