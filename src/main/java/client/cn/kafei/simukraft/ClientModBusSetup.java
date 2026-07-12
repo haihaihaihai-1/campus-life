@@ -76,5 +76,6 @@ public final class ClientModBusSetup {
         event.register(ModMenuTypes.LOGISTICS_WAREHOUSE_GRID.get(), LogisticsWarehouseGridScreen::new);
         // Campus Life
         event.register(common.campuslife.menu.WorkstationMenu.WORKSTATION.get(), client.campuslife.client.screen.WorkstationScreen::new);
+        event.register(common.campuslife.menu.SalesStallMenu.SALES_STALL.get(), client.campuslife.client.screen.SalesStallScreen::new);
     }
 }

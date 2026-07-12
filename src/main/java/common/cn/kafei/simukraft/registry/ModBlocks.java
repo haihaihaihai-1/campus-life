@@ -12,6 +12,7 @@ import common.cn.kafei.simukraft.block.ResidentialControlBoxBlock;
 import common.campuslife.block.DisplayRackBlock;
 import common.campuslife.block.EmployeeStationBlock;
 import common.campuslife.block.ResearchStationBlock;
+import common.campuslife.block.SalesStallBlock;
 import common.campuslife.block.StartupCoreBlock;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -57,6 +58,7 @@ public final class ModBlocks {
     public static final DeferredBlock<Block> RESEARCH_STATION = registerBlock("research_station", ResearchStationBlock::new);
     public static final DeferredBlock<Block> EMPLOYEE_STATION = registerBlock("employee_station", EmployeeStationBlock::new);
     public static final DeferredBlock<Block> DISPLAY_RACK = registerBlock("display_rack", DisplayRackBlock::new);
+    public static final DeferredBlock<Block> SALES_STALL = registerBlock("sales_stall", SalesStallBlock::new);
 
     private ModBlocks() {
     }

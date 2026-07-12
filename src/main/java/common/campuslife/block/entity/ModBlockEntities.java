@@ -22,6 +22,12 @@ public final class ModBlockEntities {
                 ModBlocks.STARTUP_CORE.get())
                 .build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SalesStallBlockEntity>> SALES_STALL =
+        BLOCK_ENTITIES.register("sales_stall", () ->
+            BlockEntityType.Builder.of(SalesStallBlockEntity::new,
+                ModBlocks.SALES_STALL.get())
+                .build(null));
+
     private ModBlockEntities() {}
 
     public static void register(IEventBus modEventBus) {
