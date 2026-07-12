@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "campuslife:block/employee_station"
+    }
+  }
+}
